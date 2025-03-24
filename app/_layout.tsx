@@ -50,7 +50,18 @@ export default function RootLayout() {
             backgroundColor: "#ffffff",
           },
         }}
-      />
+      >
+        <Stack.Screen name="index" options={{ headerShown: false }} />
+        <Stack.Screen
+          name="home"
+          options={{
+            title: "Home",
+            headerTitleStyle: {
+              fontFamily: "Montserrat-SemiBold",
+            },
+          }}
+        />
+      </Stack>
     </ThemeProvider>
   );
 }
