@@ -7,6 +7,7 @@ import {
   View,
   ViewProps,
 } from "react-native";
+import { FONT_WEIGHT, TYPOGRAPHY, FONT_SIZE } from "../utils/fonts";
 
 // Create the theme context
 const ThemeContext = createContext(null);
@@ -38,21 +39,15 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
 // Define default styles
 const styles = StyleSheet.create({
   defaultText: {
-    fontFamily: "Montserrat",
+    ...TYPOGRAPHY.body,
   },
   defaultView: {
     // Any default view styles you want
   },
 });
 
-// Create font utility functions to make it easier to use different weights
-export const fontStyles = {
-  light: { fontFamily: "Montserrat-Light" },
-  regular: { fontFamily: "Montserrat" },
-  medium: { fontFamily: "Montserrat-Medium" },
-  semiBold: { fontFamily: "Montserrat-SemiBold" },
-  bold: { fontFamily: "Montserrat-Bold" },
-};
+// Export the font styles from our utility
+export { FONT_WEIGHT as fontStyles, TYPOGRAPHY, FONT_SIZE } from "../utils/fonts";
 
 // Export custom components
 export { ThemedText as Text, ThemedView as View };
