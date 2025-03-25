@@ -13,9 +13,8 @@ import { primary_textColor, primaryColor } from "../constant/contant";
 import { FONT_WEIGHT, TYPOGRAPHY } from "@/utils/fonts";
 import { router } from "expo-router";
 
-const otpVerification = () => {
+const setmpin = () => {
   const { width, height } = Dimensions.get("window");
-
   return (
     <SafeAreaView style={styles.container}>
       <View style={[styles.header_container, { position: "relative" }]}>
@@ -47,10 +46,9 @@ const otpVerification = () => {
           />
         </LinearGradient>
         <View>
-          <Text style={styles.text}>Otp Verification</Text>
-          <Text style={styles.subtext}>
-            Enter the OTP you received on your phone
-          </Text>
+          <Text style={styles.text}>Create your account</Text>
+          <Text style={styles.subtext}>Enter your mobile number to create</Text>
+          <Text style={styles.subtext}>your account</Text>
         </View>
       </View>
 
@@ -69,7 +67,7 @@ const otpVerification = () => {
               marginBottom: 5,
             }}
           >
-            Enter your mobile number
+            Set your new mPin
           </Text>
           <TextInput
             onChange={(e) => console.log(e.nativeEvent.text)}
@@ -88,29 +86,17 @@ const otpVerification = () => {
               marginBottom: 5,
             }}
           >
-            Enter your OTP
+            conform your mPin
           </Text>
           <TextInput
-            placeholder="Enter your OTP"
+            placeholder="Enter your mpin"
+            secureTextEntry={true}
             maxLength={4}
             keyboardType="numeric"
             style={[styles.input, { marginBottom: 10 }]}
             onChange={(e) => console.log(e.nativeEvent.text)}
           />
         </View>
-
-        <Text
-          style={{
-            ...TYPOGRAPHY.body,
-            fontFamily: FONT_WEIGHT.semiBold,
-            color: primary_textColor,
-            marginBottom: 5,
-            textAlign: "center",
-          }}
-          onPress={() => router.push("/auth/set-mpin")}
-        >
-          Resend OTP
-        </Text>
 
         <View style={{ alignItems: "center" }}>
           <TouchableOpacity
@@ -139,7 +125,7 @@ const otpVerification = () => {
   );
 };
 
-export default otpVerification;
+export default setmpin;
 
 export const styles = StyleSheet.create({
   container: {
