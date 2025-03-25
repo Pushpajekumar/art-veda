@@ -9,7 +9,7 @@ import {
 import React from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
-import { primary_textColor, primaryColor } from "../constant/contant";
+import { primary_textColor, primaryColor } from "../../constant/contant";
 import { FONT_WEIGHT, TYPOGRAPHY } from "@/utils/fonts";
 import { router } from "expo-router";
 
@@ -46,7 +46,7 @@ const login = () => {
           />
         </LinearGradient>
         <View>
-          <Text style={styles.text}>Create your account</Text>
+          <Text style={styles.text}>Login to your Account</Text>
           <Text style={styles.subtext}>Enter your mobile number to create</Text>
           <Text style={styles.subtext}>your account</Text>
         </View>

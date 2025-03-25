@@ -9,7 +9,7 @@ import {
 import React from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
-import { primary_textColor, primaryColor } from "../constant/contant";
+import { primary_textColor, primaryColor } from "../../constant/contant";
 import { FONT_WEIGHT, TYPOGRAPHY } from "@/utils/fonts";
 import { router } from "expo-router";
 
@@ -47,7 +47,7 @@ const otpVerification = () => {
           />
         </LinearGradient>
         <View>
-          <Text style={styles.text}>Otp Verification</Text>
+          <Text style={styles.text}>OTP Verification</Text>
           <Text style={styles.subtext}>
             Enter the OTP you received on your phone
           </Text>
