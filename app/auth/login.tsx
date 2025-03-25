@@ -131,7 +131,7 @@ const login = () => {
               marginTop: 20,
               width: "70%",
             }}
-            onPress={() => console.log("Login pressed")}
+            onPress={() => router.replace("/select-political-party")}
           >
             <Text
               style={{
