@@ -11,6 +11,17 @@ const home = () => {
       >
         <Text>Log in</Text>
       </TouchableOpacity>
+      <TouchableOpacity
+        style={{
+          padding: 20,
+          backgroundColor: "#007BFF",
+          borderRadius: 5,
+          marginTop: 10,
+        }}
+        onPress={() => router.push("/official-home")}
+      >
+        <Text>Home</Text>
+      </TouchableOpacity>
     </View>
   );
 };
