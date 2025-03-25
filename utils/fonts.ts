@@ -133,7 +133,7 @@ export const TYPOGRAPHY = {
   caption: {
     fontFamily: FONT_WEIGHT.regular,
     fontSize: FONT_SIZE.sm,
-    lineHeight: getFontSize(16),
+    lineHeight: getFontSize(12),
   },
   button: {
     fontFamily: FONT_WEIGHT.medium,

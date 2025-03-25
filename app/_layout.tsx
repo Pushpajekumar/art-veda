@@ -55,10 +55,13 @@ export default function RootLayout() {
         <Stack.Screen
           name="home"
           options={{
-            title: "Home",
-            headerTitleStyle: {
-              fontFamily: "Montserrat-SemiBold",
-            },
+            headerShown: false,
+          }}
+        />
+        <Stack.Screen
+          name="auth"
+          options={{
+            headerShown: false,
           }}
         />
       </Stack>
