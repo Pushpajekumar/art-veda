@@ -13,8 +13,9 @@ import { primary_textColor, primaryColor } from "../constant/contant";
 import { FONT_WEIGHT, TYPOGRAPHY } from "@/utils/fonts";
 import { router } from "expo-router";
 
-const login = () => {
+const otpVerification = () => {
   const { width, height } = Dimensions.get("window");
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={[styles.header_container, { position: "relative" }]}>
@@ -46,9 +47,10 @@ const login = () => {
           />
         </LinearGradient>
         <View>
-          <Text style={styles.text}>Create your account</Text>
-          <Text style={styles.subtext}>Enter your mobile number to create</Text>
-          <Text style={styles.subtext}>your account</Text>
+          <Text style={styles.text}>Otp Verification</Text>
+          <Text style={styles.subtext}>
+            Enter the OTP you received on your phone
+          </Text>
         </View>
       </View>
 
@@ -86,11 +88,10 @@ const login = () => {
               marginBottom: 5,
             }}
           >
-            Enter your mPin
+            Enter your OTP
           </Text>
           <TextInput
-            placeholder="Enter your mpin"
-            secureTextEntry={true}
+            placeholder="Enter your OTP"
             maxLength={4}
             keyboardType="numeric"
             style={[styles.input, { marginBottom: 10 }]}
@@ -100,18 +101,6 @@ const login = () => {
 
         <Text
           style={{
-            ...TYPOGRAPHY.caption,
-            color: primary_textColor,
-            marginTop: 5,
-            textAlign: "right",
-            marginBottom: 20,
-          }}
-          onPress={() => router.push("/auth/otp-verification")}
-        >
-          Forgot your mPin ?
-        </Text>
-        <Text
-          style={{
             ...TYPOGRAPHY.body,
             fontFamily: FONT_WEIGHT.semiBold,
             color: primary_textColor,
@@ -119,7 +108,7 @@ const login = () => {
             textAlign: "center",
           }}
         >
-          New User SignUp ?
+          Resend OTP
         </Text>
 
         <View style={{ alignItems: "center" }}>
@@ -140,7 +129,7 @@ const login = () => {
                 ...TYPOGRAPHY.button,
               }}
             >
-              Login
+              Continue
             </Text>
           </TouchableOpacity>
         </View>
@@ -149,7 +138,7 @@ const login = () => {
   );
 };
 
-export default login;
+export default otpVerification;
 
 export const styles = StyleSheet.create({
   container: {
