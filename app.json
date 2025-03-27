@@ -35,12 +35,23 @@
       [
         "expo-font",
         {
-          "fonts": ["./assets/fonts/Montserrat-Regular.ttf"]
+          "fonts": [
+            "./assets/fonts/Montserrat-Regular.ttf"
+          ]
         }
       ]
     ],
     "experiments": {
       "typedRoutes": true
-    }
+    },
+    "extra": {
+      "router": {
+        "origin": false
+      },
+      "eas": {
+        "projectId": "e117f6d6-401f-4edf-b4bc-ca15714d5a84"
+      }
+    },
+    "owner": "pushpaje"
   }
 }
