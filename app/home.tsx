@@ -18,7 +18,7 @@ const home = () => {
           borderRadius: 5,
           marginTop: 10,
         }}
-        onPress={() => router.push("/official-home")}
+        onPress={() => router.push("/(tabs)")}
       >
         <Text>Home</Text>
       </TouchableOpacity>

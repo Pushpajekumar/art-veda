@@ -63,7 +63,7 @@ const selectpoliticalparty = () => {
 
   const handleSkip = () => {
     // Navigate to the next screen
-    router.replace("/official-home");
+    router.replace("/(tabs)");
   };
 
   return (

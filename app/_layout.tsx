@@ -71,7 +71,7 @@ export default function RootLayout() {
           }}
         />
         <Stack.Screen
-          name="official-home"
+          name="(tabs)"
           options={{
             headerShown: false,
           }}
