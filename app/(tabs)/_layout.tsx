@@ -14,6 +14,15 @@ export default function TabLayout() {
           ),
         }}
       />
+      <Tabs.Screen
+        name="downloads"
+        options={{
+          title: "MY Downloads",
+          tabBarIcon: ({ color }) => (
+            <FontAwesome size={28} name="download" color={color} />
+          ),
+        }}
+      />
     </Tabs>
   );
 }
