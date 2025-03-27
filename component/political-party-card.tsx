@@ -11,8 +11,7 @@ const PoliticalPartyCard = ({ party }: PoliticalPartyCardProps) => {
   return (
     <View style={styles.card_container}>
       <Text style={styles.title}>{party.name}</Text>
-      <Image source={{ uri: party.logo }} style={styles.logo} />{" "}
-      {/* Added Image with source */}
+      <Image source={{ uri: party.logo }} style={styles.logo} />
     </View>
   );
 };
@@ -32,14 +31,14 @@ export const styles = StyleSheet.create({
     alignItems: "center",
   },
   title: {
-    ...TYPOGRAPHY.body,
+    fontSize: 14,
     fontFamily: FONT_WEIGHT.medium,
     color: primary_textColor,
   },
 
   logo: {
-    width: 50,
-    height: 50,
+    width: 40,
+    height: 40,
     borderRadius: 25,
   },
 });

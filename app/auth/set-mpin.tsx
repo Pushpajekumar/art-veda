@@ -11,6 +11,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import { FONT_WEIGHT, TYPOGRAPHY } from "@/utils/fonts";
 import { primary_textColor, primaryColor } from "@/constant/contant";
+import { router } from "expo-router";
 
 const setmpin = () => {
   const { width, height } = Dimensions.get("window");
@@ -106,7 +107,7 @@ const setmpin = () => {
               marginTop: 20,
               width: "70%",
             }}
-            onPress={() => console.log("Login pressed")}
+            onPress={() => router.replace("/select-political-party")}
           >
             <Text
               style={{

@@ -28,7 +28,7 @@ const politicalParties = [
   {
     name: "Green Party",
     shortName: "Green",
-    logo: "https://picsum.photos/200?random=3", 
+    logo: "https://picsum.photos/200?random=3",
   },
   {
     name: "Libertarian Party",
@@ -63,7 +63,7 @@ const selectpoliticalparty = () => {
 
   const handleSkip = () => {
     // Navigate to the next screen
-    router.push("/home");
+    router.replace("/official-home");
   };
 
   return (
@@ -72,7 +72,9 @@ const selectpoliticalparty = () => {
         <View style={styles.headerTitleRow}>
           <Text style={styles.headerTitle}>Select Your Political Party</Text>
           <TouchableOpacity style={styles.skipButton} onPress={handleSkip}>
-            <Text style={styles.skipText}>Skip</Text>
+            <Text style={styles.skipText} onPress={handleSkip}>
+              Skip
+            </Text>
             <Entypo name="chevron-small-right" size={24} color="black" />
           </TouchableOpacity>
         </View>
