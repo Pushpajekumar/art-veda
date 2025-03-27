@@ -1,4 +1,8 @@
+import { Dimensions } from "react-native";
+
 export const isAuthenticated = false;
+export const width = Dimensions.get("window").width;
+export const height = Dimensions.get("window").height;
 
 export const primaryColor = "#0099FF";
 export const secondaryColor = "#D9D9D9";
