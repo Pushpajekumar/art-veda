@@ -6,10 +6,12 @@ import {
   Image,
   ScrollView,
   Dimensions,
+  Pressable,
 } from "react-native";
 import React from "react";
 import { width } from "@/constant/contant";
 import Feather from "@expo/vector-icons/Feather";
+import { router } from "expo-router";
 
 const profile = () => {
   return (
@@ -47,22 +49,32 @@ const profile = () => {
             <Text style={{ color: "gray" }}>Phone Number</Text>
           </View>
 
-          <View
+          <Pressable
             style={{
               backgroundColor: "#4285F4",
               paddingVertical: 10,
               paddingHorizontal: 20,
               borderRadius: 8,
             }}
+            onPress={() => router.push("/edit-profile")}
           >
             <Text style={{ color: "white", fontWeight: "600" }}>
               Edit Profile
             </Text>
-          </View>
+          </Pressable>
         </View>
 
-        <View style={{ paddingVertical: 20, backgroundColor: '#f3f4f6' }}>
-          <Text style={{ fontSize: 18, fontWeight: 'bold', marginHorizontal: 20, marginBottom: 10 }}>Frames</Text>
+        <View style={{ paddingVertical: 20, backgroundColor: "#f3f4f6" }}>
+          <Text
+            style={{
+              fontSize: 18,
+              fontWeight: "bold",
+              marginHorizontal: 20,
+              marginBottom: 10,
+            }}
+          >
+            Frames
+          </Text>
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
@@ -88,21 +100,25 @@ const profile = () => {
           </ScrollView>
         </View>
 
-        <View style={{ 
-          flexDirection: 'row', 
-          justifyContent: 'space-between', 
-          alignItems: 'center',
-          backgroundColor: 'white',
-          padding: 20,
-          marginTop: 10,
-          borderRadius: 10,
-          marginHorizontal: 10
-        }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+        <View
+          style={{
+            flexDirection: "row",
+            justifyContent: "space-between",
+            alignItems: "center",
+            backgroundColor: "white",
+            padding: 20,
+            marginTop: 10,
+            borderRadius: 10,
+            marginHorizontal: 10,
+          }}
+        >
+          <View style={{ flexDirection: "row", alignItems: "center" }}>
             <Feather name="globe" size={24} color="#4285F4" />
-            <Text style={{ marginLeft: 12, fontSize: 16, fontWeight: '500' }}>Language</Text>
+            <Text style={{ marginLeft: 12, fontSize: 16, fontWeight: "500" }}>
+              Language
+            </Text>
           </View>
-          <Text style={{ color: 'gray' }}>English</Text>
+          <Text style={{ color: "gray" }}>English</Text>
         </View>
       </ScrollView>
     </SafeAreaView>
