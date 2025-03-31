@@ -15,6 +15,9 @@ import { router } from "expo-router";
 
 const login = () => {
   const { width, height } = Dimensions.get("window");
+
+  
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={[styles.header_container, { position: "relative" }]}>

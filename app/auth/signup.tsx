@@ -9,49 +9,42 @@ import {
 import React from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
+import { primary_textColor, primaryColor } from "../../constant/contant";
 import { FONT_WEIGHT, TYPOGRAPHY } from "@/utils/fonts";
-import { primary_textColor, primaryColor } from "@/constant/contant";
 import { router } from "expo-router";
-import { account } from "@/context/app-write";
+import { account, ID } from "@/context/app-write";
 
-const setmpin = () => {
+const signup = () => {
   const { width, height } = Dimensions.get("window");
-  const [mpin, setMpin] = React.useState("");
-  const [confirmMpin, setConfirmMpin] = React.useState("");
+  const [phoneNumber, setPhoneNumber] = React.useState("");
   const [isLoading, setIsLoading] = React.useState(false);
 
-const handlemPin = async () => {
-  setIsLoading(true);
-  
-  try {
-    if (!mpin) {
-      console.log("mPin cannot be empty");
-      return;
+  const handleSignup = async () => {
+
+    setIsLoading(true);
+
+    console.log("Signup logic here");
+
+    try {
+    //   const token = await account.createPhoneToken(
+    //       ID.unique(),
+    //       `+91${phoneNumber}`,
+    //   );
+
+      router.push({
+        pathname: "/auth/otp-verification",
+        params: {
+        //   userId: token.userId,
+        }
+      });
+    //   console.log("Token created:", token);
+    } catch (error) {
+      console.error("Error creating token:", error);
+    } finally {
+      setIsLoading(false);
     }
-    
-    if (mpin.length !== 4) {
-      console.log("mPin must be 4 digits");
-      return;
-    }
-    
-    if (!confirmMpin) {
-      console.log("Confirm mPin cannot be empty");
-      return;
-    }
-    
-    if (mpin !== confirmMpin) {
-      console.log("mPin and confirmation do not match");
-      return;
-    }
-    
-    await account.updatePrefs({ mpin });
-    router.replace("/select-political-party");
-  } catch (error) {
-    console.error("Failed to update mPin:", error);
-  } finally {
-    setIsLoading(false);
-  }
-};
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={[styles.header_container, { position: "relative" }]}>
@@ -83,7 +76,7 @@ const handlemPin = async () => {
           />
         </LinearGradient>
         <View>
-          <Text style={styles.text}>Create your account</Text>
+          <Text style={styles.text}>Create your Account</Text>
           <Text style={styles.subtext}>Enter your mobile number to create</Text>
           <Text style={styles.subtext}>your account</Text>
         </View>
@@ -104,37 +97,67 @@ const handlemPin = async () => {
               marginBottom: 5,
             }}
           >
-            Set your new mPin
+            Enter your mobile number
           </Text>
-          <TextInput
-            onChange={(e) => setMpin(e.nativeEvent.text)}
-            placeholder="Enter your mpin"
-            secureTextEntry={true}
-            maxLength={4}
-            keyboardType="numeric"
-            style={styles.input}
-          />
-        </View>
-        <View style={{ marginTop: 10 }}>
-          <Text
-            style={{
-              ...TYPOGRAPHY.caption,
+          <View style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            backgroundColor: "rgba(217, 217, 217, 0.4)",
+            borderRadius: 5,
+            marginBottom: 10,
+          }}>
+            <Text style={{
+              paddingHorizontal: 15,
+              paddingVertical: 15,
+              ...TYPOGRAPHY.body,
               fontFamily: FONT_WEIGHT.medium,
-              color: "grey",
-              marginBottom: 5,
-            }}
-          >
-            Confirm your mPin
-          </Text>
-          <TextInput
-            placeholder="Enter your conform mpin"
-            secureTextEntry={true}
-            maxLength={4}
-            keyboardType="numeric"
-            style={[styles.input, { marginBottom: 10 }]}
-            onChange={(e) => setConfirmMpin(e.nativeEvent.text)}
-          />
+              color: primary_textColor,
+            }}>
+              +91
+            </Text>
+            <View style={{
+              height: '70%',
+              width: 1,
+              backgroundColor: 'rgba(0,0,0,0.2)',
+            }} />
+            <TextInput
+            value={phoneNumber}
+              onChange={(e) => setPhoneNumber(e.nativeEvent.text)}
+              placeholder="Enter your mobile number"
+              keyboardType="phone-pad"
+              maxLength={10}
+              style={{
+            flex: 1,
+            padding: 15,
+              }}
+            />
+          </View>
         </View>
+      
+
+        <Text
+          style={{
+            ...TYPOGRAPHY.caption,
+            color: primary_textColor,
+            marginTop: 5,
+            textAlign: "right",
+            marginBottom: 20,
+          }}
+          onPress={handleSignup}
+        >
+         Have referrel code ?
+        </Text>
+        <Text
+          style={{
+            ...TYPOGRAPHY.body,
+            fontFamily: FONT_WEIGHT.semiBold,
+            color: primary_textColor,
+            marginBottom: 5,
+            textAlign: "center",
+          }}
+        >
+       Already a User? Login  
+        </Text>
 
         <View style={{ alignItems: "center" }}>
           <TouchableOpacity
@@ -144,8 +167,10 @@ const handlemPin = async () => {
               borderRadius: 50,
               marginTop: 20,
               width: "70%",
+              opacity: isLoading ? 0.7 : 1,
             }}
-            onPress={handlemPin}
+            onPress={handleSignup}
+            disabled={isLoading}
           >
             <Text
               style={{
@@ -154,7 +179,7 @@ const handlemPin = async () => {
                 ...TYPOGRAPHY.button,
               }}
             >
-              Continue
+              {isLoading ? "Loading..." : "Login"}
             </Text>
           </TouchableOpacity>
         </View>
@@ -163,7 +188,7 @@ const handlemPin = async () => {
   );
 };
 
-export default setmpin;
+export default signup;
 
 export const styles = StyleSheet.create({
   container: {

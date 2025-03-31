@@ -12,9 +12,32 @@ import { LinearGradient } from "expo-linear-gradient";
 import { primary_textColor, primaryColor } from "../../constant/contant";
 import { FONT_WEIGHT, TYPOGRAPHY } from "@/utils/fonts";
 import { router } from "expo-router";
+import { account } from "@/context/app-write";
 
 const otpVerification = () => {
   const { width, height } = Dimensions.get("window");
+  const [otp, setOtp] = React.useState("");
+
+  const [userId, setUserId] = React.useState("67ea6dfa000693f288fb"); // Replace with actual user ID
+  const [isLoading, setIsLoading] = React.useState(false);
+  const handleOtpChange = async () => {
+    setIsLoading(true);
+    console.log("OTP logic here");
+   try {
+    // const session = await account.createSession(
+    //   userId,
+    //   otp
+    // );
+    // console.log("Session created:", session);
+
+    router.push("/auth/set-mpin");
+
+   } catch (error) {
+     console.error("Error handling OTP:", error);
+     }finally {
+      setIsLoading(false);
+     }
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -60,25 +83,7 @@ const otpVerification = () => {
           marginTop: (height - 600) / 2, // Dynamically calculate margin to center vertically
         }}
       >
-        <View>
-          <Text
-            style={{
-              ...TYPOGRAPHY.caption,
-              fontFamily: FONT_WEIGHT.medium,
-              color: "grey",
-              marginBottom: 5,
-            }}
-          >
-            Enter your mobile number
-          </Text>
-          <TextInput
-            onChange={(e) => console.log(e.nativeEvent.text)}
-            placeholder="Enter your mobile number"
-            keyboardType="phone-pad"
-            maxLength={10}
-            style={styles.input}
-          />
-        </View>
+      
         <View style={{ marginTop: 10 }}>
           <Text
             style={{
@@ -92,10 +97,11 @@ const otpVerification = () => {
           </Text>
           <TextInput
             placeholder="Enter your OTP"
-            maxLength={4}
+            maxLength={6}
             keyboardType="numeric"
             style={[styles.input, { marginBottom: 10 }]}
-            onChange={(e) => console.log(e.nativeEvent.text)}
+            onChange={(e) => setOtp(e.nativeEvent.text)}
+            value={otp}
           />
         </View>
 
@@ -121,7 +127,8 @@ const otpVerification = () => {
               marginTop: 20,
               width: "70%",
             }}
-            onPress={() => router.push("/select-political-party")}
+            onPress={handleOtpChange}
+            disabled={isLoading}  
           >
             <Text
               style={{
