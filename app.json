@@ -16,7 +16,7 @@
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "com.artveda"
+      "package": "com.evolcrm.artveda"
     },
     "web": {
       "bundler": "metro",
