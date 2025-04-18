@@ -1,6 +1,6 @@
 {
   "cli": {
-    "appVersionSource": "project"
+    "appVersionSource": "remote"
   },
   "build": {
     "development": {
@@ -10,6 +10,8 @@
     "preview": {
       "distribution": "internal"
     },
-    "production": {}
+    "production": {
+      "autoIncrement": true
+    }
   }
 }
