@@ -1,6 +1,6 @@
 {
   "cli": {
-    "appVersionSource": "1.0.0"
+    "appVersionSource": "project"
   },
   "build": {
     "development": {
