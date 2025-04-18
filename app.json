@@ -16,7 +16,7 @@
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "com.pushpaje.artveda"
+      "package": "com.artveda"
     },
     "web": {
       "bundler": "metro",
