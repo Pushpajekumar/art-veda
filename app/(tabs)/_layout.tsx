@@ -40,6 +40,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="options"
         options={{
+          headerShown: false,
           title: "Options",
           tabBarIcon: ({ color }) => (
             <Ionicons name="options" size={28} color={color} />
