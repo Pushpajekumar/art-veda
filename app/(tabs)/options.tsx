@@ -5,15 +5,29 @@ import {
   Image,
   TouchableOpacity,
   ScrollView,
+  Alert,
 } from "react-native";
 import React from "react";
 import { Ionicons, FontAwesome, MaterialIcons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { FONT_WEIGHT, TYPOGRAPHY } from "@/utils/fonts";
 import { useRouter } from "expo-router";
+import { account } from "@/context/app-write";
 
 const Options = () => {
   const router = useRouter();
+
+  const handleLogout = async () => {
+    try {
+      await account.deleteSession("current");
+      // Optionally, you can navigate to the login screen or show a success message
+      Alert.alert("Success", "Logged out successfully");
+      router.push("/auth/login");
+    } catch (error) {
+      console.error("Logout error:", error);
+      Alert.alert("Error", "Failed to log out. Please try again.");
+    }
+  };
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView showsVerticalScrollIndicator={false}>
@@ -133,7 +147,15 @@ const Options = () => {
         </View>
 
         {/* Logout Button */}
-        <TouchableOpacity style={styles.logoutButton}>
+        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+          <FontAwesome
+            name="sign-out"
+            size={18}
+            color="red"
+            style={{
+              marginRight: 8,
+            }}
+          />
           <Text style={styles.logoutText}>Logout</Text>
         </TouchableOpacity>
 
@@ -296,6 +318,8 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
   },
   logoutButton: {
+    flexDirection: "row",
+    justifyContent: "center",
     alignItems: "center",
     marginTop: 20,
   },

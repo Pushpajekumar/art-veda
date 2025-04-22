@@ -31,7 +31,7 @@ const EnterMpin = () => {
   const buttonScale = useRef(new Animated.Value(1)).current;
 
   // Animate the dots when PIN is entered
-  const animateDot = (index) => {
+  const animateDot = (index: number) => {
     Animated.sequence([
       Animated.timing(dotScale[index], {
         toValue: 1.3,
@@ -47,7 +47,7 @@ const EnterMpin = () => {
   };
 
   // Handle digit press
-  const handleDigitPress = (digit) => {
+  const handleDigitPress = (digit: string) => {
     // Button press animation
     Animated.sequence([
       Animated.timing(buttonScale, {
@@ -87,7 +87,7 @@ const EnterMpin = () => {
   };
 
   // Verify existing MPIN
-  const verifyMpin = async (pinToVerify) => {
+  const verifyMpin = async (pinToVerify: string) => {
     setIsLoading(true);
     try {
       const prefs = await account.getPrefs();
@@ -120,8 +120,7 @@ const EnterMpin = () => {
             style={[
               styles.pinDot,
               {
-                backgroundColor:
-                  index < mpin.length ? primaryColor : "#D9D9D9",
+                backgroundColor: index < mpin.length ? primaryColor : "#D9D9D9",
                 transform: [{ scale: dotScale[index] }],
               },
             ]}
@@ -164,9 +163,7 @@ const EnterMpin = () => {
         </LinearGradient>
         <View>
           <Text style={styles.text}>Enter MPIN</Text>
-          <Text style={styles.subtext}>
-            Enter your 4-digit PIN to continue
-          </Text>
+          <Text style={styles.subtext}>Enter your 4-digit PIN to continue</Text>
         </View>
       </View>
 
@@ -277,7 +274,7 @@ const EnterMpin = () => {
         {/* Forgot MPIN option */}
         <TouchableOpacity
           style={styles.forgotButton}
-          onPress={() => router.push('/auth/login')}
+          onPress={() => router.push("/auth/login")}
           disabled={isLoading}
         >
           <Text style={styles.forgotButtonText}>Forgot MPIN?</Text>
@@ -296,7 +293,7 @@ const styles = StyleSheet.create({
     position: "absolute",
     top: 0,
     bottom: 0,
-    left: 0, 
+    left: 0,
     right: 0,
     justifyContent: "center",
     alignItems: "center",
