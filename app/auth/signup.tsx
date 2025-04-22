@@ -20,24 +20,23 @@ const signup = () => {
   const [isLoading, setIsLoading] = React.useState(false);
 
   const handleSignup = async () => {
-
     setIsLoading(true);
 
     console.log("Signup logic here");
 
     try {
-    //   const token = await account.createPhoneToken(
-    //       ID.unique(),
-    //       `+91${phoneNumber}`,
-    //   );
+      // const token = await account.createPhoneToken(
+      //   ID.unique(),
+      //   `+91${phoneNumber}`
+      // );
 
       router.push({
         pathname: "/auth/otp-verification",
-        params: {
+        // params: {
         //   userId: token.userId,
-        }
+        // },
       });
-    //   console.log("Token created:", token);
+      // console.log("Token created:", token);
     } catch (error) {
       console.error("Error creating token:", error);
     } finally {
@@ -99,41 +98,46 @@ const signup = () => {
           >
             Enter your mobile number
           </Text>
-          <View style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            backgroundColor: "rgba(217, 217, 217, 0.4)",
-            borderRadius: 5,
-            marginBottom: 10,
-          }}>
-            <Text style={{
-              paddingHorizontal: 15,
-              paddingVertical: 15,
-              ...TYPOGRAPHY.body,
-              fontFamily: FONT_WEIGHT.medium,
-              color: primary_textColor,
-            }}>
+          <View
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              backgroundColor: "rgba(217, 217, 217, 0.4)",
+              borderRadius: 5,
+              marginBottom: 10,
+            }}
+          >
+            <Text
+              style={{
+                paddingHorizontal: 15,
+                paddingVertical: 15,
+                ...TYPOGRAPHY.body,
+                fontFamily: FONT_WEIGHT.medium,
+                color: primary_textColor,
+              }}
+            >
               +91
             </Text>
-            <View style={{
-              height: '70%',
-              width: 1,
-              backgroundColor: 'rgba(0,0,0,0.2)',
-            }} />
+            <View
+              style={{
+                height: "70%",
+                width: 1,
+                backgroundColor: "rgba(0,0,0,0.2)",
+              }}
+            />
             <TextInput
-            value={phoneNumber}
+              value={phoneNumber}
               onChange={(e) => setPhoneNumber(e.nativeEvent.text)}
               placeholder="Enter your mobile number"
               keyboardType="phone-pad"
               maxLength={10}
               style={{
-            flex: 1,
-            padding: 15,
+                flex: 1,
+                padding: 15,
               }}
             />
           </View>
         </View>
-      
 
         <Text
           style={{
@@ -145,7 +149,7 @@ const signup = () => {
           }}
           onPress={handleSignup}
         >
-         Have referrel code ?
+          Have referrel code ?
         </Text>
         <Text
           style={{
@@ -156,7 +160,7 @@ const signup = () => {
             textAlign: "center",
           }}
         >
-       Already a User? Login  
+          Already a User? Login
         </Text>
 
         <View style={{ alignItems: "center" }}>
@@ -179,7 +183,7 @@ const signup = () => {
                 ...TYPOGRAPHY.button,
               }}
             >
-              {isLoading ? "Loading..." : "Login"}
+              {isLoading ? "Loading..." : "SignUp"}
             </Text>
           </TouchableOpacity>
         </View>

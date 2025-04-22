@@ -5,18 +5,79 @@ import {
   StyleSheet,
   TextInput,
   TouchableOpacity,
+  ActivityIndicator,
+  Alert,
 } from "react-native";
 import React from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
-import { primary_textColor, primaryColor } from "../../constant/contant";
+import { primary_textColor, primaryColor } from "@/constant/contant";
 import { FONT_WEIGHT, TYPOGRAPHY } from "@/utils/fonts";
-import { router } from "expo-router";
+import { router, useRouter } from "expo-router";
+import { account, ID } from "@/context/app-write";
 
-const login = () => {
+const Login = () => {
   const { width, height } = Dimensions.get("window");
+  const [phoneNumber, setPhoneNumber] = React.useState("");
+  const [otp, setOtp] = React.useState("");
+  const [showOtpField, setShowOtpField] = React.useState(false);
+  const [userId, setUserId] = React.useState("");
+  const [isLoading, setIsLoading] = React.useState(false);
+  const [error, setError] = React.useState("");
 
-  
+  const router = useRouter();
+
+  // Step 1: Request OTP
+  const handleRequestOTP = async () => {
+    setIsLoading(true);
+    setError("");
+
+    if (!phoneNumber || phoneNumber.length !== 10) {
+      setError("Please enter a valid 10-digit phone number");
+      setIsLoading(false);
+      return;
+    }
+
+    try {
+      // const token = await account.createPhoneToken(
+      //   ID.unique(),
+      //   `+91${phoneNumber}`
+      // );
+      // setUserId(token.userId);
+      setShowOtpField(true);
+      setIsLoading(false);
+      Alert.alert("OTP Sent", "An OTP has been sent to your phone number");
+    } catch (error) {
+      console.error("Error requesting OTP:", error);
+      setError("Failed to send OTP. Please try again.");
+      setIsLoading(false);
+    }
+  };
+
+  // Step 2: Verify OTP and Login
+  const handleLogin = async () => {
+    setIsLoading(true);
+    setError("");
+
+    // if (!otp || otp.length < 4) {
+    //   setError("Please enter a valid OTP");
+    //   setIsLoading(false);
+    //   return;
+    // }
+
+    try {
+      // Create session with the userId and OTP
+      // const session = await account.createSession(userId, otp);
+
+      // console.log("Login successful:", session);
+      setIsLoading(false);
+      router.push("/auth/enter-mpin");
+    } catch (error) {
+      console.error("Login error:", error);
+      setError("Invalid OTP. Please try again.");
+      setIsLoading(false);
+    }
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -24,7 +85,7 @@ const login = () => {
         <LinearGradient
           colors={["#bedbff", "#0099FF"]}
           style={{
-            borderRadius: width * 0.11, // Adjusted to make it more circular
+            borderRadius: width * 0.11,
             width: width * 0.22,
             height: height * 0.1,
             overflow: "hidden",
@@ -40,126 +101,115 @@ const login = () => {
             style={{
               ...StyleSheet.absoluteFillObject,
               backgroundColor: "rgba(255, 255, 255, 0.5)",
-              borderRadius: width * 0.11, // Adjusted to match the outer border radius
+              borderRadius: width * 0.11,
               shadowColor: "#000",
               shadowOffset: { width: 0, height: 0 },
               shadowOpacity: 0.5,
-              shadowRadius: 10, // Added shadow to create a blur effect
+              shadowRadius: 10,
             }}
           />
         </LinearGradient>
         <View>
           <Text style={styles.text}>Login to your Account</Text>
-          <Text style={styles.subtext}>Enter your mobile number to create</Text>
-          <Text style={styles.subtext}>your account</Text>
+          <Text style={styles.subtext}>Enter your mobile number to</Text>
+          <Text style={styles.subtext}>receive an OTP</Text>
         </View>
       </View>
 
       <View
         style={{
           padding: 20,
-          marginTop: (height - 600) / 2, // Dynamically calculate margin to center vertically
+          marginTop: (height - 600) / 2,
         }}
       >
+        {error ? <Text style={styles.errorText}>{error}</Text> : null}
+
         <View>
-          <Text
-            style={{
-              ...TYPOGRAPHY.caption,
-              fontFamily: FONT_WEIGHT.medium,
-              color: "grey",
-              marginBottom: 5,
-            }}
-          >
-            Enter your mobile number
-          </Text>
+          <Text style={styles.inputLabel}>Enter your mobile number</Text>
           <TextInput
-            onChange={(e) => console.log(e.nativeEvent.text)}
+            onChange={(e) => setPhoneNumber(e.nativeEvent.text)}
+            value={phoneNumber}
             placeholder="Enter your mobile number"
             keyboardType="phone-pad"
             maxLength={10}
             style={styles.input}
-          />
-        </View>
-        <View style={{ marginTop: 10 }}>
-          <Text
-            style={{
-              ...TYPOGRAPHY.caption,
-              fontFamily: FONT_WEIGHT.medium,
-              color: "grey",
-              marginBottom: 5,
-            }}
-          >
-            Enter your mPin
-          </Text>
-          <TextInput
-            placeholder="Enter your mpin"
-            secureTextEntry={true}
-            maxLength={4}
-            keyboardType="numeric"
-            style={[styles.input, { marginBottom: 10 }]}
-            onChange={(e) => console.log(e.nativeEvent.text)}
+            editable={!showOtpField || !isLoading}
           />
         </View>
 
-        <Text
-          style={{
-            ...TYPOGRAPHY.caption,
-            color: primary_textColor,
-            marginTop: 5,
-            textAlign: "right",
-            marginBottom: 20,
-          }}
-          onPress={() => router.push("/auth/otp-verification")}
-        >
-          Forgot your mPin ?
-        </Text>
-        <Text
-          style={{
-            ...TYPOGRAPHY.body,
-            fontFamily: FONT_WEIGHT.semiBold,
-            color: primary_textColor,
-            marginBottom: 5,
-            textAlign: "center",
-          }}
-        >
-          New User SignUp ?
-        </Text>
-
-        <View style={{ alignItems: "center" }}>
-          <TouchableOpacity
-            style={{
-              backgroundColor: primaryColor,
-              padding: 15,
-              borderRadius: 50,
-              marginTop: 20,
-              width: "70%",
-            }}
-            onPress={() => router.replace("/select-political-party")}
-          >
-            <Text
-              style={{
-                color: "#fff",
-                textAlign: "center",
-                ...TYPOGRAPHY.button,
-              }}
+        {!showOtpField ? (
+          <View style={styles.requestOtpContainer}>
+            <TouchableOpacity
+              style={styles.requestOtpButton}
+              onPress={handleRequestOTP}
+              disabled={isLoading}
             >
-              Login
+              {isLoading ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text style={styles.buttonText}>Request OTP</Text>
+              )}
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <>
+            <View style={{ marginTop: 20 }}>
+              <Text style={styles.inputLabel}>
+                Enter OTP received on your phone
+              </Text>
+              <TextInput
+                placeholder="Enter OTP"
+                value={otp}
+                onChange={(e) => setOtp(e.nativeEvent.text)}
+                secureTextEntry={false}
+                maxLength={6}
+                keyboardType="numeric"
+                style={[styles.input, { marginBottom: 10, letterSpacing: 5 }]}
+              />
+            </View>
+
+            <Text style={styles.resendOtp} onPress={handleRequestOTP}>
+              Didn't receive OTP? Resend
             </Text>
-          </TouchableOpacity>
-        </View>
+
+            <View style={{ alignItems: "center" }}>
+              <TouchableOpacity
+                style={styles.loginButton}
+                onPress={handleLogin}
+                disabled={isLoading}
+              >
+                {isLoading ? (
+                  <ActivityIndicator color="#fff" />
+                ) : (
+                  <Text style={styles.buttonText}>Login</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </>
+        )}
+
+        <Text style={styles.newUserText}>
+          New User?
+          <Text
+            style={styles.signupText}
+            onPress={() => router.push("/auth/signup")}
+          >
+            {" "}
+            Sign Up
+          </Text>
+        </Text>
       </View>
     </SafeAreaView>
   );
 };
 
-export default login;
+export default Login;
 
 export const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#fff",
   },
-
   header_container: {
     width: "100%",
     height: "20%",
@@ -168,24 +218,74 @@ export const styles = StyleSheet.create({
     backgroundColor: "rgba(217, 217, 217, 0.4)",
     paddingLeft: 20,
   },
-
   text: {
     ...TYPOGRAPHY.body,
     fontFamily: FONT_WEIGHT.semiBold,
     color: primary_textColor,
     marginBottom: 5,
   },
-
   subtext: {
     ...TYPOGRAPHY.caption,
     color: primary_textColor,
     marginTop: 5,
   },
-
+  errorText: {
+    color: "red",
+    marginBottom: 15,
+    textAlign: "center",
+  },
+  inputLabel: {
+    ...TYPOGRAPHY.caption,
+    fontFamily: FONT_WEIGHT.medium,
+    color: "grey",
+    marginBottom: 5,
+  },
   input: {
     backgroundColor: "rgba(217, 217, 217, 0.4)",
     borderRadius: 5,
     padding: 15,
     marginBottom: 10,
+  },
+  requestOtpContainer: {
+    alignItems: "center",
+    marginTop: 20,
+  },
+  requestOtpButton: {
+    backgroundColor: primaryColor,
+    padding: 15,
+    borderRadius: 50,
+    width: "70%",
+    alignItems: "center",
+  },
+  loginButton: {
+    backgroundColor: primaryColor,
+    padding: 15,
+    borderRadius: 50,
+    marginTop: 20,
+    width: "70%",
+    alignItems: "center",
+  },
+  buttonText: {
+    color: "#fff",
+    textAlign: "center",
+    ...TYPOGRAPHY.button,
+  },
+  resendOtp: {
+    ...TYPOGRAPHY.caption,
+    color: primaryColor,
+    marginTop: 10,
+    textAlign: "right",
+    marginBottom: 20,
+  },
+  newUserText: {
+    ...TYPOGRAPHY.body,
+    fontFamily: FONT_WEIGHT.regular,
+    color: primary_textColor,
+    marginTop: 30,
+    textAlign: "center",
+  },
+  signupText: {
+    fontFamily: FONT_WEIGHT.semiBold,
+    color: primaryColor,
   },
 });

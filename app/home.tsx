@@ -7,7 +7,7 @@ const home = () => {
     <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
       <TouchableOpacity
         style={{ padding: 20, backgroundColor: "#007BFF", borderRadius: 5 }}
-        onPress={() => router.push("/auth/signup")}
+        onPress={() => router.push("/auth/login")}
       >
         <Text>Log in</Text>
       </TouchableOpacity>
