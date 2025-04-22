@@ -23,20 +23,16 @@ const otpVerification = () => {
   const handleOtpChange = async () => {
     setIsLoading(true);
     console.log("OTP logic here");
-   try {
-    // const session = await account.createSession(
-    //   userId,
-    //   otp
-    // );
-    // console.log("Session created:", session);
+    try {
+      const session = await account.createSession(userId, otp);
+      console.log("Session created:", session);
 
-    router.push("/auth/set-mpin");
-
-   } catch (error) {
-     console.error("Error handling OTP:", error);
-     }finally {
+      router.push("/auth/set-mpin");
+    } catch (error) {
+      console.error("Error handling OTP:", error);
+    } finally {
       setIsLoading(false);
-     }
+    }
   };
 
   return (
@@ -83,7 +79,6 @@ const otpVerification = () => {
           marginTop: (height - 600) / 2, // Dynamically calculate margin to center vertically
         }}
       >
-      
         <View style={{ marginTop: 10 }}>
           <Text
             style={{
@@ -128,7 +123,7 @@ const otpVerification = () => {
               width: "70%",
             }}
             onPress={handleOtpChange}
-            disabled={isLoading}  
+            disabled={isLoading}
           >
             <Text
               style={{
