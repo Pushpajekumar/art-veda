@@ -1,9 +1,14 @@
+import TabBar from "@/component/tab-bar";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { Tabs } from "expo-router";
 
 export default function TabLayout() {
   return (
-    <Tabs screenOptions={{ tabBarActiveTintColor: "blue" }}>
+    <Tabs
+      screenOptions={{ tabBarActiveTintColor: "blue" }}
+      tabBar={(props) => <TabBar {...props} />}
+    >
       <Tabs.Screen
         name="index"
         options={{
@@ -29,6 +34,15 @@ export default function TabLayout() {
           title: "Profile",
           tabBarIcon: ({ color }) => (
             <FontAwesome size={28} name="user" color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="options"
+        options={{
+          title: "Options",
+          tabBarIcon: ({ color }) => (
+            <Ionicons name="options" size={28} color={color} />
           ),
         }}
       />
