@@ -10,8 +10,10 @@ import React from "react";
 import { Ionicons, FontAwesome, MaterialIcons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { FONT_WEIGHT, TYPOGRAPHY } from "@/utils/fonts";
+import { useRouter } from "expo-router";
 
 const Options = () => {
+  const router = useRouter();
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView showsVerticalScrollIndicator={false}>
@@ -28,7 +30,7 @@ const Options = () => {
               <Text style={styles.profilePhone}>9876543210</Text>
             </View>
           </View>
-          <TouchableOpacity>
+          <TouchableOpacity onPress={() => router.push("/edit-profile")}>
             <Text style={styles.editButton}>Edit</Text>
           </TouchableOpacity>
         </View>
