@@ -31,16 +31,16 @@ const signup = () => {
     console.log("Signup logic here");
 
     try {
-      // const token = await account.createPhoneToken(
-      //   ID.unique(),
-      //   `+91${phoneNumber}`
-      // );
+      const token = await account.createPhoneToken(
+        ID.unique(),
+        `+91${phoneNumber}`
+      );
 
       router.push({
         pathname: "/auth/otp-verification",
-        // params: {
-        //   userId: token.userId,
-        // },
+        params: {
+          userId: token.userId,
+        },
       });
       // console.log("Token created:", token);
     } catch (error) {
@@ -166,7 +166,18 @@ const signup = () => {
             textAlign: "center",
           }}
         >
-          Already a User? Login
+          Already a User?
+          <Text
+            style={{
+              ...TYPOGRAPHY.body,
+              fontFamily: FONT_WEIGHT.semiBold,
+              color: primaryColor,
+            }}
+            onPress={() => router.push("/auth/login")}
+          >
+            {" "}
+            Login
+          </Text>
         </Text>
 
         <View style={{ alignItems: "center" }}>

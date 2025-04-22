@@ -13,7 +13,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import { primary_textColor, primaryColor } from "@/constant/contant";
 import { FONT_WEIGHT, TYPOGRAPHY } from "@/utils/fonts";
-import { router, useRouter } from "expo-router";
+import { useRouter } from "expo-router";
 import { account, ID } from "@/context/app-write";
 
 const Login = () => {
@@ -39,11 +39,11 @@ const Login = () => {
     }
 
     try {
-      // const token = await account.createPhoneToken(
-      //   ID.unique(),
-      //   `+91${phoneNumber}`
-      // );
-      // setUserId(token.userId);
+      const token = await account.createPhoneToken(
+        ID.unique(),
+        `+91${phoneNumber}`
+      );
+      setUserId(token.userId);
       setShowOtpField(true);
       setIsLoading(false);
       Alert.alert("OTP Sent", "An OTP has been sent to your phone number");
@@ -59,17 +59,17 @@ const Login = () => {
     setIsLoading(true);
     setError("");
 
-    // if (!otp || otp.length < 4) {
-    //   setError("Please enter a valid OTP");
-    //   setIsLoading(false);
-    //   return;
-    // }
+    if (!otp || otp.length < 4) {
+      setError("Please enter a valid OTP");
+      setIsLoading(false);
+      return;
+    }
 
     try {
       // Create session with the userId and OTP
-      // const session = await account.createSession(userId, otp);
+      const session = await account.createSession(userId, otp);
 
-      // console.log("Login successful:", session);
+      console.log("Login successful:", session);
       setIsLoading(false);
       router.push("/auth/enter-mpin");
     } catch (error) {
