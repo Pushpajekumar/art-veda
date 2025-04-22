@@ -22,25 +22,25 @@ const signup = () => {
   const handleSignup = async () => {
     setIsLoading(true);
 
-    if (!phoneNumber || phoneNumber.length !== 10) {
-      alert("Please enter a valid 10-digit phone number");
-      setIsLoading(false);
-      return;
-    }
+    // if (!phoneNumber || phoneNumber.length !== 10) {
+    //   alert("Please enter a valid 10-digit phone number");
+    //   setIsLoading(false);
+    //   return;
+    // }
 
     console.log("Signup logic here");
 
     try {
-      const token = await account.createPhoneToken(
-        ID.unique(),
-        `+91${phoneNumber}`
-      );
+      // const token = await account.createPhoneToken(
+      //   ID.unique(),
+      //   `+91${phoneNumber}`
+      // );
 
       router.push({
         pathname: "/auth/otp-verification",
-        params: {
-          userId: token.userId,
-        },
+        // params: {
+        //   userId: token.userId,
+        // },
       });
       // console.log("Token created:", token);
     } catch (error) {

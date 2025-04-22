@@ -24,10 +24,10 @@ const otpVerification = () => {
     setIsLoading(true);
     console.log("OTP logic here");
     try {
-      const session = await account.createSession(userId, otp);
-      console.log("Session created:", session);
+      // const session = await account.createSession(userId, otp);
+      // console.log("Session created:", session);
 
-      router.push("/auth/set-mpin");
+      router.push("/select-political-party");
     } catch (error) {
       console.error("Error handling OTP:", error);
     } finally {

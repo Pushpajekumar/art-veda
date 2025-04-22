@@ -13,6 +13,7 @@ import Entypo from "@expo/vector-icons/Entypo";
 import EvilIcons from "@expo/vector-icons/EvilIcons";
 import PoliticalPartyCard from "@/component/political-party-card";
 import { router } from "expo-router";
+import { account } from "@/context/app-write";
 
 const politicalParties = [
   {
@@ -66,6 +67,25 @@ const selectpoliticalparty = () => {
     router.replace("/(tabs)");
   };
 
+  type PoliticalParty = {
+    name: string;
+    shortName: string;
+    logo: string;
+  };
+
+  const handlePartySelect = async (party: PoliticalParty) => {
+    try {
+      // await account.updatePrefs({
+      //   politicalParty: party.shortName,
+      // });
+      console.log("Selected party:", party);
+      // Navigate to the next screen
+      router.replace("/auth/personal-details");
+    } catch (error) {
+      console.error("Error selecting party:", error);
+    }
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header_container}>
@@ -98,7 +118,11 @@ const selectpoliticalparty = () => {
       <FlatList
         data={filteredParties}
         keyExtractor={(item) => item.shortName}
-        renderItem={({ item }) => <PoliticalPartyCard party={item} />}
+        renderItem={({ item }) => (
+          <TouchableOpacity onPress={() => handlePartySelect(item)}>
+            <PoliticalPartyCard party={item} />
+          </TouchableOpacity>
+        )}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.listContainer}
         ListEmptyComponent={
