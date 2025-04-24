@@ -9,6 +9,7 @@ import { primary_textColor, primaryColor } from "@/constant/contant";
 import AntDesign from "@expo/vector-icons/AntDesign";
 import CarouselComp from "@/component/carousel-comp";
 import { router } from "expo-router";
+import DailyEvent from "@/component/daily-event";
 
 // Sample image URLs for the carousel that we've extracted from the carousel component
 const trendingPostsImages = [
@@ -79,25 +80,7 @@ const OfficialHome = () => {
             <Text style={styles.calendarText}>Calendar Events 2025</Text>
           </View>
 
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.dateScrollContainer}
-          >
-            {Array.from({ length: 30 }, (_, i) => {
-              const date = new Date();
-              date.setDate(date.getDate() + i);
-              const day = date.getDate().toString().padStart(2, "0");
-              const month = date.toLocaleString("default", { month: "short" });
-
-              return (
-                <View key={i} style={styles.dateCard}>
-                  <Text style={styles.dateDay}>{day}</Text>
-                  <Text style={styles.dateMonth}>{month}</Text>
-                </View>
-              );
-            })}
-          </ScrollView>
+          <DailyEvent />
         </View>
 
         {/* Trending Posts Carousel */}

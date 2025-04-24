@@ -87,7 +87,10 @@ const OfficialHome = () => {
             {Array.from({ length: 30 }, (_, i) => {
               const date = new Date();
               date.setDate(date.getDate() + i);
-              const day = date.getDate().toString().padStart(2, "0");
+              const day = date
+                .getDate()
+                .toString()
+                .padStart(2, "0");
               const month = date.toLocaleString("default", { month: "short" });
 
               return (
