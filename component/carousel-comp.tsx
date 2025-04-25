@@ -34,64 +34,70 @@ const CarouselComp: React.FC<CarouselCompProps> = ({
   return (
     <View style={{ flex: 1}}>
       <View
-        style={{
-          flexDirection: "row",
-          justifyContent: "space-between",
-          alignItems: "center",
-          marginBottom: 16,
-        }}
+      style={{
+        flexDirection: "row",
+        justifyContent: "space-between",
+        alignItems: "center",
+        marginBottom: 16,
+      }}
       >
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
-          <Feather name="trending-up" size={18} color="black" />
-          <Text style={{ ...TYPOGRAPHY.body, fontWeight: "bold" }}>
-            {title}
-          </Text>
+      <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
+        <Feather name="trending-up" size={18} color="black" />
+        <Text style={{ ...TYPOGRAPHY.body, fontWeight: "bold" }}>
+        {title}
+        </Text>
+      </View>
+      {showViewAll && (
+        <View style={{ flexDirection: "row", alignItems: "center" }}>
+        <Text style={{ color: "#666" }} onPress={onViewAllPress}>
+          View All
+        </Text>
+        <Entypo name="chevron-small-right" size={24} color="#666" />
         </View>
-        {showViewAll && (
-          <View style={{ flexDirection: "row", alignItems: "center" }}>
-            <Text style={{ color: "#666" }} onPress={onViewAllPress}>
-              View All
-            </Text>
-            <Entypo name="chevron-small-right" size={24} color="#666" />
-          </View>
-        )}
+      )}
       </View>
       <View style={{ flex: 1 }}>
+      {images.length === 0 ? (
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <Text style={{ ...TYPOGRAPHY.body, color: '#666' }}>Loading...</Text>
+        </View>
+      ) : (
         <Carousel
-          ref={ref}
-          width={width / 2.5}
-          height={width / 2.5}
-          data={images}
-          loop
-          autoPlay
+        ref={ref}
+        width={width / 2.5}
+        height={width / 2.5}
+        data={images}
+        loop
+        autoPlay
+        style={{
+          width: "100%",
+        }}
+        onProgressChange={(_, absoluteProgress) =>
+          (progress.value = absoluteProgress)
+        }
+        renderItem={({ index }) => (
+          <View
           style={{
-            width: "100%",
+            flex: 1,
+            borderRadius: 10,
+            overflow: "hidden",
+            backgroundColor: "#f9f9f9",
+            gap: 10,
+            width: "100%", // Use full item width
+            padding: 5,
           }}
-          onProgressChange={(_, absoluteProgress) =>
-            (progress.value = absoluteProgress)
-          }
-          renderItem={({ index }) => (
-            <View
-              style={{
-                flex: 1,
-                borderRadius: 10,
-                overflow: "hidden",
-                backgroundColor: "#f9f9f9",
-                gap: 10,
-                width: "100%", // Use full item width
-                padding: 5,
-              }}
-            >
-              <View style={{ width: "100%", height: "100%" }}>
-                <Image
-                  source={{ uri: images[index] }}
-                  style={{ width: "100%", height: "100%", borderRadius: 8 }}
-                  resizeMode="cover"
-                />
-              </View>
-            </View>
-          )}
+          >
+          <View style={{ width: "100%", height: "100%" }}>
+            <Image
+            source={{ uri: images[index] }}
+            style={{ width: "100%", height: "100%", borderRadius: 8 }}
+            resizeMode="cover"
+            />
+          </View>
+          </View>
+        )}
         />
+      )}
       </View>
     </View>
   );
