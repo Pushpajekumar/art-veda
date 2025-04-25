@@ -84,18 +84,30 @@ const OfficialHome = () => {
         </View>
 
         {/* Trending Posts Carousel */}
-        <CarouselComp
-          images={trendingPostsImages}
-          title="Trending Posts"
-          onViewAllPress={handleViewAllTrending}
-        />
+        <View
+          style={{
+            padding: 16,
+          }}
+        >
+          <CarouselComp
+            images={trendingPostsImages}
+            title="Trending Posts"
+            onViewAllPress={handleViewAllTrending}
+          />
+        </View>
 
         {/* Optional: Featured Events Carousel */}
-        <CarouselComp
-          images={featuredEventsImages}
-          title="Featured Events"
-          onViewAllPress={handleViewAllEvents}
-        />
+        <View
+          style={{
+            padding: 16,
+          }}
+        >
+          <CarouselComp
+            images={featuredEventsImages}
+            title="Featured Events"
+            onViewAllPress={handleViewAllEvents}
+          />
+        </View>
       </ScrollView>
     </SafeAreaView>
   );

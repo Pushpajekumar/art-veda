@@ -1,12 +1,39 @@
-import { View, Text, ScrollView, StyleSheet, Alert } from "react-native";
-import React, { useEffect } from "react";
+import {
+  View,
+  Text,
+  ScrollView,
+  StyleSheet,
+  Alert,
+  Animated,
+} from "react-native";
+import React, { useEffect, useRef } from "react";
 import { TYPOGRAPHY } from "@/utils/fonts";
 import { database } from "@/context/app-write";
 import { Query, Models } from "react-native-appwrite";
 import CarouselComp from "./carousel-comp";
+import { primaryColor } from "@/constant/contant";
 
 const DailyEvent = () => {
   const [events, setEvents] = React.useState<Models.Document[]>([]);
+  const [loading, setLoading] = React.useState(true);
+  const fadeAnim = useRef(new Animated.Value(0.5)).current;
+
+  useEffect(() => {
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(fadeAnim, {
+          toValue: 1,
+          duration: 1000,
+          useNativeDriver: true,
+        }),
+        Animated.timing(fadeAnim, {
+          toValue: 0.5,
+          duration: 1000,
+          useNativeDriver: true,
+        }),
+      ])
+    ).start();
+  }, [fadeAnim]);
 
   useEffect(() => {
     const fetchTodayEvent = async () => {
@@ -54,7 +81,6 @@ const DailyEvent = () => {
   console.log(events, "events 🟢");
   return (
     <View>
-      {/* //TODO: Add a loading state and also it has padding horizontal issue */}
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
@@ -70,23 +96,75 @@ const DailyEvent = () => {
           const month = date.toLocaleString("default", { month: "short" });
 
           return (
-            <View key={i} style={styles.dateCard}>
+            <View
+              key={i}
+              style={[
+                styles.dateCard,
+                i === 0
+                  ? {
+                      backgroundColor: "#e6f2ff",
+                      borderColor: primaryColor,
+                      borderWidth: 1,
+                    }
+                  : {},
+              ]}
+            >
               <View>
-                <Text style={styles.dateDay}>{day}</Text>
-                <Text style={styles.dateMonth}>{month}</Text>
+                <Text
+                  style={[
+                    styles.dateDay,
+                    i === 0 ? { color: primaryColor } : {},
+                  ]}
+                >
+                  {day}
+                </Text>
+                <Text
+                  style={[
+                    styles.dateMonth,
+                    i === 0 ? { color: primaryColor } : {},
+                  ]}
+                >
+                  {month}
+                </Text>
               </View>
             </View>
           );
         })}
       </ScrollView>
-    <View>
-      <CarouselComp
-        images={events.flatMap(event => 
-        event.template ? event.template.map((template: {previewImage: string}) => template.previewImage) : []
+      <View>
+        {loading ? (
+          <View>
+            <Animated.View
+              style={[
+                styles.skeletonImage,
+                {
+                  opacity: fadeAnim,
+                  borderRadius: 8,
+                  marginVertical: 10,
+                  height: 150,
+                  width: "100%",
+                },
+              ]}
+            />
+          </View>
+        ) : events.length > 0 ? (
+          <CarouselComp
+            images={events.flatMap((event) =>
+              event.template
+                ? event.template.map(
+                    (template: { previewImage: string }) =>
+                      template.previewImage
+                  )
+                : []
+            )}
+            title="Daily Event"
+          />
+        ) : (
+          <View style={{ padding: 20, alignItems: "center" }}>
+            <Text style={TYPOGRAPHY.body}>No events for today</Text>
+          </View>
         )}
-        title="Daily Event"
-      />
-    </View>
+      </View>
     </View>
   );
 };
@@ -117,5 +195,39 @@ export const styles = StyleSheet.create({
   dateMonth: {
     ...TYPOGRAPHY.caption,
     color: "#666",
+  },
+
+  skeletonContainer: {
+    flexDirection: "row",
+    backgroundColor: "#f5f5f5",
+    borderRadius: 8,
+    overflow: "hidden",
+  },
+
+  skeletonImage: {
+    width: 100,
+    height: 100,
+    backgroundColor: "#e0e0e0",
+  },
+
+  skeletonTextContainer: {
+    flex: 1,
+    padding: 10,
+    justifyContent: "center",
+  },
+
+  skeletonTitle: {
+    height: 20,
+    width: "80%",
+    backgroundColor: "#e0e0e0",
+    marginBottom: 8,
+    borderRadius: 4,
+  },
+
+  skeletonText: {
+    height: 15,
+    width: "60%",
+    backgroundColor: "#e0e0e0",
+    borderRadius: 4,
   },
 });
