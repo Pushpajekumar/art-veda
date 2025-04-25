@@ -36,6 +36,7 @@ const DailyEvent = () => {
   }, [fadeAnim]);
 
   useEffect(() => {
+    setLoading(true);
     const fetchTodayEvent = async () => {
       const databaseId = process.env.EXPO_PUBLIC_APPWRITE_DATABASE_ID!;
       const collectionId = process.env.EXPO_PUBLIC_APPWRITE_DAILY_EVENT_ID!;
@@ -72,6 +73,8 @@ const DailyEvent = () => {
         }
       } catch (error) {
         console.error("Error fetching today's event:", error);
+      } finally {
+        setLoading(false);
       }
     };
 

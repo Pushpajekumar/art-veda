@@ -64,13 +64,13 @@ const OfficialHome = () => {
   }, []);
 
   // Debug logging for subcategories data
-  useEffect(() => {
-    if (subCategories.length > 0) {
-      console.log('Subcategory template data:', 
-        JSON.stringify(subCategories[0]?.template || [], null, 2)
-      );
-    }
-  }, [subCategories]);
+  // useEffect(() => {
+  //   if (subCategories.length > 0) {
+  //     console.log('Subcategory template data:', 
+  //       JSON.stringify(subCategories[0]?.template || [], null, 2)
+  //     );
+  //   }
+  // }, [subCategories]);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -113,7 +113,6 @@ const OfficialHome = () => {
           <DailyEvent />
         </View>
 
-        {/* Trending Posts Carousel */}
         {/* Dynamic subcategories carousels */}
         {subCategories
           .sort((a, b) => a.numbering - b.numbering)
