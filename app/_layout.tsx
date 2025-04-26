@@ -40,14 +40,14 @@ export default function RootLayout() {
       <Stack
         screenOptions={{
           headerStyle: {
-        backgroundColor: "#ffffff",
+            backgroundColor: "#ffffff",
           },
           headerTintColor: "#000000",
           headerTitleStyle: {
-        fontFamily: "Montserrat",
+            fontFamily: "Montserrat",
           },
           contentStyle: {
-        backgroundColor: "#ffffff",
+            backgroundColor: "#ffffff",
           },
         }}
       >
@@ -55,32 +55,39 @@ export default function RootLayout() {
         <Stack.Screen
           name="home"
           options={{
-        headerShown: false,
+            headerShown: false,
           }}
         />
         <Stack.Screen
           name="auth"
           options={{
-        headerShown: false,
+            headerShown: false,
           }}
         />
         <Stack.Screen
           name="select-political-party"
           options={{
-        headerShown: false,
+            headerShown: false,
           }}
         />
         <Stack.Screen
           name="(tabs)"
           options={{
-        headerShown: false,
+            headerShown: false,
           }}
         />
         <Stack.Screen
           name="edit-profile"
           options={{
-        // headerShown: false,
-        headerBackTitle: "Profile",
+            // headerShown: false,
+            headerBackTitle: "Profile",
+          }}
+        />
+        <Stack.Screen
+          name="view-all"
+          options={{
+            headerShown: false,
+            headerBackTitle: "Back",
           }}
         />
       </Stack>

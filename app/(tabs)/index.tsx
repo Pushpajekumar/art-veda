@@ -34,18 +34,6 @@ const featuredEventsImages = [
 const OfficialHome = () => {
   const [subCategories, setSubCategories] = React.useState<any[]>([]);
 
-  const handleViewAllTrending = () => {
-    // Navigate to trending posts page
-    console.log("Navigate to all trending posts");
-    // router.push("/trending-posts");
-  };
-
-  const handleViewAllEvents = () => {
-    // Navigate to all events page
-    console.log("Navigate to all events");
-    // router.push("/events");
-  };
-
   useEffect(() => {
     const fetchSubCategories = async () => {
       try {
@@ -128,10 +116,8 @@ const OfficialHome = () => {
                   item.previewImage || "https://via.placeholder.com/400"
                 ) || []}
                 title={subcategory.name}
-                onViewAllPress={() => {
-                  console.log(`Navigate to ${subcategory.name}`);
-                  // router.push(`/subcategory/${subcategory.$id}`);
-                }}
+               subCatName={subcategory.name}
+                subCatId={subcategory.$id}
               />
             </View>
           ))}
@@ -143,7 +129,7 @@ const OfficialHome = () => {
               <CarouselComp
                 images={trendingPostsImages}
                 title="Trending Posts"
-                onViewAllPress={handleViewAllTrending}
+                subCatId="trending"
               />
             </View>
 
@@ -151,7 +137,7 @@ const OfficialHome = () => {
               <CarouselComp
                 images={featuredEventsImages}
                 title="Featured Events"
-                onViewAllPress={handleViewAllEvents}
+                subCatId="featured-events"
               />
             </View>
           </>

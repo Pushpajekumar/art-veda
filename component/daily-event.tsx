@@ -161,6 +161,8 @@ const DailyEvent = () => {
                 : []
             )}
             title="Daily Event"
+            subCatId={events[0].$id}
+            showViewAll={false}
           />
         ) : (
           <View style={{ padding: 20, alignItems: "center" }}>
