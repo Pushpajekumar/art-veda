@@ -83,9 +83,6 @@ const CarouselComp: React.FC<CarouselCompProps> = ({
             style={{
               width: "100%",
             }}
-            onProgressChange={(_, absoluteProgress) =>
-              (progress.value = absoluteProgress)
-            }
             renderItem={({ index }) => (
               <View
                 style={{
@@ -94,7 +91,7 @@ const CarouselComp: React.FC<CarouselCompProps> = ({
                   overflow: "hidden",
                   backgroundColor: "#f9f9f9",
                   gap: 10,
-                  width: "100%", // Use full item width
+                  width: "100%",
                   padding: 5,
                 }}
               >

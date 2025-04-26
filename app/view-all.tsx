@@ -65,7 +65,15 @@ const index = () => {
           <View style={styles.gridContainer}>
             {templates.length > 0 ? (
               templates.map((template) => (
-                <View key={template.id} style={styles.gridItem}>
+                <View key={template.id} style={styles.gridItem}  
+                onTouchEnd={() => {
+                                    router.push({
+                                      pathname: "/edit-screen",
+                                      params: {
+                                      postId: template.id,
+                                      },
+                                    });
+                                  }}>
                   <Image 
                     source={{ uri: template.previewImage }} 
                     style={styles.image}
