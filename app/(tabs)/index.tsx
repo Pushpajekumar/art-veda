@@ -69,27 +69,24 @@ const OfficialHome = () => {
           end={{ x: 1, y: 0 }}
           style={styles.header_container}
         >
-          <View style={styles.searchContainer}>
-            <View style={styles.searchIconContainer}>
-              <EvilIcons name="search" size={24} color="black" />
+            <View style={styles.searchContainer}>
+              <View 
+                style={styles.searchInputContainer}
+                onTouchEnd={() => router.push("/search-screen")}
+              >
+                <View style={styles.searchIconContainer}></View>
+                <EvilIcons name="search" size={24} color="black" />
+                <Text style={styles.searchPlaceholder}>Search category or media</Text>
+              </View>
+              <FontAwesome
+                name="bell-o"
+                size={24}
+                color="black"
+                style={{
+                  marginLeft: 10,
+                }}
+              />
             </View>
-            <TextInput
-              placeholder="Search category or media"
-              style={styles.search_input}
-              placeholderTextColor="#aaa"
-              autoCapitalize="none"
-              autoCorrect={false}
-              clearButtonMode="while-editing"
-            />
-            <FontAwesome
-              name="bell-o"
-              size={24}
-              color="black"
-              style={{
-                marginLeft: 10,
-              }}
-            />
-          </View>
         </LinearGradient>
 
         <View style={styles.calendarContainer}>
@@ -166,10 +163,23 @@ export const styles = StyleSheet.create({
     justifyContent: "space-between",
     marginTop: 10,
   },
+  searchInputContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    flex: 1,
+    backgroundColor: "#ffffff",
+    borderRadius: 8,
+    padding: 8,
+  },
   searchIconContainer: {
     position: "absolute",
     left: 10,
     zIndex: 1,
+  },
+  searchPlaceholder: {
+    ...TYPOGRAPHY.body,
+    marginLeft: 5,
+    color: "#888",
   },
   search_input: {
     borderWidth: 1,
