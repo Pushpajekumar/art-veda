@@ -18,6 +18,7 @@ import {
   Text as SkiaText,
   useFont,
 } from "@shopify/react-native-skia";
+import { width } from "@/constant/contant";
 
 const EditScreen = () => {
   const { postId } = useLocalSearchParams();
@@ -26,6 +27,8 @@ const EditScreen = () => {
   const [error, setError] = React.useState<unknown | null>(null);
   const [frames, setFrames] = React.useState<any[]>([]);
   const [selectedFrame, setSelectedFrame] = React.useState<any>(null);
+  const [canvasWidth, setCanvasWidth] = React.useState(0);
+  const [canvasHeight, setCanvasHeight] = React.useState(0);
 
   useEffect(() => {
     const fetchPost = async () => {
@@ -45,11 +48,13 @@ const EditScreen = () => {
           ),
         ]);
 
-        setPost(postDetails);
-        setFrames(framesResponse.documents);
+        setPost(postDetails.previewImage);
+        setCanvasWidth(postDetails.width);
+        setCanvasHeight(postDetails.height);
+        // setFrames(framesResponse.documents);
 
         console.log(postDetails, "Post Details 🟢");
-        console.log(framesResponse.documents, "Frames 🟡");
+        // console.log(framesResponse.documents, "Frames 🟡");
       } catch (err) {
         console.error("Error fetching data:", err);
         setError(err);
@@ -61,7 +66,7 @@ const EditScreen = () => {
     fetchPost();
   }, [postId]);
 
-  const image = useImage(require("../assets/images/icon.png"));
+  const image = useImage(post);
   const fontSize = 32;
   const font = useFont(
     require("../assets/fonts/Montserrat-Light.ttf"),
@@ -84,26 +89,41 @@ const EditScreen = () => {
             <Text style={styles.title}>{post.name}</Text>
 
             {/* Preview Section */}
-            <Canvas
-              style={{
-                flex: 1,
-                width: "100%",
-                height: 300,
-                backgroundColor: "grey",
-              }}
-            >
-              {/* Canvas content here */}
-              <SkiaImage
-                image={image}
-                fit="contain"
-                x={100}
-                y={100}
-                width={256}
-                height={256}
-              />
+            <View style={styles.previewContainer}>
+              <ScrollView
+                horizontal={true}
+                maximumZoomScale={3}
+                showsHorizontalScrollIndicator={true}
+                contentContainerStyle={{
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                <Canvas
+                  style={{
+                    width: width - 40, // 20px padding on both sides
+                    height: canvasWidth
+                      ? (canvasHeight / canvasWidth) * (width - 40)
+                      : width - 40,
+                    backgroundColor: "lightgrey",
+                  }}
+                >
+                  {/* Canvas content here */}
+                  <SkiaImage
+                    image={image}
+                    fit="contain"
+                    x={0}
+                    y={0}
+                    width={width - 40}
+                    height={canvasWidth
+                      ? (canvasHeight / canvasWidth) * (width - 40)
+                      : width - 40}
+                  />
 
-              <SkiaText x={100} y={100} text="Hello World" font={font} />
-            </Canvas>
+                  <SkiaText x={20} y={40} text="Hello World" font={font} />
+                </Canvas>
+              </ScrollView>
+            </View>
           </View>
         )}
       </ScrollView>
