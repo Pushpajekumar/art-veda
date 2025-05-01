@@ -1,9 +1,23 @@
-import { View, Text, ScrollView, Image, TouchableOpacity, StyleSheet } from "react-native";
+import {
+  View,
+  Text,
+  ScrollView,
+  Image,
+  TouchableOpacity,
+  StyleSheet,
+} from "react-native";
 import React, { useEffect } from "react";
 import { useLocalSearchParams } from "expo-router";
 import { database } from "@/context/app-write";
 import { Query } from "react-native-appwrite";
 import { SafeAreaView } from "react-native-safe-area-context";
+import {
+  Canvas,
+  Image as SkiaImage,
+  useImage,
+  Text as SkiaText,
+  useFont,
+} from "@shopify/react-native-skia";
 
 const EditScreen = () => {
   const { postId } = useLocalSearchParams();
@@ -16,36 +30,43 @@ const EditScreen = () => {
   useEffect(() => {
     const fetchPost = async () => {
       try {
-      setLoading(true);
-      
-      const [postDetails, framesResponse] = await Promise.all([
-        database.getDocument(
-        process.env.EXPO_PUBLIC_APPWRITE_DATABASE_ID!,
-        process.env.EXPO_PUBLIC_APPWRITE_TEMPLATE_COLLECTION_ID!,
-        postId as string
-        // [Query.select(["$id, name, previewImage, width, height"])]
-        ),
-        database.listDocuments(
-        process.env.EXPO_PUBLIC_APPWRITE_DATABASE_ID!,
-        process.env.EXPO_PUBLIC_APPWRITE_FRAMES_COLLECTION_ID!
-        )
-      ]);
-      
-      setPost(postDetails);
-      setFrames(framesResponse.documents);
-      
-      console.log(postDetails, "Post Details 🟢");
-      console.log(framesResponse.documents, "Frames 🟡");
+        setLoading(true);
+
+        const [postDetails, framesResponse] = await Promise.all([
+          database.getDocument(
+            process.env.EXPO_PUBLIC_APPWRITE_DATABASE_ID!,
+            process.env.EXPO_PUBLIC_APPWRITE_TEMPLATE_COLLECTION_ID!,
+            postId as string
+            // [Query.select(["$id, name, previewImage, width, height"])]
+          ),
+          database.listDocuments(
+            process.env.EXPO_PUBLIC_APPWRITE_DATABASE_ID!,
+            process.env.EXPO_PUBLIC_APPWRITE_FRAMES_COLLECTION_ID!
+          ),
+        ]);
+
+        setPost(postDetails);
+        setFrames(framesResponse.documents);
+
+        console.log(postDetails, "Post Details 🟢");
+        console.log(framesResponse.documents, "Frames 🟡");
       } catch (err) {
-      console.error("Error fetching data:", err);
-      setError(err);
+        console.error("Error fetching data:", err);
+        setError(err);
       } finally {
-      setLoading(false);
+        setLoading(false);
       }
     };
 
     fetchPost();
   }, [postId]);
+
+  const image = useImage(require("../assets/images/icon.png"));
+  const fontSize = 32;
+  const font = useFont(
+    require("../assets/fonts/Montserrat-Light.ttf"),
+    fontSize
+  );
 
   return (
     <View style={styles.safeArea}>
@@ -61,51 +82,28 @@ const EditScreen = () => {
         ) : (
           <View style={styles.container}>
             <Text style={styles.title}>{post.name}</Text>
-            
-            {/* Preview Image */}
-            {post.previewImage && (
-              <View style={styles.previewContainer}>
-                <Image 
-                  source={{ uri: post.previewImage }} 
-                  style={styles.previewImage}
-                  resizeMode="contain"
-                />
-              </View>
-            )}
-            
-            {/* Frames Section */}
-            {frames.length > 0 && (
-              <View style={styles.framesSection}>
-                <Text style={styles.sectionTitle}>Available Frames</Text>
-                <ScrollView 
-                  horizontal 
-                  showsHorizontalScrollIndicator={false} 
-                  style={styles.framesScrollView}
-                  contentContainerStyle={styles.framesContentContainer}
-                >
-                  {frames.map((frame) => (
-                    <TouchableOpacity 
-                      key={frame.$id}
-                      style={[
-                        styles.frameItem,
-                        selectedFrame?.$id === frame.$id ? styles.selectedFrame : styles.normalFrame
-                      ]}
-                      onPress={() => setSelectedFrame(frame)}
-                    >
-                      <Image 
-                        source={{ uri: frame.previewImage }} 
-                        style={styles.frameImage}
-                        resizeMode="cover"
-                      />
-                      <View style={styles.frameDetails}>
-                        <Text style={styles.frameName}>{frame.name || 'Unnamed Frame'}</Text>
-                        <Text style={styles.frameDimensions}>{frame.width}×{frame.height}</Text>
-                      </View>
-                    </TouchableOpacity>
-                  ))}
-                </ScrollView>
-              </View>
-            )}
+
+            {/* Preview Section */}
+            <Canvas
+              style={{
+                flex: 1,
+                width: "100%",
+                height: 300,
+                backgroundColor: "grey",
+              }}
+            >
+              {/* Canvas content here */}
+              <SkiaImage
+                image={image}
+                fit="contain"
+                x={100}
+                y={100}
+                width={256}
+                height={256}
+              />
+
+              <SkiaText x={100} y={100} text="Hello World" font={font} />
+            </Canvas>
           </View>
         )}
       </ScrollView>
@@ -118,7 +116,6 @@ export default EditScreen;
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: "yellow",
     paddingTop: 10, // Adjusted padding top
   },
   scrollView: {
@@ -126,8 +123,8 @@ const styles = StyleSheet.create({
   },
   loadingContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     padding: 20,
   },
   loadingText: {
@@ -135,13 +132,13 @@ const styles = StyleSheet.create({
   },
   errorContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     padding: 20,
   },
   errorText: {
     fontSize: 18,
-    color: 'red',
+    color: "red",
   },
   container: {
     flex: 1,
@@ -150,25 +147,25 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 24,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     marginBottom: 16,
     marginTop: 0, // Keep title close to the top
   },
   previewContainer: {
-    width: '100%',
+    width: "100%",
     aspectRatio: 1,
     marginBottom: 20,
   },
   previewImage: {
-    width: '100%',
-    height: '100%',
+    width: "100%",
+    height: "100%",
   },
   framesSection: {
     marginTop: 20,
   },
   sectionTitle: {
     fontSize: 18,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     marginBottom: 12,
   },
   framesScrollView: {
@@ -181,28 +178,28 @@ const styles = StyleSheet.create({
     width: 150,
     marginRight: 12,
     borderRadius: 8,
-    overflow: 'hidden',
+    overflow: "hidden",
   },
   selectedFrame: {
     borderWidth: 2,
-    borderColor: '#007bff',
+    borderColor: "#007bff",
   },
   normalFrame: {
     borderWidth: 1,
-    borderColor: '#eeeeee',
+    borderColor: "#eeeeee",
   },
   frameImage: {
-    width: '100%',
+    width: "100%",
     height: 100,
   },
   frameDetails: {
     padding: 8,
   },
   frameName: {
-    fontWeight: '500',
+    fontWeight: "500",
   },
   frameDimensions: {
     fontSize: 12,
-    color: '#666',
+    color: "#666",
   },
 });
