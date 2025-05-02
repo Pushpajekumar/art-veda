@@ -114,10 +114,33 @@ const EditScreen = () => {
   };
 
   const getFontWithSize = (weight: string, fontSize: number) => {
-    const scaledSize = fontSize * ((width - 40) / frameWidth);
-    const closestSize = getClosestFontSize(scaledSize);
-    const index = fontSizes.indexOf(closestSize);
+    if (!frameWidth || !frameHeight) {
+      const index = fontSizes.indexOf(12); // Default font size
+      return weight === 'bold' ? boldFonts[index] : regularFonts[index];
+    }
+    
+    const screenWidth = width - 40;
+    const screenHeight = screenWidth * (frameHeight / frameWidth);
+    
+    // Scale ratio from original frame to screen size
+    const scaleX = screenWidth / (frameWidth / 2);;
+    const scaleY = screenHeight / (frameHeight / 2);
+    
+    // Use minimum of both scales for proportional scaling
+    const scale = Math.min(scaleX, scaleY);
 
+    console.log(scaleX, scaleY, scale, "Scale X and Y");
+    
+    // Scale the font size
+    const scaledSize = fontSize * scale;
+
+    console.log(scaledSize, "Scaled Size");
+    
+    // Find closest available font size
+    const closestSize = getClosestFontSize(scaledSize);
+    console.log(closestSize, "Closest Size");
+    const index = fontSizes.indexOf(closestSize - 5);
+    
     if (index === -1) return null;
     return weight === 'bold' ? boldFonts[index] : regularFonts[index];
   };
@@ -194,19 +217,21 @@ const EditScreen = () => {
     }).filter(Boolean) as SkiaRenderable[];
   };
 
-  const calculatePositionFromRatio = (x: number, y: number, fontSize?: number) => {
+  const calculatePositionFromRatio = (x: number, y: number) => {
     if (!frameWidth || !frameHeight) return { x, y };
     
     const screenWidth = width - 40;
     const screenHeight = screenWidth * (frameHeight / frameWidth);
     
     // Scale ratio from original frame to screen size
-    const scaleX = screenWidth / (frameWidth/2);
-    const scaleY = screenHeight / (frameHeight/2);
-
+    const scaleX = screenWidth / (frameWidth / 2);
+    const scaleY = screenHeight / (frameHeight / 2);
+    
     // Apply the scale to position elements correctly
     const newX = x * scaleX;
     const newY = y * scaleY;
+    
+  
     
     console.log(`Original (${x},${y}) -> Scaled (${newX},${newY}), Scale: ${scaleX.toFixed(2)}x${scaleY.toFixed(2)}`);
     
@@ -251,13 +276,6 @@ const EditScreen = () => {
   }, [postId]);
 
   console.log(post, "Post 🟢");
-
-  const image = useImage(post);
-  const fontSize = 20;
-  const font = useFont(
-    require("../assets/fonts/Montserrat-Light.ttf"),
-    fontSize
-  );
 
   const anotherImage = useImage(post);
 
@@ -311,12 +329,12 @@ const EditScreen = () => {
                   height={width - 40}
                  
                   />
-                  <SkiaText x={20} y={40} text="Hello World" font={font} />
                   {elements.map((el) => {
                     if (el.type === 'text') {
 
                       const position = calculatePositionFromRatio(el.x, el.y);
-
+                      const font = getFontWithSize(el.fontWeight, el.fontSize);
+                      if (!font) return null;
                       return (
                         <SkiaText
                           key={el.id}
