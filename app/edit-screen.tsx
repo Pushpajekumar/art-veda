@@ -259,34 +259,7 @@ const EditScreen = () => {
     }
   };
 
-  const switchPost = async (postId: string) => {
-    if (currentPostId === postId) return;
-    
-    setLoading(true);
-    setCurrentPostId(postId);
-    
-    try {
-      const postDetails = await database.getDocument(
-        process.env.EXPO_PUBLIC_APPWRITE_DATABASE_ID!,
-        process.env.EXPO_PUBLIC_APPWRITE_TEMPLATE_COLLECTION_ID!,
-        postId
-      );
-      
-      setPost(postDetails);
-      setCanvasWidth(postDetails.width);
-      setCanvasHeight(postDetails.height);
-      
-      // Reset selected frame when switching posts
-      if (frames.length > 0) {
-        selectFrame(0);
-      }
-    } catch (err) {
-      console.error("Error loading post:", err);
-      setError(err);
-    } finally {
-      setLoading(false);
-    }
-  };
+
 
   useEffect(() => {
     const fetchInitialData = async () => {
