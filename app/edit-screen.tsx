@@ -5,6 +5,7 @@ import {
   Image,
   TouchableOpacity,
   StyleSheet,
+  Dimensions,
 } from "react-native";
 import React, { useEffect, useState, useCallback } from "react";
 import { useLocalSearchParams } from "expo-router";
@@ -95,6 +96,8 @@ const EditScreen = () => {
   const [canvasHeight, setCanvasHeight] = React.useState(0);
   const [elements, setElements] = React.useState<SkiaRenderable[]>([]);
   const [imageSources, setImageSources] = useState<string[]>([]);
+  const [frameWidth, setFrameWidth] = useState(0);
+  const [frameHeight, setFrameHeight] = useState(0);
 
   const regularFont = useFont(require("../assets/fonts/Montserrat-Light.ttf"));
   const boldFont = useFont(require("../assets/fonts/Montserrat-Bold.ttf"));
@@ -176,6 +179,39 @@ const EditScreen = () => {
     return regularFont;
   };
 
+  const calculatePositionFromRatio = (x: number, y: number) => {
+    if (!frameWidth || !frameHeight) return { x, y };
+    
+    const screenWidth = width - 40;
+    const screenHeight = screenWidth * (frameHeight / frameWidth);
+    
+    // Calculate the scaling factor between original frame and our display canvas
+    const scaleX = frameWidth / screenWidth;
+    const scaleY = frameHeight / screenHeight;
+
+    console.log(scaleX, scaleY, "Scale factors");
+
+    // Apply the inverse scale to the coordinates
+    const newX = x * scaleX;
+    const newY = y * scaleY;
+    
+    console.log(frameWidth, frameHeight, "Frame dimensions");
+    console.log(screenWidth, screenHeight, "Screen dimensions");
+    console.log(x, y, "Original coordinates");
+    console.log(newX, newY, "Scaled coordinates");
+    
+    return { x: newX, y: newY };
+  };
+
+  const scaleFontSize = (originalSize: number) => {
+    if (!frameWidth || !frameHeight) return originalSize;
+    
+    const screenWidth = width - 40;
+    const scaleFactor = screenWidth / frameWidth;
+    
+    return originalSize * scaleFactor;
+  };
+
   useEffect(() => {
     const fetchPost = async () => {
       try {
@@ -200,6 +236,8 @@ const EditScreen = () => {
         setElements(framesResponse.documents && framesResponse.documents.length > 0 
           ? parseFabricToSkia(framesResponse.documents[3]?.template) 
           : []);
+          setFrameWidth(framesResponse.documents[3]?.width);
+          setFrameHeight(framesResponse.documents[3]?.height);
       } catch (err) {
         console.error("Error fetching data:", err);
         setError(err);
@@ -214,7 +252,7 @@ const EditScreen = () => {
   console.log(post, "Post 🟢");
 
   const image = useImage(post);
-  const fontSize = 32;
+  const fontSize = 12;
   const font = useFont(
     require("../assets/fonts/Montserrat-Light.ttf"),
     fontSize
@@ -263,21 +301,25 @@ const EditScreen = () => {
                   fit="contain"
                   x={0}
                   y={0}
-                  width={256}
-                  height={256}
+                  width={width - 40}
+                  height={width - 40}
                  
                   />
                   <SkiaText x={20} y={40} text="Hello World" font={font} />
                   {elements.map((el) => {
-                    if (el.type === 'text' && font) {
-                      const font = getFont(el.fontWeight, el.fontStyle, el.fontSize);
-                      if (!font) return null;
+                    if (el.type === 'text') {
+                      const textFont = getFont(el.fontWeight, el.fontStyle, el.fontSize);
+                      if (!textFont) return null;
+                      
+                      const position = calculatePositionFromRatio(el.x, el.y);
+
                       return (
                         <SkiaText
                           key={el.id}
-                          x={el.x}
-                          y={el.y}
+                          x={position.x}
+                          y={position.y}
                           text={el.text}
+                          color="#000000"
                           font={font}
                         />
                       );
@@ -286,15 +328,16 @@ const EditScreen = () => {
                     if (el.type === 'image') {
                       const img = el.src ? imageMap[el.src] : null;
                       if (!img) return null;
+                      
                       return (
                         <SkiaImage
                           key={el.id}
                           image={img}
                           x={el.x}
                           y={el.y}
-                          width={el.width}
-                          height={el.height}
-                          fit="contain"
+                          width={width - 40}
+                          height={width - 40}
+                          fit="fill"
                         />
                       );
                     }
