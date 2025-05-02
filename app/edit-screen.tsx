@@ -194,24 +194,21 @@ const EditScreen = () => {
     }).filter(Boolean) as SkiaRenderable[];
   };
 
-  const calculatePositionFromRatio = (x: number, y: number) => {
+  const calculatePositionFromRatio = (x: number, y: number, fontSize?: number) => {
     if (!frameWidth || !frameHeight) return { x, y };
     
     const screenWidth = width - 40;
     const screenHeight = screenWidth * (frameHeight / frameWidth);
     
-    const scaleX = frameWidth / screenWidth;
-    const scaleY = frameHeight / screenHeight;
+    // Scale ratio from original frame to screen size
+    const scaleX = screenWidth / (frameWidth/2);
+    const scaleY = screenHeight / (frameHeight/2);
 
-    console.log(scaleX, scaleY, "Scale factors");
-
+    // Apply the scale to position elements correctly
     const newX = x * scaleX;
     const newY = y * scaleY;
     
-    console.log(frameWidth, frameHeight, "Frame dimensions");
-    console.log(screenWidth, screenHeight, "Screen dimensions");
-    console.log(x, y, "Original coordinates");
-    console.log(newX, newY, "Scaled coordinates");
+    console.log(`Original (${x},${y}) -> Scaled (${newX},${newY}), Scale: ${scaleX.toFixed(2)}x${scaleY.toFixed(2)}`);
     
     return { x: newX, y: newY };
   };
@@ -238,10 +235,10 @@ const EditScreen = () => {
         setCanvasHeight(postDetails.height);
         setFrames(framesResponse.documents);
         setElements(framesResponse.documents && framesResponse.documents.length > 0 
-          ? parseFabricToSkia(framesResponse.documents[3]?.template) 
+          ? parseFabricToSkia(framesResponse.documents[5]?.template) 
           : []);
-          setFrameWidth(framesResponse.documents[3]?.width);
-          setFrameHeight(framesResponse.documents[3]?.height);
+          setFrameWidth(framesResponse.documents[5]?.width);
+          setFrameHeight(framesResponse.documents[5]?.height);
       } catch (err) {
         console.error("Error fetching data:", err);
         setError(err);
@@ -256,7 +253,7 @@ const EditScreen = () => {
   console.log(post, "Post 🟢");
 
   const image = useImage(post);
-  const fontSize = 12;
+  const fontSize = 20;
   const font = useFont(
     require("../assets/fonts/Montserrat-Light.ttf"),
     fontSize
@@ -265,6 +262,11 @@ const EditScreen = () => {
   const anotherImage = useImage(post);
 
   console.log(elements, "Elements 🟣");
+  console.log(canvasHeight, canvasWidth, "Canvas dimensions");
+  console.log(canvasWidth
+    ? (canvasHeight / canvasWidth) * (width - 40)
+    : width - 40, "Calculated height");
+  console.log(width - 40, "Width");
 
   return (
     <View style={styles.safeArea}>
@@ -312,18 +314,16 @@ const EditScreen = () => {
                   <SkiaText x={20} y={40} text="Hello World" font={font} />
                   {elements.map((el) => {
                     if (el.type === 'text') {
-                      const sizedFont = getFontWithSize(el.fontWeight, el.fontSize);
-                      if (!sizedFont) return null;
 
                       const position = calculatePositionFromRatio(el.x, el.y);
 
                       return (
                         <SkiaText
                           key={el.id}
-                          x={position.x }
-                          y={position.y - 15}
+                          x={position.x} 
+                          y={position.y}
                           text={el.text}
-                          font={sizedFont}
+                          font={font}
                           color="#000000"
                         />
                       );
