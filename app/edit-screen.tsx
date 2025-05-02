@@ -40,7 +40,10 @@ type SkiaRenderable =
     text: string;
     fontSize: number;
     fontWeight: 'normal' | 'bold';
-    fontStyle: 'normal' | 'italic';}
+    fontStyle: 'normal' | 'italic';
+    fill: string;
+  
+  }
   | { type: 'image'; id: string; x: number; y: number; width: number; height: number; src: string };
 
 const ImageLoader = ({ maxImages = 20 }) => {
@@ -86,7 +89,8 @@ const ImageLoader = ({ maxImages = 20 }) => {
 };
 
 const EditScreen = () => {
-  const { postId } = useLocalSearchParams();
+  const { postId: initialPostId } = useLocalSearchParams();
+  const [currentPostId, setCurrentPostId] = useState<string>(initialPostId as string);
   const [post, setPost] = React.useState<any>(null);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<unknown | null>(null);
@@ -98,6 +102,7 @@ const EditScreen = () => {
   const [imageSources, setImageSources] = useState<string[]>([]);
   const [frameWidth, setFrameWidth] = useState(0);
   const [frameHeight, setFrameHeight] = useState(0);
+  const [selectedFrameIndex, setSelectedFrameIndex] = useState(0);
 
   const fontSizes = [8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50];
   const regularFonts = fontSizes.map(size => 
@@ -200,6 +205,7 @@ const EditScreen = () => {
           fontSize: obj.fontSize ?? 12,
           fontWeight: (obj.fontWeight ?? 'normal') as 'normal' | 'bold',
           fontStyle: (obj.fontStyle ?? 'normal') as 'normal' | 'italic',
+          fill: obj.fill ?? '#000000',
         };
       }
       if (obj.type === 'Image') {
@@ -238,16 +244,63 @@ const EditScreen = () => {
     return { x: newX, y: newY };
   };
 
+  const selectFrame = (index: number) => {
+    if (index >= 0 && index < frames.length) {
+      setSelectedFrameIndex(index);
+      const frame = frames[index];
+      setSelectedFrame(frame);
+      
+      // Update elements, frame width and height based on selected frame
+      if (frame?.template) {
+        setElements(parseFabricToSkia(frame.template));
+        setFrameWidth(frame.width);
+        setFrameHeight(frame.height);
+      }
+    }
+  };
+
+  const switchPost = async (postId: string) => {
+    if (currentPostId === postId) return;
+    
+    setLoading(true);
+    setCurrentPostId(postId);
+    
+    try {
+      const postDetails = await database.getDocument(
+        process.env.EXPO_PUBLIC_APPWRITE_DATABASE_ID!,
+        process.env.EXPO_PUBLIC_APPWRITE_TEMPLATE_COLLECTION_ID!,
+        postId
+      );
+      
+      setPost(postDetails);
+      setCanvasWidth(postDetails.width);
+      setCanvasHeight(postDetails.height);
+      
+      // Reset selected frame when switching posts
+      if (frames.length > 0) {
+        selectFrame(0);
+      }
+    } catch (err) {
+      console.error("Error loading post:", err);
+      setError(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const fetchPost = async () => {
+    const fetchInitialData = async () => {
       try {
         setLoading(true);
 
+        
+        
+        // Fetch current post and frames
         const [postDetails, framesResponse] = await Promise.all([
           database.getDocument(
             process.env.EXPO_PUBLIC_APPWRITE_DATABASE_ID!,
             process.env.EXPO_PUBLIC_APPWRITE_TEMPLATE_COLLECTION_ID!,
-            postId as string
+            currentPostId
           ),
           database.listDocuments(
             process.env.EXPO_PUBLIC_APPWRITE_DATABASE_ID!,
@@ -255,15 +308,15 @@ const EditScreen = () => {
           ),
         ]);
 
-        setPost(postDetails.previewImage);
+        setPost(postDetails);
         setCanvasWidth(postDetails.width);
         setCanvasHeight(postDetails.height);
         setFrames(framesResponse.documents);
-        setElements(framesResponse.documents && framesResponse.documents.length > 0 
-          ? parseFabricToSkia(framesResponse.documents[5]?.template) 
-          : []);
-          setFrameWidth(framesResponse.documents[5]?.width);
-          setFrameHeight(framesResponse.documents[5]?.height);
+        
+        // Initialize with first frame
+        if (framesResponse.documents && framesResponse.documents.length > 0) {
+          selectFrame(0);
+        }
       } catch (err) {
         console.error("Error fetching data:", err);
         setError(err);
@@ -272,12 +325,12 @@ const EditScreen = () => {
       }
     };
 
-    fetchPost();
-  }, [postId]);
+    fetchInitialData();
+  }, [currentPostId]);
 
   console.log(post, "Post 🟢");
 
-  const anotherImage = useImage(post);
+  const anotherImage = useImage(post?.previewImage);
 
   console.log(elements, "Elements 🟣");
   console.log(canvasHeight, canvasWidth, "Canvas dimensions");
@@ -299,7 +352,7 @@ const EditScreen = () => {
           </View>
         ) : (
           <View style={styles.container}>
-            <Text style={styles.title}>{post.name}</Text>
+            
 
             <View style={styles.previewContainer}>
               <ScrollView
@@ -342,7 +395,7 @@ const EditScreen = () => {
                           y={position.y}
                           text={el.text}
                           font={font}
-                          color="#000000"
+                          color={el.fill}
                         />
                       );
                     }
@@ -369,6 +422,39 @@ const EditScreen = () => {
                 </Canvas>
               </ScrollView>
             </View>
+
+            {/* Frames Selection Section */}
+            {frames.length > 0 && (
+              <View style={styles.framesSection}>
+                <Text style={styles.sectionTitle}>Available Frames</Text>
+                <ScrollView 
+                  horizontal 
+                  showsHorizontalScrollIndicator={false} 
+                  style={styles.framesScrollView}
+                  contentContainerStyle={styles.framesContentContainer}
+                >
+                  {frames.map((frame, index) => (
+                    <TouchableOpacity 
+                      key={frame.$id}
+                      style={[
+                        styles.frameItem,
+                        selectedFrameIndex === index ? styles.selectedFrame : styles.normalFrame
+                      ]}
+                      onPress={() => selectFrame(index)}
+                    >
+                      <Image 
+                        source={{ uri: frame.previewImage }} 
+                        style={styles.frameImage}
+                        resizeMode="cover"
+                      />
+                      <View style={styles.frameDetails}>
+                        <Text style={styles.frameName}>{frame.name || `Frame ${index + 1}`}</Text>
+                      </View>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              </View>
+            )}
           </View>
         )}
       </ScrollView>
@@ -466,5 +552,37 @@ const styles = StyleSheet.create({
   frameDimensions: {
     fontSize: 12,
     color: "#666",
+  },
+  postsSection: {
+    marginBottom: 20,
+  },
+  postsScrollView: {
+    flexGrow: 0,
+  },
+  postsContentContainer: {
+    paddingVertical: 10,
+  },
+  postItem: {
+    width: 100,
+    marginRight: 10,
+    borderRadius: 8,
+    overflow: 'hidden',
+  },
+  selectedPost: {
+    borderWidth: 2,
+    borderColor: '#007bff',
+  },
+  normalPost: {
+    borderWidth: 1,
+    borderColor: '#eeeeee',
+  },
+  postImage: {
+    width: '100%',
+    height: 70,
+  },
+  postName: {
+    fontSize: 12,
+    textAlign: 'center',
+    padding: 4,
   },
 });
