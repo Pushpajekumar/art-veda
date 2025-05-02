@@ -99,8 +99,28 @@ const EditScreen = () => {
   const [frameWidth, setFrameWidth] = useState(0);
   const [frameHeight, setFrameHeight] = useState(0);
 
-  const regularFont = useFont(require("../assets/fonts/Montserrat-Light.ttf"));
-  const boldFont = useFont(require("../assets/fonts/Montserrat-Bold.ttf"));
+  const fontSizes = [8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50];
+  const regularFonts = fontSizes.map(size => 
+    useFont(require("../assets/fonts/Montserrat-Light.ttf"), size)
+  );
+  const boldFonts = fontSizes.map(size => 
+    useFont(require("../assets/fonts/Montserrat-Bold.ttf"), size)
+  );
+
+  const getClosestFontSize = (size: number) => {
+    return fontSizes.reduce((prev, curr) => 
+      Math.abs(curr - size) < Math.abs(prev - size) ? curr : prev
+    , fontSizes[0]);
+  };
+
+  const getFontWithSize = (weight: string, fontSize: number) => {
+    const scaledSize = fontSize * ((width - 40) / frameWidth);
+    const closestSize = getClosestFontSize(scaledSize);
+    const index = fontSizes.indexOf(closestSize);
+
+    if (index === -1) return null;
+    return weight === 'bold' ? boldFonts[index] : regularFonts[index];
+  };
 
   const { imageHooks, updateUrls } = ImageLoader({ maxImages: 20 });
 
@@ -174,24 +194,17 @@ const EditScreen = () => {
     }).filter(Boolean) as SkiaRenderable[];
   };
 
-  const getFont = (weight: string, style: string, size: number) => {
-    if (weight === 'bold') return boldFont;
-    return regularFont;
-  };
-
   const calculatePositionFromRatio = (x: number, y: number) => {
     if (!frameWidth || !frameHeight) return { x, y };
     
     const screenWidth = width - 40;
     const screenHeight = screenWidth * (frameHeight / frameWidth);
     
-    // Calculate the scaling factor between original frame and our display canvas
     const scaleX = frameWidth / screenWidth;
     const scaleY = frameHeight / screenHeight;
 
     console.log(scaleX, scaleY, "Scale factors");
 
-    // Apply the inverse scale to the coordinates
     const newX = x * scaleX;
     const newY = y * scaleY;
     
@@ -201,15 +214,6 @@ const EditScreen = () => {
     console.log(newX, newY, "Scaled coordinates");
     
     return { x: newX, y: newY };
-  };
-
-  const scaleFontSize = (originalSize: number) => {
-    if (!frameWidth || !frameHeight) return originalSize;
-    
-    const screenWidth = width - 40;
-    const scaleFactor = screenWidth / frameWidth;
-    
-    return originalSize * scaleFactor;
   };
 
   useEffect(() => {
@@ -308,19 +312,19 @@ const EditScreen = () => {
                   <SkiaText x={20} y={40} text="Hello World" font={font} />
                   {elements.map((el) => {
                     if (el.type === 'text') {
-                      const textFont = getFont(el.fontWeight, el.fontStyle, el.fontSize);
-                      if (!textFont) return null;
-                      
+                      const sizedFont = getFontWithSize(el.fontWeight, el.fontSize);
+                      if (!sizedFont) return null;
+
                       const position = calculatePositionFromRatio(el.x, el.y);
 
                       return (
                         <SkiaText
                           key={el.id}
-                          x={position.x}
-                          y={position.y}
+                          x={position.x }
+                          y={position.y - 15}
                           text={el.text}
+                          font={sizedFont}
                           color="#000000"
-                          font={font}
                         />
                       );
                     }
