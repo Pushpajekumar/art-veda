@@ -42,9 +42,9 @@ type SkiaRenderable =
     fontWeight: 'normal' | 'bold';
     fontStyle: 'normal' | 'italic';
     fill: string;
-  
+    label: string;
   }
-  | { type: 'image'; id: string; x: number; y: number; width: number; height: number; src: string };
+  | { type: 'image'; id: string; x: number; y: number; width: number; height: number; src: string; label: string; };
 
 const ImageLoader = ({ maxImages = 20 }) => {
   const [urls, setUrls] = useState<Array<string | null>>(Array(maxImages).fill(null));
@@ -206,6 +206,7 @@ const EditScreen = () => {
           fontWeight: (obj.fontWeight ?? 'normal') as 'normal' | 'bold',
           fontStyle: (obj.fontStyle ?? 'normal') as 'normal' | 'italic',
           fill: obj.fill ?? '#000000',
+          label: obj.label ?? '',
         };
       }
       if (obj.type === 'Image') {
@@ -217,6 +218,7 @@ const EditScreen = () => {
           width: (obj.width ?? 100) * (obj.scaleX ?? 1),
           height: (obj.height ?? 100) * (obj.scaleY ?? 1),
           src: obj.src ?? '',
+          label: obj.label ?? '',
         };
       }
       return null;
@@ -375,19 +377,38 @@ const EditScreen = () => {
 
                     if (el.type === 'image') {
                       const img = el.src ? imageMap[el.src] : null;
+                      console.log(img, "Image");
                       if (!img) return null;
-                      
-                      return (
-                        <SkiaImage
-                          key={el.id}
-                          image={img}
-                          x={el.x}
-                          y={el.y}
-                          width={width - 40}
-                          height={width - 40}
-                          fit="fill"
-                        />
-                      );
+
+                      const position = calculatePositionFromRatio(el.x, el.y);
+
+                      if (el.label === 'logo') {
+                        // For logo images, use their original dimensions
+                        return (
+                          <SkiaImage
+                            key={el.id}
+                            image={img}
+                            x={position.x}
+                            y={position.y}
+                            width={el.width}
+                            height={el.height}
+                            fit="fill"
+                          />
+                        );
+                      } else {
+                        // For other images, use default dimensions
+                        return (
+                          <SkiaImage
+                            key={el.id}
+                            image={img}
+                            x={position.x}
+                            y={position.y}
+                            width={width - 40}
+                            height={width - 40}
+                            fit="fill"
+                          />
+                        );
+                      }
                     }
 
                     return null;
