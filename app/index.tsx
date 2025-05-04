@@ -1,11 +1,14 @@
 import { View, Text } from "../context/ThemeContext";
 import { Dimensions, Image, StyleSheet, Animated } from "react-native";
 import { TYPOGRAPHY, FONT_SIZE, FONT_WEIGHT } from "../utils/fonts";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { router } from "expo-router";
+import { account } from "@/context/app-write";
 export default function Index() {
   const { width, height } = Dimensions.get("window");
   const scaleAnim = useRef(new Animated.Value(1)).current;
+
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   useEffect(() => {
     // Start the scale animation
@@ -17,7 +20,11 @@ export default function Index() {
 
     // Set timeout to navigate after 1 second
     const timeout = setTimeout(() => {
-      router.replace("/home");
+      if (isAuthenticated) {
+        router.replace("/home");
+      } else {
+        router.replace("/auth/login");
+      }
     }, 1000);
 
     // Clean up function
@@ -25,6 +32,24 @@ export default function Index() {
       clearTimeout(timeout);
       scaleAnim.stopAnimation();
     };
+  }, [isAuthenticated]);
+
+  // Check if user is authenticated
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const user = await account.get();
+        if (user) {
+          setIsAuthenticated(true);
+        } else {
+          setIsAuthenticated(false);
+        }
+      } catch (error) {
+        console.error("Error fetching user:", error);
+      }
+    };
+
+    checkAuth();
   }, []);
 
   return (

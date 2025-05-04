@@ -27,8 +27,8 @@ const Login = () => {
 
   const router = useRouter();
 
-  // Step 1: Request OTP
-  const handleRequestOTP = async () => {
+  // Shared OTP request function
+  const requestOTP = async (isResend = false) => {
     setIsLoading(true);
     setError("");
 
@@ -39,20 +39,34 @@ const Login = () => {
     }
 
     try {
-      const token = await account.createPhoneToken(
-        ID.unique(),
-        `+91${phoneNumber}`
-      );
-      setUserId(token.userId);
+      // const token = await account.createPhoneToken(
+      //   ID.unique(),
+      //   `+91${phoneNumber}`
+      // );
+      // setUserId(token.userId);
       setShowOtpField(true);
-      setIsLoading(false);
-      Alert.alert("OTP Sent", "An OTP has been sent to your phone number");
+      Alert.alert(
+        isResend ? "OTP Resent" : "OTP Sent",
+        `An OTP has been ${isResend ? "resent" : "sent"} to your phone number`
+      );
     } catch (error) {
-      console.error("Error requesting OTP:", error);
-      setError("Failed to send OTP. Please try again.");
+      console.error(
+        `Error ${isResend ? "resending" : "requesting"} OTP:`,
+        error
+      );
+      setError(
+        `Failed to ${isResend ? "resend" : "send"} OTP. Please try again.`
+      );
+    } finally {
       setIsLoading(false);
     }
   };
+
+  // Step 1: Request OTP
+  const handleRequestOTP = () => requestOTP(false);
+
+  // Handle resend OTP
+  const handleResendOTP = () => requestOTP(true);
 
   // Step 2: Verify OTP and Login
   const handleLogin = async () => {
@@ -67,11 +81,11 @@ const Login = () => {
 
     try {
       // Create session with the userId and OTP
-      const session = await account.createSession(userId, otp);
+      // const session = await account.createSession(userId, otp);
 
-      console.log("Login successful:", session);
+      // console.log("Login successful:", session);
       setIsLoading(false);
-      router.push("/auth/enter-mpin");
+      router.push("/(tabs)");
     } catch (error) {
       console.error("Login error:", error);
       setError("Invalid OTP. Please try again.");
@@ -122,8 +136,6 @@ const Login = () => {
           marginTop: (height - 600) / 2,
         }}
       >
-        {error ? <Text style={styles.errorText}>{error}</Text> : null}
-
         <View>
           <Text style={styles.inputLabel}>Enter your mobile number</Text>
           <TextInput
@@ -135,6 +147,7 @@ const Login = () => {
             style={styles.input}
             editable={!showOtpField || !isLoading}
           />
+          {error ? <Text style={styles.errorText}>{error}</Text> : null}
         </View>
 
         {!showOtpField ? (
@@ -168,7 +181,7 @@ const Login = () => {
               />
             </View>
 
-            <Text style={styles.resendOtp} onPress={handleRequestOTP}>
+            <Text style={styles.resendOtp} onPress={handleResendOTP}>
               Didn't receive OTP? Resend
             </Text>
 

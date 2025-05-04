@@ -11,25 +11,49 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import { primary_textColor, primaryColor } from "../../constant/contant";
 import { FONT_WEIGHT, TYPOGRAPHY } from "@/utils/fonts";
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import { account } from "@/context/app-write";
 
 const otpVerification = () => {
+  const { userId, phoneNumber } = useLocalSearchParams();
+  console.log(userId, phoneNumber, "🟢");
+
   const { width, height } = Dimensions.get("window");
   const [otp, setOtp] = React.useState("");
-
-  const [userId, setUserId] = React.useState("67ea6dfa000693f288fb"); // Replace with actual user ID
   const [isLoading, setIsLoading] = React.useState(false);
+  const [token, setToken] = React.useState<{ userId: string } | null>(null);
   const handleOtpChange = async () => {
     setIsLoading(true);
     console.log("OTP logic here");
     try {
-      // const session = await account.createSession(userId, otp);
+      // const userIdString = userId ?
+      //   (typeof userId === 'string' ? userId : Array.isArray(userId) ? userId[0] : '') :
+      //   (token && token.userId ? token.userId : '');
+
+      // if (!userIdString) {
+      //   throw new Error("User ID not found");
+      // }
+
+      // const session = await account.createSession(userIdString, otp);
       // console.log("Session created:", session);
 
-      router.push("/select-political-party");
+      router.push("/auth/personal-details");
     } catch (error) {
       console.error("Error handling OTP:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleResendOtp = async () => {
+    setIsLoading(true);
+    console.log("Resend OTP logic here");
+    try {
+      // const token = await account.createPhoneToken(userId, phoneNumber);
+      // setToken(token);
+      // console.log("Token created:", token);
+    } catch (error) {
+      console.error("Error resending OTP:", error);
     } finally {
       setIsLoading(false);
     }
@@ -108,7 +132,7 @@ const otpVerification = () => {
             marginBottom: 5,
             textAlign: "center",
           }}
-          onPress={() => router.push("/auth/set-mpin")}
+          onPress={handleResendOtp}
         >
           Resend OTP
         </Text>

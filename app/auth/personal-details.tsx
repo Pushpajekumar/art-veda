@@ -14,14 +14,16 @@ import { router } from "expo-router";
 import { primaryColor } from "@/constant/contant";
 import * as ImagePicker from "expo-image-picker";
 import { Ionicons } from "@expo/vector-icons";
-import { account, storage } from "@/context/app-write";
+import { account, database, storage } from "@/context/app-write";
 import { ID } from "react-native-appwrite";
+import profile from "../(tabs)/profile";
 
 const PersonalDetails = () => {
   const [fullName, setFullName] = useState("");
   const [image, setImage] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState("");
+  const [address, setAddress] = useState("");
 
   // Pick an image from gallery
   const pickImage = async () => {
@@ -55,8 +57,8 @@ const PersonalDetails = () => {
 
   // Handle continue button
   const handleContinue = async () => {
-    if (!fullName.trim()) {
-      setError("Please enter your full name");
+    if (!fullName.trim() || !address.trim()) {
+      setError("Please enter your full name and address");
       return;
     }
 
@@ -64,55 +66,53 @@ const PersonalDetails = () => {
     setError("");
 
     try {
-      // Update user preferences with name
-      await account.updatePrefs({
-        fullName: fullName.trim(),
-      });
+      const databaseId = process.env.EXPO_PUBLIC_DATABASE_ID!;
+      const usersCollectionId = process.env.EXPO_PUBLIC_USERS_COLLECTION_ID!;
+
+      // if (!databaseId || !usersCollectionId) {
+      //   throw new Error("Database configuration is missing");
+      // }
 
       // Upload profile image if selected
-      if (image) {
-        const imageUri: string = image;
-        const filename = imageUri.split("/").pop();
+      // if (image) {
+      //   const imageUri: string = image;
+      //   const filename = imageUri.split("/").pop();
 
-        // For iOS, we need to convert file:// URI to blob
-        const blob = await (async () => {
-          if (Platform.OS === "ios") {
-            const response = await fetch(imageUri);
-            return await response.blob();
-          }
-          return imageUri;
-        })();
+      //   // Android only implementation
+      //   const fileData = {
+      //     name: filename || "profile.jpg",
+      //     type: "image/jpeg",
+      //     size: 0, // This will be determined by the backend for Android
+      //     uri: imageUri,
+      //   };
 
-        // Upload to Appwrite Storage
-        const fileData =
-          Platform.OS === "ios"
-            ? {
-                name: filename || "profile.jpg",
-                type: "image/jpeg",
-                size: Buffer.byteLength(await (blob as Blob).arrayBuffer()),
-                uri: imageUri,
-              }
-            : {
-                name: filename || "profile.jpg",
-                type: "image/jpeg",
-                size: 0, // This will be determined by Appwrite for Android
-                uri: imageUri,
-              };
+      //   const bucketId = process.env.EXPO_PUBLIC_BUCKET_ID!;
+      //   const file = await storage.createFile(
+      //     bucketId,
+      //     ID.unique(),
+      //     fileData,
+      //     [`public`] // Make it readable by anyone or restrict as needed
+      //   );
 
-        await storage.createFile(
-          "profile_images", // Your Appwrite storage bucket ID
-          ID.unique(),
-          fileData,
-          [`public`] // Make it readable by anyone or restrict as needed
-        );
+      //   //update user data in our database
+      //   await database.updateDocument(
+      //     databaseId,
+      //     usersCollectionId,
+      //     ID.unique(),
+      //     {
+      //       name: fullName,
+      //       profileImage: `https://cloud.appwrite.io/v1/storage/buckets/${
+      //         process.env.EXPO_PUBLIC_BUCKET_ID
+      //       }/files/${file.$id}/view?project=${
+      //         process.env.EXPO_PUBLIC_APPWRITE_PROJECT_ID
+      //       }`,
+      //       profileImageId: file.$id,
+      //       address: address,
+      //     }
+      //   );
+      // }
 
-        // Update user preferences with profile image ID
-        await account.updatePrefs({
-          profileImageId: filename,
-        });
-      }
-
-      router.replace("/(tabs)");
+      router.replace("/select-political-party");
     } catch (err) {
       console.error("Error saving details:", err);
       setError("Failed to save your details. Please try again.");
@@ -154,6 +154,16 @@ const PersonalDetails = () => {
           placeholder="Full Name"
           value={fullName}
           onChangeText={setFullName}
+          placeholderTextColor="#888"
+          editable={!uploading}
+        />
+
+        {/* Name Input */}
+        <TextInput
+          style={styles.input}
+          placeholder="Address"
+          value={address}
+          onChangeText={setAddress}
           placeholderTextColor="#888"
           editable={!uploading}
         />

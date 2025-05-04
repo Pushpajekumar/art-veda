@@ -5,6 +5,8 @@ import {
   StyleSheet,
   TextInput,
   TouchableOpacity,
+  Alert,
+  ToastAndroid,
 } from "react-native";
 import React from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -12,7 +14,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { primary_textColor, primaryColor } from "../../constant/contant";
 import { FONT_WEIGHT, TYPOGRAPHY } from "@/utils/fonts";
 import { router } from "expo-router";
-import { account, ID } from "@/context/app-write";
+import { account, database, ID } from "@/context/app-write";
 
 const signup = () => {
   const { width, height } = Dimensions.get("window");
@@ -22,29 +24,52 @@ const signup = () => {
   const handleSignup = async () => {
     setIsLoading(true);
 
-    // if (!phoneNumber || phoneNumber.length !== 10) {
-    //   alert("Please enter a valid 10-digit phone number");
-    //   setIsLoading(false);
-    //   return;
-    // }
-
-    console.log("Signup logic here");
+    if (!phoneNumber || phoneNumber.length !== 10) {
+      alert("Please enter a valid 10-digit phone number");
+      setIsLoading(false);
+      return;
+    }
 
     try {
+      const databaseId = process.env.EXPO_PUBLIC_DATABASE_ID;
+      const usersCollectionId = process.env.EXPO_PUBLIC_USERS_COLLECTION_ID;
+
+      // if (!databaseId || !usersCollectionId) {
+      //   throw new Error("Database configuration is missing");
+      // }
+
       // const token = await account.createPhoneToken(
       //   ID.unique(),
       //   `+91${phoneNumber}`
       // );
 
+      // //create user in the database
+      // if (token) {
+      //   await database.createDocument(
+      //     databaseId,
+      //     usersCollectionId,
+      //     ID.unique(),
+      //     {
+      //       phoneNumber: `+91${phoneNumber}`,
+      //       userId: token.userId,
+      //     }
+      //   );
+      // }
+
       router.push({
         pathname: "/auth/otp-verification",
-        // params: {
-        //   userId: token.userId,
-        // },
+        params: {
+          // userId: token.userId,
+          phoneNumber: `+91${phoneNumber}`,
+        },
       });
-      // console.log("Token created:", token);
+      ToastAndroid.show(`OTP sent to +91${phoneNumber}`, ToastAndroid.SHORT);
     } catch (error) {
       console.error("Error creating token:", error);
+      // ToastAndroid.show(
+      //   error.message || "Failed to create account. Please try again.",
+      //   ToastAndroid.LONG
+      // );
     } finally {
       setIsLoading(false);
     }
@@ -93,7 +118,7 @@ const signup = () => {
           marginTop: (height - 600) / 2, // Dynamically calculate margin to center vertically
         }}
       >
-        <View>
+        <View style={{ marginBottom: 10 }}>
           <Text
             style={{
               ...TYPOGRAPHY.caption,
@@ -124,13 +149,6 @@ const signup = () => {
             >
               +91
             </Text>
-            <View
-              style={{
-                height: "70%",
-                width: 1,
-                backgroundColor: "rgba(0,0,0,0.2)",
-              }}
-            />
             <TextInput
               value={phoneNumber}
               onChange={(e) => setPhoneNumber(e.nativeEvent.text)}
@@ -145,7 +163,7 @@ const signup = () => {
           </View>
         </View>
 
-        <Text
+        {/* <Text
           style={{
             ...TYPOGRAPHY.caption,
             color: primary_textColor,
@@ -156,7 +174,7 @@ const signup = () => {
           onPress={handleSignup}
         >
           Have referrel code ?
-        </Text>
+        </Text> */}
         <Text
           style={{
             ...TYPOGRAPHY.body,
