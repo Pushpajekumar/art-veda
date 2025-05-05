@@ -5,12 +5,13 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { database } from "@/context/app-write";
 import { Query, Models } from "react-native-appwrite";
 import { StyleSheet } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 
 const index = () => {
   const { subCatId, subCatName } = useLocalSearchParams();
   const router = useRouter();
   console.log("Sub Category 🟡 ID:", subCatId);
-  const [templates, setTemplates] = React.useState<Models.Document[]>([]);
+  const [posts, setPosts] = React.useState<Models.Document[]>([]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -21,24 +22,24 @@ const index = () => {
           [Query.equal("$id", subCatId)]
         );
 
-        if (response.documents[0]?.template) {
+        if (response.documents[0]?.posts) {
           try {
-            const parsedTemplates = response.documents[0]?.template
+            const parsedPosts = response.documents[0]?.posts
             // Extract only preview image and ID from each template
-            const extractedData = parsedTemplates.map((template: { $id: string; previewImage: string; name: string }) => ({
-              id: template.$id,
-              previewImage: template.previewImage,
-              name: template.name,
+            const extractedData = parsedPosts.map((post: { $id: string; previewImage: string; name: string }) => ({
+              id: post.$id,
+              previewImage: post.previewImage,
+              name: post.name,
             }));
-            setTemplates(extractedData);
+            setPosts(extractedData);
           } catch (error) {
             console.error("Error parsing templates:", error);
-            setTemplates([]);
+            setPosts([]);
           }
         } else {
-          setTemplates([]);
+          setPosts([]);
         }
-        console.log("Templates:", response.documents[0]?.template);
+        console.log("Posts:", response.documents[0]?.posts);
       } catch (error) {
         console.error("Error fetching documents:", error);
       }
@@ -52,30 +53,30 @@ const index = () => {
       <ScrollView>
         <View style={styles.container}>
             <View style={styles.header}>
-            <TouchableOpacity 
-              style={styles.backButton}
-              onPress={() => router.back()}
-            >
-              <Text style={styles.backButtonText}>←</Text>
-            </TouchableOpacity>
-            <Text style={styles.title}>
-              {subCatName}
-            </Text>
-          </View>
+              <TouchableOpacity 
+                style={styles.backButton}
+                onPress={() => router.back()}
+              >
+                <Ionicons name="arrow-back" size={24} color="black" />
+              </TouchableOpacity>
+              <Text style={styles.title}>
+                {typeof subCatName === 'string' ? subCatName.charAt(0).toUpperCase() + subCatName.slice(1) : subCatName}
+              </Text>
+            </View>
           <View style={styles.gridContainer}>
-            {templates.length > 0 ? (
-              templates.map((template) => (
-                <View key={template.id} style={styles.gridItem}  
+            {posts.length > 0 ? (
+              posts.map((post) => (
+                <View key={post.id} style={styles.gridItem}  
                 onTouchEnd={() => {
                                     router.push({
                                       pathname: "/edit-screen",
                                       params: {
-                                      postId: template.id,
+                                      postId: post.id,
                                       },
                                     });
                                   }}>
                   <Image 
-                    source={{ uri: template.previewImage }} 
+                    source={{ uri: post.previewImage }} 
                     style={styles.image}
                     resizeMode="cover"
                   />
@@ -101,7 +102,7 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 16
+    marginBottom: 16,
   },
   backButton: {
     padding: 8,
@@ -114,7 +115,6 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 24,
     fontWeight: 'bold',
-    marginBottom: 16
   },
   gridContainer: {
     flexDirection: 'row',
