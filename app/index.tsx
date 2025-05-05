@@ -21,7 +21,7 @@ export default function Index() {
     // Set timeout to navigate after 1 second
     const timeout = setTimeout(() => {
       if (isAuthenticated) {
-        router.replace("/home");
+        router.replace("/(tabs)");
       } else {
         router.replace("/auth/login");
       }

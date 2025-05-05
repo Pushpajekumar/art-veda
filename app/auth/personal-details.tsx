@@ -10,7 +10,7 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import { primaryColor } from "@/constant/contant";
 import * as ImagePicker from "expo-image-picker";
 import { Ionicons } from "@expo/vector-icons";
@@ -19,6 +19,12 @@ import { ID } from "react-native-appwrite";
 import profile from "../(tabs)/profile";
 
 const PersonalDetails = () => {
+  const params = useLocalSearchParams();
+  const documentId = Array.isArray(params.documentId)
+    ? params.documentId[0]
+    : (params.documentId as string);
+  console.log(documentId, "🟢");
+
   const [fullName, setFullName] = useState("");
   const [image, setImage] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
@@ -66,53 +72,49 @@ const PersonalDetails = () => {
     setError("");
 
     try {
-      const databaseId = process.env.EXPO_PUBLIC_DATABASE_ID!;
-      const usersCollectionId = process.env.EXPO_PUBLIC_USERS_COLLECTION_ID!;
+      // const databaseId = process.env.EXPO_PUBLIC_APPWRITE_DATABASE_ID;
+      // const usersCollectionId =
+      //   process.env.EXPO_PUBLIC_APPWRITE_USERS_COLLECTION_ID;
 
       // if (!databaseId || !usersCollectionId) {
       //   throw new Error("Database configuration is missing");
       // }
 
       // Upload profile image if selected
-      // if (image) {
-      //   const imageUri: string = image;
-      //   const filename = imageUri.split("/").pop();
+      if (image) {
+        const imageUri: string = image;
+        const filename = imageUri.split("/").pop();
 
-      //   // Android only implementation
-      //   const fileData = {
-      //     name: filename || "profile.jpg",
-      //     type: "image/jpeg",
-      //     size: 0, // This will be determined by the backend for Android
-      //     uri: imageUri,
-      //   };
+        // Android only implementation
+        const fileData = {
+          name: filename || "profile.jpg",
+          type: "image/jpeg",
+          size: 0, // This will be determined by the backend for Android
+          uri: imageUri,
+        };
 
-      //   const bucketId = process.env.EXPO_PUBLIC_BUCKET_ID!;
-      //   const file = await storage.createFile(
-      //     bucketId,
-      //     ID.unique(),
-      //     fileData,
-      //     [`public`] // Make it readable by anyone or restrict as needed
-      //   );
+        const bucketId = process.env.EXPO_PUBLIC_BUCKET_ID!;
+        const file = await storage.createFile(bucketId, ID.unique(), fileData);
 
-      //   //update user data in our database
-      //   await database.updateDocument(
-      //     databaseId,
-      //     usersCollectionId,
-      //     ID.unique(),
-      //     {
-      //       name: fullName,
-      //       profileImage: `https://cloud.appwrite.io/v1/storage/buckets/${
-      //         process.env.EXPO_PUBLIC_BUCKET_ID
-      //       }/files/${file.$id}/view?project=${
-      //         process.env.EXPO_PUBLIC_APPWRITE_PROJECT_ID
-      //       }`,
-      //       profileImageId: file.$id,
-      //       address: address,
-      //     }
-      //   );
-      // }
+        //update user data in our database
+        await database.updateDocument(
+          "6815de2b0004b53475ec",
+          "6815e0be001731ca8b1b",
+          documentId,
+          {
+            name: fullName,
+            profileImage: `https://cloud.appwrite.io/v1/storage/buckets/${
+              process.env.EXPO_PUBLIC_BUCKET_ID
+            }/files/${file.$id}/view?project=${
+              process.env.EXPO_PUBLIC_APPWRITE_PROJECT_ID
+            }`,
+            profileImageId: file.$id,
+            address: address,
+          }
+        );
+      }
 
-      router.replace("/select-political-party");
+      router.replace("/(tabs)");
     } catch (err) {
       console.error("Error saving details:", err);
       setError("Failed to save your details. Please try again.");

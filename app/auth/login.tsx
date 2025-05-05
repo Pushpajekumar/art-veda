@@ -39,11 +39,11 @@ const Login = () => {
     }
 
     try {
-      // const token = await account.createPhoneToken(
-      //   ID.unique(),
-      //   `+91${phoneNumber}`
-      // );
-      // setUserId(token.userId);
+      const token = await account.createPhoneToken(
+        ID.unique(),
+        `+91${phoneNumber}`
+      );
+      setUserId(token.userId);
       setShowOtpField(true);
       Alert.alert(
         isResend ? "OTP Resent" : "OTP Sent",
@@ -81,9 +81,8 @@ const Login = () => {
 
     try {
       // Create session with the userId and OTP
-      // const session = await account.createSession(userId, otp);
-
-      // console.log("Login successful:", session);
+      const session = await account.createSession(userId, otp);
+      console.log("Login successful:", session);
       setIsLoading(false);
       router.push("/(tabs)");
     } catch (error) {

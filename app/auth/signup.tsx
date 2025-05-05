@@ -5,7 +5,6 @@ import {
   StyleSheet,
   TextInput,
   TouchableOpacity,
-  Alert,
   ToastAndroid,
 } from "react-native";
 import React from "react";
@@ -31,45 +30,50 @@ const signup = () => {
     }
 
     try {
-      const databaseId = process.env.EXPO_PUBLIC_DATABASE_ID;
-      const usersCollectionId = process.env.EXPO_PUBLIC_USERS_COLLECTION_ID;
+      const databaseId = process.env.EXPO_PUBLIC_APPWRITE_DATABASE_ID!;
+      const usersCollectionId = process.env
+        .EXPO_PUBLIC_APPWRITE_USERS_COLLECTION_ID!;
 
-      // if (!databaseId || !usersCollectionId) {
-      //   throw new Error("Database configuration is missing");
-      // }
+      if (!databaseId || !usersCollectionId) {
+        throw new Error("Database configuration is missing");
+      }
 
-      // const token = await account.createPhoneToken(
-      //   ID.unique(),
-      //   `+91${phoneNumber}`
-      // );
+      const token = await account.createPhoneToken(
+        ID.unique(),
+        `+91${phoneNumber}`
+      );
 
-      // //create user in the database
-      // if (token) {
-      //   await database.createDocument(
-      //     databaseId,
-      //     usersCollectionId,
-      //     ID.unique(),
-      //     {
-      //       phoneNumber: `+91${phoneNumber}`,
-      //       userId: token.userId,
-      //     }
-      //   );
-      // }
+      //create user in the database
+      if (token) {
+        const newUser = await database.createDocument(
+          "6815de2b0004b53475ec",
+          "6815e0be001731ca8b1b",
+          ID.unique(),
+          {
+            phone: `+91${phoneNumber}`,
+            userId: token.userId,
+          }
+        );
 
-      router.push({
-        pathname: "/auth/otp-verification",
-        params: {
-          // userId: token.userId,
-          phoneNumber: `+91${phoneNumber}`,
-        },
-      });
+        console.log("New user created:", newUser);
+
+        router.push({
+          pathname: "/auth/otp-verification",
+          params: {
+            userId: token.userId,
+            phoneNumber: `+91${phoneNumber}`,
+            documentId: newUser.$id,
+          },
+        });
+      }
+
       ToastAndroid.show(`OTP sent to +91${phoneNumber}`, ToastAndroid.SHORT);
     } catch (error) {
       console.error("Error creating token:", error);
-      // ToastAndroid.show(
-      //   error.message || "Failed to create account. Please try again.",
-      //   ToastAndroid.LONG
-      // );
+      ToastAndroid.show(
+        error.message || "Failed to create account. Please try again.",
+        ToastAndroid.LONG
+      );
     } finally {
       setIsLoading(false);
     }

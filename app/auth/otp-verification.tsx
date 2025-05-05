@@ -15,7 +15,7 @@ import { router, useLocalSearchParams } from "expo-router";
 import { account } from "@/context/app-write";
 
 const otpVerification = () => {
-  const { userId, phoneNumber } = useLocalSearchParams();
+  const { userId, phoneNumber, documentId } = useLocalSearchParams();
   console.log(userId, phoneNumber, "🟢");
 
   const { width, height } = Dimensions.get("window");
@@ -26,18 +26,29 @@ const otpVerification = () => {
     setIsLoading(true);
     console.log("OTP logic here");
     try {
-      // const userIdString = userId ?
-      //   (typeof userId === 'string' ? userId : Array.isArray(userId) ? userId[0] : '') :
-      //   (token && token.userId ? token.userId : '');
+      const userIdString = userId
+        ? typeof userId === "string"
+          ? userId
+          : Array.isArray(userId)
+          ? userId[0]
+          : ""
+        : token && token.userId
+        ? token.userId
+        : "";
 
-      // if (!userIdString) {
-      //   throw new Error("User ID not found");
-      // }
+      if (!userIdString) {
+        throw new Error("User ID not found");
+      }
 
-      // const session = await account.createSession(userIdString, otp);
-      // console.log("Session created:", session);
+      const session = await account.createSession(userIdString, otp);
+      console.log("Session created:", session);
 
-      router.push("/auth/personal-details");
+      router.push({
+        pathname: "/auth/personal-details",
+        params: {
+          documentId,
+        },
+      });
     } catch (error) {
       console.error("Error handling OTP:", error);
     } finally {
@@ -49,9 +60,25 @@ const otpVerification = () => {
     setIsLoading(true);
     console.log("Resend OTP logic here");
     try {
-      // const token = await account.createPhoneToken(userId, phoneNumber);
-      // setToken(token);
-      // console.log("Token created:", token);
+      const userIdString =
+        typeof userId === "string"
+          ? userId
+          : Array.isArray(userId)
+          ? userId[0]
+          : "";
+      const phoneNumberString =
+        typeof phoneNumber === "string"
+          ? phoneNumber
+          : Array.isArray(phoneNumber)
+          ? phoneNumber[0]
+          : "";
+
+      const token = await account.createPhoneToken(
+        userIdString,
+        phoneNumberString
+      );
+      setToken(token);
+      console.log("Token created:", token);
     } catch (error) {
       console.error("Error resending OTP:", error);
     } finally {
