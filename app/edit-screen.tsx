@@ -274,7 +274,7 @@ const EditScreen = () => {
         const [postDetails, framesResponse] = await Promise.all([
           database.getDocument(
             process.env.EXPO_PUBLIC_APPWRITE_DATABASE_ID!,
-            process.env.EXPO_PUBLIC_APPWRITE_TEMPLATE_COLLECTION_ID!,
+            process.env.EXPO_PUBLIC_APPWRITE_POSTS_COLLECTION_ID!,
             currentPostId
           ),
           database.listDocuments(

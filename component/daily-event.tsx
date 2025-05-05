@@ -38,20 +38,16 @@ const DailyEvent = () => {
   useEffect(() => {
     setLoading(true);
     const fetchTodayEvent = async () => {
-      const databaseId = process.env.EXPO_PUBLIC_APPWRITE_DATABASE_ID!;
-      const collectionId = process.env.EXPO_PUBLIC_APPWRITE_DAILY_EVENT_ID!;
-
       try {
         const today = new Date();
         const formattedDate =
           today.toISOString().split("T")[0] + "T12:00:00.000+00:00";
 
         const todayEvent = await database.listDocuments(
-          databaseId,
-          collectionId,
+          process.env.EXPO_PUBLIC_APPWRITE_DATABASE_ID!,
+          process.env.EXPO_PUBLIC_APPWRITE_DAILY_EVENT_ID!,
           [Query.equal("date", formattedDate)]
         );
-        console.log("Event found:", todayEvent.documents.length > 0);
         console.log(todayEvent, "events 🟢");
 
         // Store all events in state
@@ -61,14 +57,14 @@ const DailyEvent = () => {
           const eventData = todayEvent.documents[0];
           console.log("Date:", eventData.date);
 
-          // Access template array and print previewImage
-          if (eventData.template && eventData.template.length > 0) {
+          // Access posts array and print previewImage
+          if (eventData.posts && eventData.posts.length > 0) {
             console.log(
               "Preview Image URL:",
-              eventData.template[0].previewImage
+              eventData.posts[0].previewImage
             );
           } else {
-            console.log("No template data available");
+            console.log("No posts data available");
           }
         }
       } catch (error) {
@@ -153,10 +149,10 @@ const DailyEvent = () => {
         ) : events.length > 0 ? (
           <CarouselComp
             images={events.flatMap((event) =>
-              event.template
-                ? event.template.map(
-                    (template: { previewImage: string }) =>
-                      template.previewImage
+              event.posts
+                ? event.posts.map(
+                    (posts: { previewImage: string }) =>
+                      posts.previewImage
                   )
                 : []
             )}

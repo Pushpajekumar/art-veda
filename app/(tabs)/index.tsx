@@ -54,8 +54,8 @@ const OfficialHome = () => {
   // Debug logging for subcategories data
   // useEffect(() => {
   //   if (subCategories.length > 0) {
-  //     console.log('Subcategory template data:', 
-  //       JSON.stringify(subCategories[0]?.template || [], null, 2)
+  //     console.log('Subcategory posts data:', 
+  //       JSON.stringify(subCategories[0]?.posts || [], null, 2)
   //     );
   //   }
   // }, [subCategories]);
@@ -109,7 +109,7 @@ const OfficialHome = () => {
               }}
             >
               <CarouselComp
-                images={subcategory.template?.map((item: any) => 
+                images={subcategory.posts?.map((item: any) => 
                   item.previewImage || "https://via.placeholder.com/400"
                 ) || []}
                 title={subcategory.name}
