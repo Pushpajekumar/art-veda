@@ -105,9 +105,7 @@ const PersonalDetails = () => {
             name: fullName,
             profileImage: `https://cloud.appwrite.io/v1/storage/buckets/${
               process.env.EXPO_PUBLIC_BUCKET_ID
-            }/files/${file.$id}/view?project=${
-              process.env.EXPO_PUBLIC_APPWRITE_PROJECT_ID
-            }`,
+            }/files/${file.$id}/view?project=6815dda60027ce5089d8`,
             profileImageId: file.$id,
             address: address,
           }

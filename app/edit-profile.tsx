@@ -9,17 +9,21 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
+  Alert,
 } from "react-native";
 import React, { useEffect, useState } from "react";
 import { Ionicons } from "@expo/vector-icons";
 import { primaryColor } from "@/constant/contant";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { database } from "@/context/app-write";
+import { database, ID } from "@/context/app-write";
+import * as ImagePicker from "expo-image-picker";
+import { storage } from "@/context/app-write"; // Make sure this is imported or available
 
 const EditProfile = () => {
   const { userId } = useLocalSearchParams();
   const router = useRouter();
   const [loading, setLoading] = useState(true);
+  const [imageUploading, setImageUploading] = useState(false);
   const [error, setError] = useState("");
 
   const [profileData, setProfileData] = useState({
@@ -31,20 +35,23 @@ const EditProfile = () => {
     phone: "",
     address: "",
     profileImage: "https://via.placeholder.com/150",
+    profileImageId: "",
+    logo: "https://via.placeholder.com/150",
+    logoId: "",
   });
 
   useEffect(() => {
     const fetchUserData = async () => {
       try {
         if (!userId) return;
-        
+
         setLoading(true);
         const user = await database.getDocument(
           "6815de2b0004b53475ec",
           "6815e0be001731ca8b1b",
           userId.toString()
         );
-        
+
         if (user) {
           setProfileData({
             name: user.name || "",
@@ -54,7 +61,11 @@ const EditProfile = () => {
             email: user.email || "",
             phone: user.phone || "",
             address: user.address || "",
-            profileImage: user.profileImage || "https://via.placeholder.com/150",
+            profileImage:
+              user.profileImage || "https://via.placeholder.com/150",
+            profileImageId: user.profileImageId || "",
+            logo: user.logo || "https://via.placeholder.com/150",
+            logoId: user.logoId || "",
           });
         }
       } catch (err) {
@@ -71,6 +82,7 @@ const EditProfile = () => {
   const handleSave = async () => {
     try {
       setLoading(true);
+
       await database.updateDocument(
         "6815de2b0004b53475ec",
         "6815e0be001731ca8b1b",
@@ -83,10 +95,10 @@ const EditProfile = () => {
           email: profileData.email,
           phone: profileData.phone,
           address: profileData.address,
-          profileImage: profileData.profileImage,
         }
       );
-      alert("Profile updated successfully");
+
+      Alert.alert("Success", "Profile updated successfully");
       router.back();
     } catch (err) {
       console.error("Error updating profile:", err);
@@ -96,10 +108,123 @@ const EditProfile = () => {
     }
   };
 
-  // Function to handle image selection (placeholder for now)
-  const handleImageSelect = () => {
-    // Image picker implementation would go here
-    alert("Image selection functionality to be implemented");
+  // Function to handle image selection
+  const pickImage = async (type: "profile" | "logo") => {
+    try {
+      // Request permissions
+      const {
+        status,
+      } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+
+      if (status !== "granted") {
+        Alert.alert(
+          "Permission needed",
+          "Please grant camera roll permissions to upload images"
+        );
+        return;
+      }
+
+      // Launch image picker
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.5,
+      });
+
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        setImageUploading(true);
+
+        try {
+          const uri = result.assets[0].uri;
+          const filename = uri.substring(uri.lastIndexOf("/") + 1);
+
+          // Get file info
+          const response = await fetch(uri);
+          const blob = await response.blob();
+
+          // Create a file object compatible with Appwrite storage
+          const fileData = {
+            name: filename,
+            type: blob.type,
+            size: blob.size,
+            uri: uri,
+          };
+
+          const bucketId = process.env.EXPO_PUBLIC_BUCKET_ID!;
+
+          // Upload to storage
+          const file = await storage.createFile(
+            bucketId,
+            ID.unique(),
+            fileData
+          );
+
+          // Generate the complete file URL
+          const fileUrl = `https://cloud.appwrite.io/v1/storage/buckets/${bucketId}/files/${
+            file.$id
+          }/view?project=6815dda60027ce5089d8`;
+
+          // Update document with the new image info
+          if (type === "profile") {
+            await database.updateDocument(
+              "6815de2b0004b53475ec",
+              "6815e0be001731ca8b1b",
+              userId.toString(),
+              {
+                profileImage: fileUrl,
+                profileImageId: file.$id,
+              }
+            );
+          } else if (type === "logo") {
+            await database.updateDocument(
+              "6815de2b0004b53475ec",
+              "6815e0be001731ca8b1b",
+              userId.toString(),
+              {
+                logo: fileUrl,
+                logoId: file.$id,
+              }
+            );
+          }
+
+          // Update state based on type
+          if (type === "profile") {
+            setProfileData((prev) => ({
+              ...prev,
+              profileImage: fileUrl,
+              profileImageId: file.$id,
+            }));
+          } else if (type === "logo") {
+            setProfileData((prev) => ({
+              ...prev,
+              logo: fileUrl,
+              logoId: file.$id,
+            }));
+          }
+
+          // Show success message
+          Alert.alert(
+            "Upload Success",
+            `Your ${
+              type === "profile" ? "profile picture" : "business logo"
+            } has been uploaded successfully!`
+          );
+        } catch (err) {
+          console.error("Error uploading image:", err);
+          Alert.alert(
+            "Upload Failed",
+            "Failed to upload image. Please try again."
+          );
+        } finally {
+          setImageUploading(false);
+        }
+      }
+    } catch (err) {
+      console.error("Image picker error:", err);
+      Alert.alert("Error", "Something went wrong while selecting the image");
+      setImageUploading(false);
+    }
   };
 
   if (loading && !profileData.name) {
@@ -119,19 +244,56 @@ const EditProfile = () => {
   }
 
   return (
-    <KeyboardAvoidingView 
+    <KeyboardAvoidingView
       behavior={Platform.OS === "ios" ? "padding" : "height"}
       style={styles.keyboardAvoidingView}
     >
-      <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
+      <ScrollView
+        style={styles.container}
+        contentContainerStyle={styles.scrollContent}
+      >
         <View style={styles.imageContainer}>
-          <Image
-            source={{ uri: profileData.profileImage }}
-            style={styles.profileImage}
-          />
-          <TouchableOpacity style={styles.imageEditButton} onPress={handleImageSelect}>
+          {imageUploading ? (
+            <View style={styles.profileImageLoader}>
+              <ActivityIndicator size="large" color={primaryColor} />
+            </View>
+          ) : (
+            <Image
+              source={{ uri: profileData.profileImage }}
+              style={styles.profileImage}
+            />
+          )}
+          <TouchableOpacity
+            style={styles.imageEditButton}
+            onPress={() => pickImage("profile")}
+            disabled={imageUploading}
+          >
             <Ionicons name="camera-outline" size={24} color="#fff" />
           </TouchableOpacity>
+        </View>
+
+        {/* Logo Image Section */}
+        <View style={styles.logoSection}>
+          <Text style={styles.sectionTitle}>Business Logo</Text>
+          <View style={styles.logoContainer}>
+            {imageUploading ? (
+              <View style={styles.logoImageLoader}>
+                <ActivityIndicator size="large" color={primaryColor} />
+              </View>
+            ) : (
+              <Image
+                source={{ uri: profileData.logo }}
+                style={styles.logoImage}
+              />
+            )}
+            <TouchableOpacity
+              style={styles.logoEditButton}
+              onPress={() => pickImage("logo")}
+              disabled={imageUploading}
+            >
+              <Ionicons name="camera-outline" size={24} color="#fff" />
+            </TouchableOpacity>
+          </View>
         </View>
 
         <View style={styles.formContainer}>
@@ -176,7 +338,9 @@ const EditProfile = () => {
             <View style={styles.radioContainer}>
               <TouchableOpacity
                 style={styles.radioOption}
-                onPress={() => setProfileData({ ...profileData, gender: "male" })}
+                onPress={() =>
+                  setProfileData({ ...profileData, gender: "male" })
+                }
               >
                 <View
                   style={[
@@ -257,10 +421,13 @@ const EditProfile = () => {
             />
           </View>
 
-          <TouchableOpacity 
-            style={[styles.saveButton, loading && styles.disabledButton]} 
+          <TouchableOpacity
+            style={[
+              styles.saveButton,
+              (loading || imageUploading) && styles.disabledButton,
+            ]}
             onPress={handleSave}
-            disabled={loading}
+            disabled={loading || imageUploading}
           >
             {loading ? (
               <ActivityIndicator color="#fff" size="small" />
@@ -287,14 +454,14 @@ const styles = StyleSheet.create({
   },
   centerContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     padding: 20,
   },
   errorText: {
-    color: 'red',
+    color: "red",
     fontSize: 16,
-    textAlign: 'center',
+    textAlign: "center",
   },
   imageContainer: {
     alignItems: "center",
@@ -306,10 +473,54 @@ const styles = StyleSheet.create({
     height: 120,
     borderRadius: 60,
   },
+  profileImageLoader: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: "#f0f0f0",
+    justifyContent: "center",
+    alignItems: "center",
+  },
   imageEditButton: {
     position: "absolute",
     bottom: 0,
     right: "35%",
+    backgroundColor: primaryColor,
+    padding: 8,
+    borderRadius: 20,
+  },
+  // Logo styles
+  logoSection: {
+    alignItems: "center",
+    marginTop: 20,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+    marginBottom: 10,
+    color: "#333",
+  },
+  logoContainer: {
+    position: "relative",
+    marginBottom: 10,
+  },
+  logoImage: {
+    width: 100,
+    height: 100,
+    borderRadius: 10,
+  },
+  logoImageLoader: {
+    width: 100,
+    height: 100,
+    borderRadius: 10,
+    backgroundColor: "#f0f0f0",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  logoEditButton: {
+    position: "absolute",
+    bottom: 0,
+    right: 0,
     backgroundColor: primaryColor,
     padding: 8,
     borderRadius: 20,

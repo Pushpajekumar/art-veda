@@ -450,6 +450,7 @@ const EditScreen = () => {
     ? (canvasHeight / canvasWidth) * (width - 40)
     : width - 40, "Calculated height");
   console.log(width - 40, "Width");
+  console.log(currentUser, "Current User🔴");
 
   const renderFontSelectionBottomSheet = () => {
     return (
@@ -591,14 +592,28 @@ const EditScreen = () => {
                     }
 
                     if (el.type === 'image') {
-                      const img = el.src ? imageMap[el.src] : null;
-                      console.log(img, "Image");
+                      
+                      let imgSrc = el.src;
+                      
+                      // Handle logo case specially
+                      if (el.label === 'logo' && currentUser && currentUser[0]?.logo) {
+                        // Add the logo URL to image sources if not already there
+                        if (!imageSources.includes(currentUser[0].logo)) {
+                          setImageSources(prev => [...prev, currentUser[0].logo]);
+                        }
+                        imgSrc = currentUser[0].logo;
+                      }
+                      
+                      const img = imgSrc ? imageMap[imgSrc] : null;
+                      
+                      console.log(imgSrc, "Image Source URL");
+                      console.log(img, "Image Source");
                       if (!img) return null;
 
                       const position = calculatePositionFromRatio(el.x, el.y);
 
                       if (el.label === 'logo') {
-                        // For logo images, use their original dimensions
+                        console.log(img, "Logo Image 🤔");
                         return (
                           <SkiaImage
                             key={el.id}
@@ -612,6 +627,7 @@ const EditScreen = () => {
                         );
                       } else {
                         // For other images, use default dimensions
+                        console.log(img, "Other Image 😂");
                         return (
                           <SkiaImage
                             key={el.id}
