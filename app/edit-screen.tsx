@@ -9,7 +9,7 @@ import {
 } from "react-native";
 import React, { useEffect, useState, useCallback } from "react";
 import { useLocalSearchParams } from "expo-router";
-import { database } from "@/context/app-write";
+import { account, database } from "@/context/app-write";
 import { Query } from "react-native-appwrite";
 import { SafeAreaView } from "react-native-safe-area-context";
 import {
@@ -103,6 +103,23 @@ const EditScreen = () => {
   const [frameWidth, setFrameWidth] = useState(0);
   const [frameHeight, setFrameHeight] = useState(0);
   const [selectedFrameIndex, setSelectedFrameIndex] = useState(0);
+  const [currentUser, setCurrentUser] = useState<any>(null);
+
+useEffect(() => {
+  const fetchUserData = async () => {
+    const accountDetails = await account.get(); // Await the account.get() call
+    const userId = accountDetails?.$id;
+
+    const userDetails = await database.listDocuments(
+      "6815de2b0004b53475ec",
+      "6815e0be001731ca8b1b",
+      [Query.equal("userId", userId)]
+    );
+    setCurrentUser(userDetails.documents);
+  };
+
+  fetchUserData();
+}, [])
 
   const fontSizes = [8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50];
   const regularFonts = fontSizes.map(size => 
@@ -215,8 +232,8 @@ const EditScreen = () => {
           id: obj.id,
           x: obj.left ?? 0,
           y: obj.top ?? 0,
-          width: (obj.width ?? 100) * (obj.scaleX ?? 1),
-          height: (obj.height ?? 100) * (obj.scaleY ?? 1),
+          width: (obj.label === 'logo') ? Math.min(80, (obj.width ?? 50) * (obj.scaleX ?? 1)) : (obj.width ?? 50) * (obj.scaleX ?? 1),
+          height: (obj.label === 'logo') ? Math.min(80, (obj.height ?? 50) * (obj.scaleY ?? 1)) : (obj.height ?? 50) * (obj.scaleY ?? 1),
           src: obj.src ?? '',
           label: obj.label ?? '',
         };
@@ -266,20 +283,18 @@ const EditScreen = () => {
   useEffect(() => {
     const fetchInitialData = async () => {
       try {
-        setLoading(true);
-
-        
+        setLoading(true);     
         
         // Fetch current post and frames
         const [postDetails, framesResponse] = await Promise.all([
           database.getDocument(
-            process.env.EXPO_PUBLIC_APPWRITE_DATABASE_ID!,
-            process.env.EXPO_PUBLIC_APPWRITE_POSTS_COLLECTION_ID!,
+            "6815de2b0004b53475ec",
+           "6815de8d00124a0a9572",
             currentPostId
           ),
           database.listDocuments(
-            process.env.EXPO_PUBLIC_APPWRITE_DATABASE_ID!,
-            process.env.EXPO_PUBLIC_APPWRITE_FRAMES_COLLECTION_ID!
+            "6815de2b0004b53475ec",
+            "6815de5300077ef22735"
           ),
         ]);
 
@@ -359,19 +374,31 @@ const EditScreen = () => {
                   />
                   {elements.map((el) => {
                     if (el.type === 'text') {
-
                       const position = calculatePositionFromRatio(el.x, el.y);
                       const font = getFontWithSize(el.fontWeight, el.fontSize);
                       if (!font) return null;
+
+                      // Determine text content based on label
+                      let displayText = el.text;
+                        if (el.label && currentUser && currentUser[0]) {
+                        if (el.label === 'name' && currentUser[0].name) {
+                          displayText = currentUser[0].name;
+                        } else if (el.label === 'email' && currentUser[0].email) {
+                          displayText = currentUser[0].email;
+                        } else if (el.label === 'address' && currentUser[0].address) {
+                          displayText = currentUser[0].address;
+                        }
+                        }
+
                       return (
-                        <SkiaText
-                          key={el.id}
-                          x={position.x} 
-                          y={position.y}
-                          text={el.text}
-                          font={font}
-                          color={el.fill}
-                        />
+                      <SkiaText
+                        key={el.id}
+                        x={position.x} 
+                        y={position.y}
+                        text={displayText}
+                        font={font}
+                        color={el.fill}
+                      />
                       );
                     }
 
