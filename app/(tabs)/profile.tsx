@@ -57,6 +57,7 @@ const profile = () => {
         setPhone(userDetails.phone || "");
         setProfileImage(userDetails.profileImage || "");
         setUserId(userDetails.$id || "");
+        console.log(userDetails);
       } catch (error) {
         console.error("Error fetching user details:", error);
         ToastAndroid.show("Failed to load profile", ToastAndroid.SHORT);
@@ -94,7 +95,11 @@ const profile = () => {
             >
               <View style={{ alignItems: "center" }}>
                 <Image
-                  source={{ uri: profileImage }}
+                  source={
+                    profileImage && profileImage.length > 0
+                      ? { uri: profileImage }
+                      : require("../../assets/images/user.png")
+                  }
                   style={{
                     width: width * 0.25,
                     height: width * 0.25,
@@ -102,7 +107,11 @@ const profile = () => {
                     borderWidth: 3,
                     marginTop: -width * 0.175,
                     borderColor: "white",
+                    backgroundColor: "#e5e7eb", // Add background color for transparent images
+                    overflow: "hidden", // Ensure content doesn't overflow rounded borders
                   }}
+                  resizeMode="cover"
+                  onError={() => console.log("Error loading profile image")}
                 />
                 <Text
                   style={{ marginTop: 8, fontSize: 16, fontWeight: "bold" }}
