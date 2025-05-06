@@ -8,6 +8,7 @@ import {
   Dimensions,
   Alert,
   Linking,
+  Modal,
 } from "react-native";
 import React, { useEffect, useState, useCallback, useRef } from "react";
 import { useLocalSearchParams } from "expo-router";
@@ -109,6 +110,7 @@ const EditScreen = () => {
   const [frameHeight, setFrameHeight] = useState(0);
   const [selectedFrameIndex, setSelectedFrameIndex] = useState(0);
   const [currentUser, setCurrentUser] = useState<any>(null);
+  const [fontSelectorVisible, setFontSelectorVisible] = useState(false);
 
   // Canvas reference to access makeImageSnapshot method
   const canvasRef = useRef<any>(null);
@@ -132,7 +134,7 @@ const EditScreen = () => {
   const fontSizes = [8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50];
   // Font loading
   const regularFonts = fontSizes.map(size => 
-    useFont(require("../assets/fonts/Montserrat-Light.ttf"), size)
+    useFont(require("../assets/fonts/Montserrat-Medium.ttf"), size)
   );
   const boldFonts = fontSizes.map(size => 
     useFont(require("../assets/fonts/Montserrat-Bold.ttf"), size)
@@ -148,18 +150,18 @@ const EditScreen = () => {
   const [selectedFontFamily, setSelectedFontFamily] = useState<'montserrat' | 'roboto'>('montserrat');
 
   // Function to get the appropriate font based on selection
-  const getSelectedFont = (weight: string, fontSize: number) => {
-    const closestSize = getClosestFontSize(fontSize);
-    const index = fontSizes.indexOf(closestSize);
+  // const getSelectedFont = (weight: string, fontSize: number) => {
+  //   const closestSize = getClosestFontSize(fontSize);
+  //   const index = fontSizes.indexOf(closestSize);
     
-    if (index === -1) return null;
+  //   if (index === -1) return null;
     
-    if (selectedFontFamily === 'montserrat') {
-      return weight === 'bold' ? boldFonts[index] : regularFonts[index];
-    } else {
-      return weight === 'bold' ? robotoBoldFonts[index] : robotoRegularFonts[index];
-    }
-  };
+  //   if (selectedFontFamily === 'montserrat') {
+  //     return weight === 'bold' ? boldFonts[index] : regularFonts[index];
+  //   } else {
+  //     return weight === 'bold' ? robotoBoldFonts[index] : robotoRegularFonts[index];
+  //   }
+  // };
 
   const getClosestFontSize = (size: number) => {
     return fontSizes.reduce((prev, curr) => 
@@ -449,6 +451,72 @@ const EditScreen = () => {
     : width - 40, "Calculated height");
   console.log(width - 40, "Width");
 
+  const renderFontSelectionBottomSheet = () => {
+    return (
+      <Modal
+        visible={fontSelectorVisible}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setFontSelectorVisible(false)}
+      >
+        <TouchableOpacity 
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setFontSelectorVisible(false)}
+        >
+          <View style={styles.bottomSheet}>
+            <View style={styles.bottomSheetHandle} />
+            <Text style={styles.bottomSheetTitle}>Select Font</Text>
+            
+            <View style={styles.fontOptionsContainer}>
+              <TouchableOpacity
+                style={[
+                  styles.fontOption,
+                  selectedFontFamily === 'montserrat' && styles.selectedFontOption
+                ]}
+                onPress={() => {
+                  setSelectedFontFamily('montserrat');
+                  setFontSelectorVisible(false);
+                }}
+              >
+                <Text style={styles.fontLabel}>Montserrat</Text>
+                <Text 
+                  style={[
+                    styles.fontPreview, 
+                    { fontFamily: 'Montserrat' }
+                  ]}
+                >
+                  Sample Text
+                </Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                style={[
+                  styles.fontOption,
+                  selectedFontFamily === 'roboto' && styles.selectedFontOption
+                ]}
+                onPress={() => {
+                  setSelectedFontFamily('roboto');
+                  setFontSelectorVisible(false);
+                }}
+              >
+                <Text style={styles.fontLabel}>Roboto</Text>
+                <Text 
+                  style={[
+                    styles.fontPreview, 
+                    { fontFamily: 'Roboto' }
+                  ]}
+                >
+                  Sample Text
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </TouchableOpacity>
+      </Modal>
+    );
+  };
+
   return (
     <View style={styles.safeArea}>
       <ScrollView style={styles.scrollView}>
@@ -462,46 +530,6 @@ const EditScreen = () => {
           </View>
         ) : (
           <View style={styles.container}>
-            
-            {/* Font Family Selection UI */}
-            <View style={styles.fontSelectionContainer}>
-              <Text style={styles.fontSelectionTitle}>Select Font Family:</Text>
-              <View style={styles.fontButtonsContainer}>
-                <TouchableOpacity
-                  style={[
-                    styles.fontFamilyButton,
-                    selectedFontFamily === 'montserrat' && styles.selectedFontFamilyButton,
-                  ]}
-                  onPress={() => setSelectedFontFamily('montserrat')}
-                >
-                  <Text 
-                    style={[
-                      styles.fontFamilyButtonText,
-                      selectedFontFamily === 'montserrat' && styles.selectedFontFamilyButtonText,
-                    ]}
-                  >
-                    Montserrat
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[
-                    styles.fontFamilyButton,
-                    selectedFontFamily === 'roboto' && styles.selectedFontFamilyButton,
-                  ]}
-                  onPress={() => setSelectedFontFamily('roboto')}
-                >
-                  <Text 
-                    style={[
-                      styles.fontFamilyButtonText,
-                      selectedFontFamily === 'roboto' && styles.selectedFontFamilyButtonText,
-                    ]}
-                  >
-                    Roboto
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-
             <View style={styles.previewContainer}>
               <ScrollView
                 horizontal={true}
@@ -603,6 +631,15 @@ const EditScreen = () => {
                 </Canvas>
               </ScrollView>
               
+              {/* Font button */}
+              <TouchableOpacity 
+                style={styles.fontButton} 
+                onPress={() => setFontSelectorVisible(true)}
+                activeOpacity={0.8}
+              >
+                <Feather name="type" size={24} color="white" />
+              </TouchableOpacity>
+              
               {/* Download Button */}
               <TouchableOpacity 
                 style={styles.downloadButton} 
@@ -612,6 +649,9 @@ const EditScreen = () => {
                 <Feather name="download" size={24} color="white" />
               </TouchableOpacity>
             </View>
+
+            {/* Render the font selection bottom sheet */}
+            {renderFontSelectionBottomSheet()}
 
             {/* Frames Selection Section */}
             {frames.length > 0 && (
@@ -791,41 +831,80 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 5,
   },
-  downloadButtonText: {
-    color: 'white',
-    fontWeight: '600',
-    marginLeft: 8,
-    fontSize: 16,
-  },
-  // Styles for Font Family Selection
-  fontSelectionContainer: {
-    marginVertical: 15,
-    paddingHorizontal: 5,
-  },
-  fontSelectionTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginBottom: 8,
-  },
-  fontButtonsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-  },
-  fontFamilyButton: {
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: primaryColor,
-  },
-  selectedFontFamilyButton: {
+  
+  fontButton: {
+    position: 'absolute',
+    bottom: 30,
+    right: 80, // Position to the left of download button
     backgroundColor: primaryColor,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 5,
   },
-  fontFamilyButtonText: {
-    color: primaryColor,
+  
+  // Bottom sheet styles
+  modalOverlay: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    backgroundColor: 'rgba(0,0,0,0.4)',
+  },
+  bottomSheet: {
+    backgroundColor: 'white',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    padding: 20,
+    paddingTop: 10,
+    elevation: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 5,
+  },
+  bottomSheetHandle: {
+    width: 40,
+    height: 5,
+    backgroundColor: '#ccc',
+    borderRadius: 3,
+    alignSelf: 'center',
+    marginBottom: 15,
+  },
+  bottomSheetTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 20,
+    textAlign: 'center',
+  },
+  fontOptionsContainer: {
+    marginBottom: 20,
+  },
+  fontOption: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 15,
+    paddingHorizontal: 10,
+    borderRadius: 8,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: '#eee',
+  },
+  selectedFontOption: {
+    borderColor: primaryColor,
+    backgroundColor: `${primaryColor}10`, // 10% opacity of primary color
+  },
+  fontLabel: {
+    fontSize: 16,
     fontWeight: '500',
   },
-  selectedFontFamilyButtonText: {
-    color: 'white',
+  fontPreview: {
+    fontSize: 16,
+    color: '#666',
   },
 });
