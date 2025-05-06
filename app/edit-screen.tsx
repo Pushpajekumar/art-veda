@@ -6,8 +6,10 @@ import {
   TouchableOpacity,
   StyleSheet,
   Dimensions,
+  Alert,
+  Linking,
 } from "react-native";
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useRef } from "react";
 import { useLocalSearchParams } from "expo-router";
 import { account, database } from "@/context/app-write";
 import { Query } from "react-native-appwrite";
@@ -20,6 +22,9 @@ import {
   useFont,
 } from "@shopify/react-native-skia";
 import { width } from "@/constant/contant";
+import * as MediaLibrary from 'expo-media-library';
+import * as FileSystem from 'expo-file-system';
+import { Feather } from '@expo/vector-icons';
 
 type FabricObject = {
   type: string;
@@ -105,21 +110,24 @@ const EditScreen = () => {
   const [selectedFrameIndex, setSelectedFrameIndex] = useState(0);
   const [currentUser, setCurrentUser] = useState<any>(null);
 
-useEffect(() => {
-  const fetchUserData = async () => {
-    const accountDetails = await account.get(); // Await the account.get() call
-    const userId = accountDetails?.$id;
+  // Canvas reference to access makeImageSnapshot method
+  const canvasRef = useRef<any>(null);
 
-    const userDetails = await database.listDocuments(
-      "6815de2b0004b53475ec",
-      "6815e0be001731ca8b1b",
-      [Query.equal("userId", userId)]
-    );
-    setCurrentUser(userDetails.documents);
-  };
+  useEffect(() => {
+    const fetchUserData = async () => {
+      const accountDetails = await account.get(); // Await the account.get() call
+      const userId = accountDetails?.$id;
 
-  fetchUserData();
-}, [])
+      const userDetails = await database.listDocuments(
+        "6815de2b0004b53475ec",
+        "6815e0be001731ca8b1b",
+        [Query.equal("userId", userId)]
+      );
+      setCurrentUser(userDetails.documents);
+    };
+
+    fetchUserData();
+  }, [])
 
   const fontSizes = [8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50];
   const regularFonts = fontSizes.map(size => 
@@ -278,7 +286,79 @@ useEffect(() => {
     }
   };
 
-
+  const handleDownload = async () => {
+    try {
+      // First check if we already have permissions
+      let permissionStatus = await MediaLibrary.getPermissionsAsync();
+      
+      // If we don't have permissions, request them
+      if (!permissionStatus.granted) {
+        permissionStatus = await MediaLibrary.requestPermissionsAsync();
+        
+        // If the user denied permissions, show an alert with instructions
+        if (!permissionStatus.granted) {
+          Alert.alert(
+            'Permission Required',
+            'To save images, this app needs access to your media library. Please go to app settings and enable Media Library permissions.',
+            [
+              { text: 'Cancel', style: 'cancel' },
+              { 
+                text: 'Open Settings', 
+                onPress: () => Linking.openSettings() 
+              }
+            ]
+          );
+          return;
+        }
+      }
+      
+      // Check for canvas reference
+      if (!canvasRef.current) {
+        Alert.alert('Error', 'Canvas not ready. Please try again.');
+        return;
+      }
+      
+      // Create a snapshot using makeImageSnapshot
+      Alert.alert('Creating snapshot...', 'Please wait while we save your image.');
+      const snapshot = await canvasRef.current.makeImageSnapshot();
+      
+      if (!snapshot) {
+        Alert.alert('Error', 'Failed to capture image');
+        return;
+      }
+      
+      // Use the correct method to encode to base64
+      const base64 = snapshot.encodeToBase64();
+      
+      // Create a temporary file path with proper naming
+      const fileUri = `${FileSystem.cacheDirectory}artframe_${Date.now()}.png`;
+      
+      // Write the base64 data to the file
+      await FileSystem.writeAsStringAsync(fileUri, base64, {
+        encoding: FileSystem.EncodingType.Base64,
+      });
+      
+      // Save to media library with proper error handling
+      try {
+        const asset = await MediaLibrary.createAssetAsync(fileUri);
+        await MediaLibrary.createAlbumAsync("ArtVeda", asset, false);
+        Alert.alert('Success', 'Image saved to your gallery!');
+      } catch (mediaError) {
+        console.error('Media library error:', mediaError);
+        Alert.alert(
+          'Save Failed',
+          'Failed to save to gallery. Please check your permissions and try again.'
+        );
+      }
+      
+      // Clean up the temporary file
+      await FileSystem.deleteAsync(fileUri, { idempotent: true });
+      
+    } catch (error:any) {
+      console.error('Error saving image:', error);
+      Alert.alert('Error', `Failed to save image: ${error.message}`);
+    }
+  };
 
   useEffect(() => {
     const fetchInitialData = async () => {
@@ -355,6 +435,7 @@ useEffect(() => {
                 }}
               >
                 <Canvas
+                  ref={canvasRef}
                   style={{
                     width: width - 40,
                     height: canvasWidth
@@ -442,6 +523,16 @@ useEffect(() => {
                   })}
                 </Canvas>
               </ScrollView>
+              
+              {/* Download Button */}
+              <TouchableOpacity 
+                style={styles.downloadButton} 
+                onPress={handleDownload}
+                activeOpacity={0.8}
+              >
+                <Feather name="download" size={24} color="white" />
+                <Text style={styles.downloadButtonText}>Save to Gallery</Text>
+              </TouchableOpacity>
             </View>
 
             {/* Frames Selection Section */}
@@ -605,5 +696,27 @@ const styles = StyleSheet.create({
     fontSize: 12,
     textAlign: 'center',
     padding: 4,
+  },
+  downloadButton: {
+    position: 'absolute',
+    bottom: 30,
+    right: 20,
+    backgroundColor: '#007bff',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  downloadButtonText: {
+    color: 'white',
+    fontWeight: '600',
+    marginLeft: 8,
+    fontSize: 16,
   },
 });
