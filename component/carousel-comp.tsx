@@ -1,5 +1,5 @@
 import * as React from "react";
-import { Dimensions, Image, Text, View } from "react-native";
+import { Dimensions, Image, Text, View, TouchableOpacity } from "react-native";
 import Carousel, { ICarouselInstance } from "react-native-reanimated-carousel";
 import Entypo from "@expo/vector-icons/Entypo";
 import Feather from "@expo/vector-icons/Feather";
@@ -7,7 +7,7 @@ import { useRouter } from "expo-router";
 import { TYPOGRAPHY } from "@/utils/fonts";
 
 interface CarouselCompProps {
-  images: string[];
+  images: { previewImage: string; id: string }[];
   title?: string;
   showViewAll?: boolean;
   subCatId: string;
@@ -34,6 +34,13 @@ const CarouselComp: React.FC<CarouselCompProps> = ({
     });
   }, [subCatId, subCatName, router]);
 
+  const handlePostPress = React.useCallback((postId: string) => {
+    router.push({
+      pathname: "/edit-screen",
+      params: { postId },
+    });
+  }, [router]);
+
   return (
     <View style={{ flex: 1 }}>
       <View
@@ -50,7 +57,7 @@ const CarouselComp: React.FC<CarouselCompProps> = ({
             {title}
           </Text>
         </View>
-        
+
         {showViewAll && (
           <View style={{ flexDirection: "row", alignItems: "center" }}>
             <Text style={{ color: "#666" }} onPress={onViewAllPress}>
@@ -60,10 +67,12 @@ const CarouselComp: React.FC<CarouselCompProps> = ({
           </View>
         )}
       </View>
-      
+
       <View style={{ flex: 1 }}>
         {images.length === 0 ? (
-          <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+          <View
+            style={{ flex: 1, justifyContent: "center", alignItems: "center" }}
+          >
             <Text style={{ ...TYPOGRAPHY.body, color: "#666" }}>
               Loading...
             </Text>
@@ -78,7 +87,9 @@ const CarouselComp: React.FC<CarouselCompProps> = ({
             style={{ width: "100%" }}
             loop
             renderItem={({ index }) => (
-              <View
+              <TouchableOpacity
+                activeOpacity={0.8}
+                onPress={() => handlePostPress(images[index].id)}
                 style={{
                   flex: 1,
                   borderRadius: 10,
@@ -90,11 +101,11 @@ const CarouselComp: React.FC<CarouselCompProps> = ({
                 }}
               >
                 <Image
-                  source={{ uri: images[index] }}
+                  source={{ uri: images[index].previewImage }}
                   style={{ width: "100%", height: "100%", borderRadius: 8 }}
                   resizeMode="cover"
                 />
-              </View>
+              </TouchableOpacity>
             )}
           />
         )}

@@ -40,7 +40,7 @@ const DailyEvent = () => {
   const fetchEventByDate = async (date: Date) => {
     setLoading(true);
     try {
-      const formattedDate = 
+      const formattedDate =
         date.toISOString().split("T")[0] + "T12:00:00.000+00:00";
 
       const events = await database.listDocuments(
@@ -48,8 +48,9 @@ const DailyEvent = () => {
         process.env.EXPO_PUBLIC_APPWRITE_DAILY_EVENT_ID!,
         [Query.equal("date", formattedDate)]
       );
-      
+
       setEvents(events.documents);
+      console.log("events 🟡", events.documents);
       console.log(events, "events for date:", formattedDate);
     } catch (error) {
       console.error("Error fetching event:", error);
@@ -148,7 +149,10 @@ const DailyEvent = () => {
             images={events.flatMap((event) =>
               event.posts
                 ? event.posts.map(
-                    (posts: { previewImage: string }) => posts.previewImage
+                    (posts: { previewImage: string; $id: string }) => ({
+                      previewImage: posts.previewImage,
+                      id: posts.$id,
+                    })
                   )
                 : []
             )}
