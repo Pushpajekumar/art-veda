@@ -130,12 +130,36 @@ const EditScreen = () => {
   }, [])
 
   const fontSizes = [8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50];
+  // Font loading
   const regularFonts = fontSizes.map(size => 
     useFont(require("../assets/fonts/Montserrat-Light.ttf"), size)
   );
   const boldFonts = fontSizes.map(size => 
     useFont(require("../assets/fonts/Montserrat-Bold.ttf"), size)
   );
+  const robotoRegularFonts = fontSizes.map(size => 
+    useFont(require("../assets/fonts/Roboto-Medium.ttf"), size)
+  );
+  const robotoBoldFonts = fontSizes.map(size => 
+    useFont(require("../assets/fonts/Roboto-Bold.ttf"), size)
+  );
+
+  // Font selection state
+  const [selectedFontFamily, setSelectedFontFamily] = useState<'montserrat' | 'roboto'>('montserrat');
+
+  // Function to get the appropriate font based on selection
+  const getSelectedFont = (weight: string, fontSize: number) => {
+    const closestSize = getClosestFontSize(fontSize);
+    const index = fontSizes.indexOf(closestSize);
+    
+    if (index === -1) return null;
+    
+    if (selectedFontFamily === 'montserrat') {
+      return weight === 'bold' ? boldFonts[index] : regularFonts[index];
+    } else {
+      return weight === 'bold' ? robotoBoldFonts[index] : robotoRegularFonts[index];
+    }
+  };
 
   const getClosestFontSize = (size: number) => {
     return fontSizes.reduce((prev, curr) => 
@@ -172,7 +196,11 @@ const EditScreen = () => {
     const index = fontSizes.indexOf(closestSize - 5);
     
     if (index === -1) return null;
-    return weight === 'bold' ? boldFonts[index] : regularFonts[index];
+    if (selectedFontFamily === 'montserrat') {
+      return weight === 'bold' ? boldFonts[index] : regularFonts[index];
+    } else {
+      return weight === 'bold' ? robotoBoldFonts[index] : robotoRegularFonts[index];
+    }
   };
 
   const { imageHooks, updateUrls } = ImageLoader({ maxImages: 20 });
@@ -435,6 +463,44 @@ const EditScreen = () => {
         ) : (
           <View style={styles.container}>
             
+            {/* Font Family Selection UI */}
+            <View style={styles.fontSelectionContainer}>
+              <Text style={styles.fontSelectionTitle}>Select Font Family:</Text>
+              <View style={styles.fontButtonsContainer}>
+                <TouchableOpacity
+                  style={[
+                    styles.fontFamilyButton,
+                    selectedFontFamily === 'montserrat' && styles.selectedFontFamilyButton,
+                  ]}
+                  onPress={() => setSelectedFontFamily('montserrat')}
+                >
+                  <Text 
+                    style={[
+                      styles.fontFamilyButtonText,
+                      selectedFontFamily === 'montserrat' && styles.selectedFontFamilyButtonText,
+                    ]}
+                  >
+                    Montserrat
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[
+                    styles.fontFamilyButton,
+                    selectedFontFamily === 'roboto' && styles.selectedFontFamilyButton,
+                  ]}
+                  onPress={() => setSelectedFontFamily('roboto')}
+                >
+                  <Text 
+                    style={[
+                      styles.fontFamilyButtonText,
+                      selectedFontFamily === 'roboto' && styles.selectedFontFamilyButtonText,
+                    ]}
+                  >
+                    Roboto
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
 
             <View style={styles.previewContainer}>
               <ScrollView
@@ -730,5 +796,36 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginLeft: 8,
     fontSize: 16,
+  },
+  // Styles for Font Family Selection
+  fontSelectionContainer: {
+    marginVertical: 15,
+    paddingHorizontal: 5,
+  },
+  fontSelectionTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginBottom: 8,
+  },
+  fontButtonsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+  },
+  fontFamilyButton: {
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: primaryColor,
+  },
+  selectedFontFamilyButton: {
+    backgroundColor: primaryColor,
+  },
+  fontFamilyButtonText: {
+    color: primaryColor,
+    fontWeight: '500',
+  },
+  selectedFontFamilyButtonText: {
+    color: 'white',
   },
 });
