@@ -12,7 +12,7 @@ import {
 import React, { useEffect, useState, useCallback, useRef } from "react";
 import { useLocalSearchParams } from "expo-router";
 import { account, database } from "@/context/app-write";
-import { Query } from "react-native-appwrite";
+import { ID, Query } from "react-native-appwrite";
 import { SafeAreaView } from "react-native-safe-area-context";
 import {
   Canvas,
@@ -21,7 +21,7 @@ import {
   Text as SkiaText,
   useFont,
 } from "@shopify/react-native-skia";
-import { width } from "@/constant/contant";
+import { primaryColor, width } from "@/constant/contant";
 import * as MediaLibrary from 'expo-media-library';
 import * as FileSystem from 'expo-file-system';
 import { Feather } from '@expo/vector-icons';
@@ -342,6 +342,18 @@ const EditScreen = () => {
       try {
         const asset = await MediaLibrary.createAssetAsync(fileUri);
         await MediaLibrary.createAlbumAsync("ArtVeda", asset, false);
+
+//         //save in our db as downloaded
+//  await database.createDocument(
+//           '6815de2b0004b53475ec',
+//           '681a1b3c0020eb66b3b1',
+//           ID.unique(),
+//           {
+//             posts: initialPostId,
+//             userId: currentUser.$id,
+//           }
+//         )
+
         Alert.alert('Success', 'Image saved to your gallery!');
       } catch (mediaError) {
         console.error('Media library error:', mediaError);
@@ -531,7 +543,6 @@ const EditScreen = () => {
                 activeOpacity={0.8}
               >
                 <Feather name="download" size={24} color="white" />
-                <Text style={styles.downloadButtonText}>Save to Gallery</Text>
               </TouchableOpacity>
             </View>
 
@@ -701,7 +712,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: 30,
     right: 20,
-    backgroundColor: '#007bff',
+    backgroundColor: primaryColor,
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderRadius: 8,
