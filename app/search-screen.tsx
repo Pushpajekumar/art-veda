@@ -30,6 +30,7 @@ const SearchScreen = () => {
         process.env.EXPO_PUBLIC_APPWRITE_SUB_CATEGORY_COLLECTION_ID!,
         [Query.search("name", searchQuery), Query.select(["$id", "name"])]
       );
+
       console.log(result.documents);
 
       // Cast the documents to the proper type
@@ -40,6 +41,7 @@ const SearchScreen = () => {
       setLoading(false);
     }
   };
+
   return (
     <View style={styles.container}>
       <View style={styles.searchContainer}>

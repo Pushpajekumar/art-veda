@@ -480,8 +480,9 @@ const EditScreen = () => {
                           displayText = currentUser[0].email;
                         } else if (el.label === 'address' && currentUser[0].address) {
                           displayText = currentUser[0].address;
-                        }
-                        }
+                        }else if (el.label === 'phone' && currentUser[0].phone) {
+                          displayText = currentUser[0].phone;
+                        }}
 
                       return (
                       <SkiaText
