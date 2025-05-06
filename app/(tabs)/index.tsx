@@ -51,15 +51,6 @@ const OfficialHome = () => {
     fetchSubCategories();
   }, []);
 
-  // Debug logging for subcategories data
-  // useEffect(() => {
-  //   if (subCategories.length > 0) {
-  //     console.log('Subcategory posts data:', 
-  //       JSON.stringify(subCategories[0]?.posts || [], null, 2)
-  //     );
-  //   }
-  // }, [subCategories]);
-
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView>

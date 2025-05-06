@@ -5,8 +5,9 @@ import {
   StyleSheet,
   Alert,
   Animated,
+  TouchableOpacity,
 } from "react-native";
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { TYPOGRAPHY } from "@/utils/fonts";
 import { database } from "@/context/app-write";
 import { Query, Models } from "react-native-appwrite";
@@ -17,6 +18,7 @@ const DailyEvent = () => {
   const [events, setEvents] = React.useState<Models.Document[]>([]);
   const [loading, setLoading] = React.useState(true);
   const fadeAnim = useRef(new Animated.Value(0.5)).current;
+  const [selectedDateIndex, setSelectedDateIndex] = useState(0);
 
   useEffect(() => {
     Animated.loop(
@@ -35,49 +37,39 @@ const DailyEvent = () => {
     ).start();
   }, [fadeAnim]);
 
-  useEffect(() => {
+  const fetchEventByDate = async (date: Date) => {
     setLoading(true);
-    const fetchTodayEvent = async () => {
-      try {
-        const today = new Date();
-        const formattedDate =
-          today.toISOString().split("T")[0] + "T12:00:00.000+00:00";
+    try {
+      const formattedDate = 
+        date.toISOString().split("T")[0] + "T12:00:00.000+00:00";
 
-        const todayEvent = await database.listDocuments(
-          process.env.EXPO_PUBLIC_APPWRITE_DATABASE_ID!,
-          process.env.EXPO_PUBLIC_APPWRITE_DAILY_EVENT_ID!,
-          [Query.equal("date", formattedDate)]
-        );
-        console.log(todayEvent, "events 🟢");
+      const events = await database.listDocuments(
+        process.env.EXPO_PUBLIC_APPWRITE_DATABASE_ID!,
+        process.env.EXPO_PUBLIC_APPWRITE_DAILY_EVENT_ID!,
+        [Query.equal("date", formattedDate)]
+      );
+      
+      setEvents(events.documents);
+      console.log(events, "events for date:", formattedDate);
+    } catch (error) {
+      console.error("Error fetching event:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-        // Store all events in state
-        setEvents(todayEvent.documents);
-
-        if (todayEvent.documents.length > 0) {
-          const eventData = todayEvent.documents[0];
-          console.log("Date:", eventData.date);
-
-          // Access posts array and print previewImage
-          if (eventData.posts && eventData.posts.length > 0) {
-            console.log(
-              "Preview Image URL:",
-              eventData.posts[0].previewImage
-            );
-          } else {
-            console.log("No posts data available");
-          }
-        }
-      } catch (error) {
-        console.error("Error fetching today's event:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchTodayEvent();
+  useEffect(() => {
+    const today = new Date();
+    fetchEventByDate(today);
   }, []);
 
-  console.log(events, "events 🟢");
+  const handleDatePress = (index: number) => {
+    setSelectedDateIndex(index);
+    const date = new Date();
+    date.setDate(date.getDate() + index);
+    fetchEventByDate(date);
+  };
+
   return (
     <View>
       <ScrollView
@@ -85,7 +77,7 @@ const DailyEvent = () => {
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.dateScrollContainer}
       >
-        {Array.from({ length: 30 }, (_, i) => {
+        {Array.from({ length: 7 }, (_, i) => {
           const date = new Date();
           date.setDate(date.getDate() + i);
           const day = date
@@ -95,38 +87,43 @@ const DailyEvent = () => {
           const month = date.toLocaleString("default", { month: "short" });
 
           return (
-            <View
+            <TouchableOpacity
               key={i}
-              style={[
-                styles.dateCard,
-                i === 0
-                  ? {
-                      backgroundColor: "#e6f2ff",
-                      borderColor: primaryColor,
-                      borderWidth: 1,
-                    }
-                  : {},
-              ]}
+              onPress={() => handleDatePress(i)}
+              activeOpacity={0.7}
             >
-              <View>
-                <Text
-                  style={[
-                    styles.dateDay,
-                    i === 0 ? { color: primaryColor } : {},
-                  ]}
-                >
-                  {day}
-                </Text>
-                <Text
-                  style={[
-                    styles.dateMonth,
-                    i === 0 ? { color: primaryColor } : {},
-                  ]}
-                >
-                  {month}
-                </Text>
+              <View
+                style={[
+                  styles.dateCard,
+                  i === selectedDateIndex
+                    ? {
+                        backgroundColor: "#e6f2ff",
+                        borderColor: primaryColor,
+                        borderWidth: 1,
+                      }
+                    : {},
+                ]}
+              >
+                <View>
+                  <Text
+                    style={[
+                      styles.dateDay,
+                      i === selectedDateIndex ? { color: primaryColor } : {},
+                    ]}
+                  >
+                    {day}
+                  </Text>
+                  <Text
+                    style={[
+                      styles.dateMonth,
+                      i === selectedDateIndex ? { color: primaryColor } : {},
+                    ]}
+                  >
+                    {month}
+                  </Text>
+                </View>
               </View>
-            </View>
+            </TouchableOpacity>
           );
         })}
       </ScrollView>
@@ -151,8 +148,7 @@ const DailyEvent = () => {
             images={events.flatMap((event) =>
               event.posts
                 ? event.posts.map(
-                    (posts: { previewImage: string }) =>
-                      posts.previewImage
+                    (posts: { previewImage: string }) => posts.previewImage
                   )
                 : []
             )}
@@ -162,7 +158,7 @@ const DailyEvent = () => {
           />
         ) : (
           <View style={{ padding: 20, alignItems: "center" }}>
-            <Text style={TYPOGRAPHY.body}>No events for today</Text>
+            <Text style={TYPOGRAPHY.body}>No events for this date</Text>
           </View>
         )}
       </View>

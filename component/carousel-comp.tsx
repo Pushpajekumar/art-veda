@@ -1,11 +1,10 @@
 import * as React from "react";
 import { Dimensions, Image, Text, View } from "react-native";
-import { useSharedValue } from "react-native-reanimated";
 import Carousel, { ICarouselInstance } from "react-native-reanimated-carousel";
 import Entypo from "@expo/vector-icons/Entypo";
-import { TYPOGRAPHY } from "@/utils/fonts";
 import Feather from "@expo/vector-icons/Feather";
 import { useRouter } from "expo-router";
+import { TYPOGRAPHY } from "@/utils/fonts";
 
 interface CarouselCompProps {
   images: string[];
@@ -15,28 +14,25 @@ interface CarouselCompProps {
   subCatName?: string;
 }
 
-const width = Dimensions.get("window").width;
+const { width } = Dimensions.get("window");
+const cardWidth = width / 2.5;
 
 const CarouselComp: React.FC<CarouselCompProps> = ({
-  images,
+  images = [],
   title = "Trending Posts",
   showViewAll = true,
   subCatId,
   subCatName,
 }) => {
   const ref = React.useRef<ICarouselInstance>(null);
-  const progress = useSharedValue<number>(0);
   const router = useRouter();
 
-  const onViewAllPress = () => {
+  const onViewAllPress = React.useCallback(() => {
     router.push({
       pathname: "/view-all",
-      params: {
-        subCatId: subCatId,
-        subCatName: subCatName,
-      },
+      params: { subCatId, subCatName },
     });
-  };
+  }, [subCatId, subCatName, router]);
 
   return (
     <View style={{ flex: 1 }}>
@@ -54,6 +50,7 @@ const CarouselComp: React.FC<CarouselCompProps> = ({
             {title}
           </Text>
         </View>
+        
         {showViewAll && (
           <View style={{ flexDirection: "row", alignItems: "center" }}>
             <Text style={{ color: "#666" }} onPress={onViewAllPress}>
@@ -63,11 +60,10 @@ const CarouselComp: React.FC<CarouselCompProps> = ({
           </View>
         )}
       </View>
+      
       <View style={{ flex: 1 }}>
         {images.length === 0 ? (
-          <View
-            style={{ flex: 1, justifyContent: "center", alignItems: "center" }}
-          >
+          <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
             <Text style={{ ...TYPOGRAPHY.body, color: "#666" }}>
               Loading...
             </Text>
@@ -75,14 +71,12 @@ const CarouselComp: React.FC<CarouselCompProps> = ({
         ) : (
           <Carousel
             ref={ref}
-            width={width / 2.5}
-            height={width / 2.5}
+            width={cardWidth}
+            height={cardWidth}
             data={images}
-            loop
             autoPlay
-            style={{
-              width: "100%",
-            }}
+            style={{ width: "100%" }}
+            loop
             renderItem={({ index }) => (
               <View
                 style={{
@@ -95,13 +89,11 @@ const CarouselComp: React.FC<CarouselCompProps> = ({
                   padding: 5,
                 }}
               >
-                <View style={{ width: "100%", height: "100%" }}>
-                  <Image
-                    source={{ uri: images[index] }}
-                    style={{ width: "100%", height: "100%", borderRadius: 8 }}
-                    resizeMode="cover"
-                  />
-                </View>
+                <Image
+                  source={{ uri: images[index] }}
+                  style={{ width: "100%", height: "100%", borderRadius: 8 }}
+                  resizeMode="cover"
+                />
               </View>
             )}
           />
@@ -111,4 +103,4 @@ const CarouselComp: React.FC<CarouselCompProps> = ({
   );
 };
 
-export default CarouselComp;
+export default React.memo(CarouselComp);
