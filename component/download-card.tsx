@@ -2,9 +2,13 @@ import { View, Text, Image, StyleSheet, Dimensions } from "react-native";
 import React from "react";
 import { FONT_WEIGHT, TYPOGRAPHY } from "@/utils/fonts";
 
-const imageUri = "https://images.unsplash.com/photo-1503177119275-0aa32b3a9368";
+type DownloadCardProps = {
+  title: string;
+  date: string;
+  imageUri: string;
+};
 
-const DownloadCard = ({ title = "Download Title", date = "Sept 23, 2023" }) => {
+const DownloadCard = ({ title, date, imageUri }: DownloadCardProps) => {
   const { width } = Dimensions.get("window");
   const imageWidth = width * 0.2;
   const imageHeight = width * 0.2;
@@ -16,7 +20,13 @@ const DownloadCard = ({ title = "Download Title", date = "Sept 23, 2023" }) => {
       />
       <View style={styles.contentContainer}>
         <Text style={styles.title}>{title}</Text>
-        <Text style={styles.date}>{date}</Text>
+        <Text style={styles.date}>
+          {new Date(date).toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric'
+          })}
+        </Text>
       </View>
     </View>
   );

@@ -319,8 +319,10 @@ const EditScreen = () => {
 
   const handleDownload = async () => {
     try {
+   
       // First check if we already have permissions
       let permissionStatus = await MediaLibrary.getPermissionsAsync();
+
       
       // If we don't have permissions, request them
       if (!permissionStatus.granted) {
@@ -374,16 +376,17 @@ const EditScreen = () => {
         const asset = await MediaLibrary.createAssetAsync(fileUri);
         await MediaLibrary.createAlbumAsync("ArtVeda", asset, false);
 
-//         //save in our db as downloaded
-//  await database.createDocument(
-//           '6815de2b0004b53475ec',
-//           '681a1b3c0020eb66b3b1',
-//           ID.unique(),
-//           {
-//             posts: initialPostId,
-//             userId: currentUser.$id,
-//           }
-//         )
+        //save in our db as downloaded
+      await database.createDocument(
+          '6815de2b0004b53475ec',
+          '681a1b3c0020eb66b3b1',
+          ID.unique(),
+          {
+            posts: currentPostId,
+            userId: currentUser[0].$id,
+          }
+        );
+ 
 
         Alert.alert('Success', 'Image saved to your gallery!');
       } catch (mediaError) {
