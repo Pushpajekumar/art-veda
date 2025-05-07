@@ -9,6 +9,7 @@ import {
   Alert,
   Linking,
   Modal,
+  ActivityIndicator,
 } from "react-native";
 import React, { useEffect, useState, useCallback, useRef } from "react";
 import { useLocalSearchParams } from "expo-router";
@@ -111,6 +112,7 @@ const EditScreen = () => {
   const [selectedFrameIndex, setSelectedFrameIndex] = useState(0);
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [fontSelectorVisible, setFontSelectorVisible] = useState(false);
+  const [isFrameLoading, setIsFrameLoading] = useState(false);
 
   // Canvas reference to access makeImageSnapshot method
   const canvasRef = useRef<any>(null);
@@ -148,20 +150,6 @@ const EditScreen = () => {
 
   // Font selection state
   const [selectedFontFamily, setSelectedFontFamily] = useState<'montserrat' | 'roboto'>('montserrat');
-
-  // Function to get the appropriate font based on selection
-  // const getSelectedFont = (weight: string, fontSize: number) => {
-  //   const closestSize = getClosestFontSize(fontSize);
-  //   const index = fontSizes.indexOf(closestSize);
-    
-  //   if (index === -1) return null;
-    
-  //   if (selectedFontFamily === 'montserrat') {
-  //     return weight === 'bold' ? boldFonts[index] : regularFonts[index];
-  //   } else {
-  //     return weight === 'bold' ? robotoBoldFonts[index] : robotoRegularFonts[index];
-  //   }
-  // };
 
   const getClosestFontSize = (size: number) => {
     return fontSizes.reduce((prev, curr) => 
@@ -303,15 +291,28 @@ const EditScreen = () => {
 
   const selectFrame = (index: number) => {
     if (index >= 0 && index < frames.length) {
+      setIsFrameLoading(true); // Set loading to true before frame change
       setSelectedFrameIndex(index);
       const frame = frames[index];
       setSelectedFrame(frame);
       
       // Update elements, frame width and height based on selected frame
       if (frame?.template) {
-        setElements(parseFabricToSkia(frame.template));
-        setFrameWidth(frame.width);
-        setFrameHeight(frame.height);
+        try {
+          const parsedElements = parseFabricToSkia(frame.template);
+          setElements(parsedElements);
+          setFrameWidth(frame.width);
+          setFrameHeight(frame.height);
+        } catch (error) {
+          console.error("Error parsing frame template:", error);
+        } finally {
+          // Use a slight delay to ensure UI updates properly
+          setTimeout(() => {
+            setIsFrameLoading(false);
+          }, 500);
+        }
+      } else {
+        setIsFrameLoading(false);
       }
     }
   };
@@ -551,100 +552,112 @@ const EditScreen = () => {
                     backgroundColor: "lightgrey",
                   }}
                 >
-                  <SkiaImage 
-                  image={anotherImage}
-                  fit="contain"
-                  x={0}
-                  y={0}
-                  width={width - 40}
-                  height={width - 40}
-                 
-                  />
-                  {elements.map((el) => {
-                    if (el.type === 'text') {
-                      const position = calculatePositionFromRatio(el.x, el.y);
-                      const font = getFontWithSize(el.fontWeight, el.fontSize);
-                      if (!font) return null;
-
-                      // Determine text content based on label
-                      let displayText = el.text;
-                        if (el.label && currentUser && currentUser[0]) {
-                        if (el.label === 'name' && currentUser[0].name) {
-                          displayText = currentUser[0].name;
-                        } else if (el.label === 'email' && currentUser[0].email) {
-                          displayText = currentUser[0].email;
-                        } else if (el.label === 'address' && currentUser[0].address) {
-                          displayText = currentUser[0].address;
-                        }else if (el.label === 'phone' && currentUser[0].phone) {
-                          displayText = currentUser[0].phone;
-                        }}
-
-                      return (
-                      <SkiaText
-                        key={el.id}
-                        x={position.x} 
-                        y={position.y}
-                        text={displayText}
-                        font={font}
-                        color={el.fill}
+                  {/* Only render content when not loading */}
+                  {!isFrameLoading && (
+                    <>
+                      <SkiaImage 
+                        image={anotherImage}
+                        fit="contain"
+                        x={0}
+                        y={0}
+                        width={width - 40}
+                        height={width - 40}
                       />
-                      );
-                    }
+                      {elements.map((el) => {
+                        if (el.type === 'text') {
+                          const position = calculatePositionFromRatio(el.x, el.y);
+                          const font = getFontWithSize(el.fontWeight, el.fontSize);
+                          if (!font) return null;
 
-                    if (el.type === 'image') {
-                      
-                      let imgSrc = el.src;
-                      
-                      // Handle logo case specially
-                      if (el.label === 'logo' && currentUser && currentUser[0]?.logo) {
-                        // Add the logo URL to image sources if not already there
-                        if (!imageSources.includes(currentUser[0].logo)) {
-                          setImageSources(prev => [...prev, currentUser[0].logo]);
+                          // Determine text content based on label
+                          let displayText = el.text;
+                            if (el.label && currentUser && currentUser[0]) {
+                            if (el.label === 'name' && currentUser[0].name) {
+                              displayText = currentUser[0].name;
+                            } else if (el.label === 'email' && currentUser[0].email) {
+                              displayText = currentUser[0].email;
+                            } else if (el.label === 'address' && currentUser[0].address) {
+                              displayText = currentUser[0].address;
+                            }else if (el.label === 'phone' && currentUser[0].phone) {
+                              displayText = currentUser[0].phone;
+                            }}
+
+                          return (
+                          <SkiaText
+                            key={el.id}
+                            x={position.x} 
+                            y={position.y}
+                            text={displayText}
+                            font={font}
+                            color={el.fill}
+                          />
+                          );
                         }
-                        imgSrc = currentUser[0].logo;
-                      }
-                      
-                      const img = imgSrc ? imageMap[imgSrc] : null;
-                      
-                      console.log(imgSrc, "Image Source URL");
-                      console.log(img, "Image Source");
-                      if (!img) return null;
 
-                      const position = calculatePositionFromRatio(el.x, el.y);
+                        if (el.type === 'image') {
+                          
+                          let imgSrc = el.src;
+                          
+                          // Handle logo case specially
+                          if (el.label === 'logo' && currentUser && currentUser[0]?.logo) {
+                            // Add the logo URL to image sources if not already there
+                            if (!imageSources.includes(currentUser[0].logo)) {
+                              setImageSources(prev => [...prev, currentUser[0].logo]);
+                            }
+                            imgSrc = currentUser[0].logo;
+                          }
+                          
+                          const img = imgSrc ? imageMap[imgSrc] : null;
+                          
+                          console.log(imgSrc, "Image Source URL");
+                          console.log(img, "Image Source");
+                          if (!img) return null;
 
-                      if (el.label === 'logo') {
-                        console.log(img, "Logo Image 🤔");
-                        return (
-                          <SkiaImage
-                            key={el.id}
-                            image={img}
-                            x={position.x}
-                            y={position.y}
-                            width={el.width}
-                            height={el.height}
-                            fit="fill"
-                          />
-                        );
-                      } else {
-                        // For other images, use default dimensions
-                        console.log(img, "Other Image 😂");
-                        return (
-                          <SkiaImage
-                            key={el.id}
-                            image={img}
-                            x={position.x}
-                            y={position.y}
-                            width={width - 40}
-                            height={width - 40}
-                            fit="fill"
-                          />
-                        );
-                      }
-                    }
+                          const position = calculatePositionFromRatio(el.x, el.y);
 
-                    return null;
-                  })}
+                          if (el.label === 'logo') {
+                            console.log(img, "Logo Image 🤔");
+                            return (
+                              <SkiaImage
+                                key={el.id}
+                                image={img}
+                                x={position.x}
+                                y={position.y}
+                                width={el.width}
+                                height={el.height}
+                                fit="fill"
+                              />
+                            );
+                          } else {
+                            // For other images, use default dimensions
+                            console.log(img, "Other Image 😂");
+                            return (
+                              <SkiaImage
+                                key={el.id}
+                                image={img}
+                                x={position.x}
+                                y={position.y}
+                                width={width - 40}
+                                height={width - 40}
+                                fit="fill"
+                              />
+                            );
+                          }
+                        }
+
+                        return null;
+                      })}
+                    </>
+                  )}
                 </Canvas>
+                
+                {/* Show loading indicator over canvas when frame is loading */}
+                {isFrameLoading && (
+                  <View style={styles.frameLoadingOverlay}>
+                    <ActivityIndicator size="large" color={primaryColor} />
+                    <Text style={styles.loadingFrameText}>Loading frame...</Text>
+                  </View>
+                )}
               </ScrollView>
               
               {/* Font button */}
@@ -924,5 +937,22 @@ const styles = StyleSheet.create({
   fontPreview: {
     fontSize: 16,
     color: '#666',
+  },
+  frameLoadingOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(255,255,255,0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 10,
+  },
+  loadingFrameText: {
+    marginTop: 10,
+    fontSize: 14,
+    color: primaryColor,
+    fontWeight: '500',
   },
 });
