@@ -38,8 +38,8 @@ export default function Index() {
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        const user = await account.get();
-        if (user) {
+        const session = await account.getSession("current");
+        if (session) {
           setIsAuthenticated(true);
         } else {
           setIsAuthenticated(false);
