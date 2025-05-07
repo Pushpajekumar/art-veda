@@ -659,23 +659,26 @@ const EditScreen = () => {
                   </View>
                 )}
               </ScrollView>
-              
-              {/* Font button */}
+            </View>
+            
+            {/* Buttons Container - MOVED BELOW CANVAS */}
+            <View style={styles.buttonsContainer}>
               <TouchableOpacity 
-                style={styles.fontButton} 
+                style={styles.actionButton} 
                 onPress={() => setFontSelectorVisible(true)}
                 activeOpacity={0.8}
               >
                 <Feather name="type" size={24} color="white" />
+                <Text style={styles.buttonText}>Change Font</Text>
               </TouchableOpacity>
               
-              {/* Download Button */}
               <TouchableOpacity 
-                style={styles.downloadButton} 
+                style={styles.actionButton} 
                 onPress={handleDownload}
                 activeOpacity={0.8}
               >
                 <Feather name="download" size={24} color="white" />
+                <Text style={styles.buttonText}>Save to Gallery</Text>
               </TouchableOpacity>
             </View>
 
@@ -764,14 +767,57 @@ const styles = StyleSheet.create({
   previewContainer: {
     width: "100%",
     aspectRatio: 1,
-    marginBottom: 20,
+    marginBottom: 16,
     justifyContent: "center",
     alignItems: "center",
   },
-  previewImage: {
-    width: "100%",
-    height: "100%",
+  
+  // New styles for buttons below canvas
+  buttonsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 24,
+    paddingHorizontal: 4,
   },
+  actionButton: {
+    flex: 1,
+    backgroundColor: primaryColor,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginHorizontal: 6,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 3,
+    elevation: 4,
+  },
+  buttonText: {
+    color: 'white',
+    fontWeight: '600',
+    marginLeft: 8,
+    fontSize: 15,
+  },
+  
+  // Remove or comment out the old button styles
+  /* 
+  downloadButton: {
+    position: 'absolute',
+    bottom: 30,
+    right: 20,
+    // ...other styles
+  },
+  fontButton: {
+    position: 'absolute',
+    bottom: 30,
+    right: 80,
+    // ...other styles
+  },
+  */
+  
   framesSection: {
     marginTop: 20,
   },
@@ -845,39 +891,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     textAlign: 'center',
     padding: 4,
-  },
-  downloadButton: {
-    position: 'absolute',
-    bottom: 30,
-    right: 20,
-    backgroundColor: primaryColor,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderRadius: 8,
-    flexDirection: 'row',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 5,
-  },
-  
-  fontButton: {
-    position: 'absolute',
-    bottom: 30,
-    right: 80, // Position to the left of download button
-    backgroundColor: primaryColor,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderRadius: 8,
-    flexDirection: 'row',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 5,
   },
   
   // Bottom sheet styles
