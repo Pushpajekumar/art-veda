@@ -14,7 +14,8 @@ import { LinearGradient } from "expo-linear-gradient";
 import { primary_textColor, primaryColor } from "@/constant/contant";
 import { FONT_WEIGHT, TYPOGRAPHY } from "@/utils/fonts";
 import { useRouter } from "expo-router";
-import { account, ID } from "@/context/app-write";
+import { account, database, ID } from "@/context/app-write";
+import { Query } from "react-native-appwrite";
 
 const Login = () => {
   const { width, height } = Dimensions.get("window");
@@ -39,6 +40,25 @@ const Login = () => {
     }
 
     try {
+      const existingUserList = await database.listDocuments(
+        "6815de2b0004b53475ec",
+        "6815e0be001731ca8b1b",
+        [Query.equal("phone", `+91${phoneNumber}`)]
+      );
+
+      const existingUser =
+        existingUserList.documents.length > 0
+          ? existingUserList.documents[0]
+          : null;
+
+      console.log(existingUser, "existingUser 🟢");
+
+      if (!existingUser) {
+        setError("User does not exist. Please register first.");
+        setIsLoading(false);
+        return;
+      }
+
       const token = await account.createPhoneToken(
         ID.unique(),
         `+91${phoneNumber}`

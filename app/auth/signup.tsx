@@ -68,7 +68,7 @@ const signup = () => {
       }
 
       ToastAndroid.show(`OTP sent to +91${phoneNumber}`, ToastAndroid.SHORT);
-    } catch (error) {
+    } catch (error : any) {
       console.error("Error creating token:", error);
       ToastAndroid.show(
         error.message || "Failed to create account. Please try again.",
