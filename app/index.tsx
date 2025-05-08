@@ -4,6 +4,7 @@ import { TYPOGRAPHY, FONT_SIZE, FONT_WEIGHT } from "../utils/fonts";
 import { useEffect, useRef, useState } from "react";
 import { router } from "expo-router";
 import { account } from "@/context/app-write";
+
 export default function Index() {
   const { width, height } = Dimensions.get("window");
   const scaleAnim = useRef(new Animated.Value(1)).current;

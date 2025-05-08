@@ -59,6 +59,16 @@
         "projectId": "e0e37584-b8be-4638-8727-34a7ca0cc88d"
       }
     },
-    "owner": "pushpaje"
+    "owner": "pushpaje",
+    "expo": {
+      "android": {
+        "permissions": ["READ_MEDIA_IMAGES"]
+      },
+      "ios": {
+        "infoPlist": {
+          "NSPhotoLibraryAddUsageDescription": "This app needs access to your photo library to save images."
+        }
+      }
+    }
   }
 }

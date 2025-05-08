@@ -113,7 +113,8 @@ const EditScreen = () => {
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [fontSelectorVisible, setFontSelectorVisible] = useState(false);
   const [isFrameLoading, setIsFrameLoading] = useState(false);
-
+  const [mediaLibraryPermissions, requestMediaLibraryPermissions] = MediaLibrary.usePermissions();
+ 
   // Canvas reference to access makeImageSnapshot method
   const canvasRef = useRef<any>(null);
 
@@ -317,94 +318,179 @@ const EditScreen = () => {
     }
   };
 
-  const handleDownload = async () => {
-    try {
+//   const handleDownload = async () => {
+//     try {
    
-      // First check if we already have permissions
-      let permissionStatus = await MediaLibrary.getPermissionsAsync();
+//       // // First check if we already have permissions
+//       // let permissionStatus = await MediaLibrary.getPermissionsAsync();
 
       
-      // If we don't have permissions, request them
-      if (!permissionStatus.granted) {
-        permissionStatus = await MediaLibrary.requestPermissionsAsync();
+//       // // If we don't have permissions, request them
+//       // if (!permissionStatus.granted) {
+//       //   permissionStatus = await MediaLibrary.requestPermissionsAsync();
         
-        // If the user denied permissions, show an alert with instructions
-        if (!permissionStatus.granted) {
-          Alert.alert(
-            'Permission Required',
-            'To save images, this app needs access to your media library. Please go to app settings and enable Media Library permissions.',
-            [
-              { text: 'Cancel', style: 'cancel' },
-              { 
-                text: 'Open Settings', 
-                onPress: () => Linking.openSettings() 
-              }
-            ]
-          );
-          return;
-        }
-      }
-      
-      // Check for canvas reference
-      if (!canvasRef.current) {
-        Alert.alert('Error', 'Canvas not ready. Please try again.');
-        return;
-      }
-      
-      // Create a snapshot using makeImageSnapshot
-      Alert.alert('Creating snapshot...', 'Please wait while we save your image.');
-      const snapshot = await canvasRef.current.makeImageSnapshot();
-      
-      if (!snapshot) {
-        Alert.alert('Error', 'Failed to capture image');
-        return;
-      }
-      
-      // Use the correct method to encode to base64
-      const base64 = snapshot.encodeToBase64();
-      
-      // Create a temporary file path with proper naming
-      const fileUri = `${FileSystem.cacheDirectory}artframe_${Date.now()}.png`;
-      
-      // Write the base64 data to the file
-      await FileSystem.writeAsStringAsync(fileUri, base64, {
-        encoding: FileSystem.EncodingType.Base64,
-      });
-      
-      // Save to media library with proper error handling
-      try {
-        const asset = await MediaLibrary.createAssetAsync(fileUri);
-        await MediaLibrary.createAlbumAsync("ArtVeda", asset, false);
+//       //   // If the user denied permissions, show an alert with instructions
+//       //   if (!permissionStatus.granted) {
+//       //     Alert.alert(
+//       //       'Permission Required',
+//       //       'To save images, this app needs access to your media library. Please go to app settings and enable Media Library permissions.',
+//       //       [
+//       //         { text: 'Cancel', style: 'cancel' },
+//       //         { 
+//       //           text: 'Open Settings', 
+//       //           onPress: () => Linking.openSettings() 
+//       //         }
+//       //       ]
+//       //     );
+//       //     return;
+//       //   }
+//       // }
 
-        //save in our db as downloaded
-      await database.createDocument(
-          '6815de2b0004b53475ec',
-          '681a1b3c0020eb66b3b1',
-          ID.unique(),
-          {
-            posts: currentPostId,
-            userId: currentUser[0].$id,
-          }
-        );
- 
+//       // Check if we have permission to access the media library
+//       console.log(mediaLibraryPermissions?.status, "Media Library Permission Status🟢🟡🔴");
+//       if (!mediaLibraryPermissions?.granted) {
+//         const { status } = await requestMediaLibraryPermissions();
+//         console.log(status, "Media Library Permission Status🟢🟡🔴");
+//         if (status !== 'granted') {
+//           Alert.alert(
+//             'Permission Required',
+//             'To save images, this app needs access to your media library. Please go to app settings and enable Media Library permissions.',
+//             [
+//               { text: 'Cancel', style: 'cancel' },
+//               { 
+//                 text: 'Open Settings', 
+//                 onPress: () => Linking.openSettings() 
+//               }
+//             ]
+//           );
+//           return;
+//         }
+//       }
+      
+//       // Check for canvas reference
+//       if (!canvasRef.current) {
+//         Alert.alert('Error', 'Canvas not ready. Please try again.');
+//         return;
+//       }
+      
+//       // Create a snapshot using makeImageSnapshot
+   
+//       const snapshot = await canvasRef.current.makeImageSnapshot();
+      
+//       if (!snapshot) {
+//         Alert.alert('Error', 'Failed to capture image');
+//         return;
+//       }
+      
+//       // Use the correct method to encode to base64
+//       const base64 = snapshot.encodeToBase64();
 
-        Alert.alert('Success', 'Image saved to your gallery!');
-      } catch (mediaError) {
-        console.error('Media library error:', mediaError);
-        Alert.alert(
-          'Save Failed',
-          'Failed to save to gallery. Please check your permissions and try again.'
-        );
-      }
+//       if (!base64) {
+//         Alert.alert('Error', 'Failed to encode image');
+//         return;
+//       }
       
-      // Clean up the temporary file
-      await FileSystem.deleteAsync(fileUri, { idempotent: true });
+//       // Create a temporary file path with proper naming
+//       const fileUri = `${FileSystem.cacheDirectory}artframe_${Date.now()}.png`;
+
+//      console.log(fileUri, "File URI");
+
+//       // Write the base64 data to the file
+//       await FileSystem.writeAsStringAsync(fileUri, base64, {
+//         encoding: FileSystem.EncodingType.Base64,
+//       });
+
+//       console.log(fileUri, "File URI after writing");
       
-    } catch (error:any) {
-      console.error('Error saving image:', error);
-      Alert.alert('Error', `Failed to save image: ${error.message}`);
+//       // Save to media library with proper error handling
+//       try {
+//         const asset = await MediaLibrary.createAssetAsync(fileUri);
+//         console.log(asset, "Asset");
+//         await MediaLibrary.createAlbumAsync("ArtVeda", asset, false);
+
+// //save in our db as downloaded
+// try {
+//   await database.createDocument(
+//     '6815de2b0004b53475ec',
+//     '681a1b3c0020eb66b3b1',
+//     ID.unique(),
+//     {
+//       posts: currentPostId,
+//       users: currentUser[0].$id,
+//     }
+//   );
+
+//   console.log('Document created successfully', { posts: currentPostId, users: currentUser[0].$id });
+// } catch (dbError: any) {
+//   // If there's a duplicate ID error, just log it and continue - the image is still saved
+//   if (dbError.message && dbError.message.includes('already exists')) {
+//     console.log('Download record already exists, continuing with save operation');
+//   } else {
+//     // For other database errors, log but don't block the image save
+//     console.error('Database error when recording download:', dbError);
+//   }
+// }
+
+//         Alert.alert('Success', 'Image saved to your gallery!');
+//       } catch (mediaError) {
+//         console.error('Media library error:', mediaError);
+//         Alert.alert(
+//           'Save Failed',
+//           'Failed to save to gallery. Please check your permissions and try again.'
+//         );
+//       }
+      
+//       // Clean up the temporary file
+//       await FileSystem.deleteAsync(fileUri, { idempotent: true });
+      
+//     } catch (error:any) {
+//       console.error('Error saving image:', error);
+//       Alert.alert('Error', `Failed to save image: ${error.message}`);
+//     }
+//   };
+
+const handleDownload = async () => {
+  try {
+    // Request permission directly before saving
+    const { status } = await MediaLibrary.requestPermissionsAsync();
+    console.log('Permission status:', status);
+    
+    if (status !== 'granted') {
+      Alert.alert(
+        'Permission Required',
+        'To save images, this app needs access to your media library.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Open Settings', onPress: () => Linking.openSettings() }
+        ]
+      );
+      return;
     }
-  };
+
+    if (!canvasRef.current) {
+      Alert.alert('Error', 'Canvas not ready. Please try again.');
+      return;
+    }
+
+    const snapshot = await canvasRef.current.makeImageSnapshot();
+    const base64 = snapshot.encodeToBase64();
+
+    const fileUri = `${FileSystem.cacheDirectory}artframe_${Date.now()}.png`;
+    await FileSystem.writeAsStringAsync(fileUri, base64, {
+      encoding: FileSystem.EncodingType.Base64,
+    });
+
+    const asset = await MediaLibrary.createAssetAsync(fileUri);
+    await MediaLibrary.createAlbumAsync('ArtVeda', asset, false);
+
+    Alert.alert('Success', 'Image saved to your gallery!');
+    
+    await FileSystem.deleteAsync(fileUri, { idempotent: true });
+  } catch (error) {
+    console.error('Download error:', error);
+    Alert.alert('Error', 'Failed to save image. Check permissions and try again.');
+  }
+};
 
   useEffect(() => {
     const fetchInitialData = async () => {
