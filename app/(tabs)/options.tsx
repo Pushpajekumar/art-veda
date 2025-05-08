@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   ScrollView,
   Alert,
+  Share,
 } from "react-native";
 import React, { useEffect, useState } from "react";
 import { Ionicons, FontAwesome, MaterialIcons } from "@expo/vector-icons";
@@ -15,9 +16,39 @@ import { useRouter } from "expo-router";
 import { account, database } from "@/context/app-write";
 import { Query } from "react-native-appwrite";
 
+const shareAbleLink = 'https://play.google.com/apps/test/com.evolcrm.artveda/10'
+
 const Options = () => {
   const router = useRouter();
   const [user, setUser] = useState<any>(null);
+
+const shareApp = async () => {
+  try {
+  const result = await Share.share({
+    message: `Check out this amazing app! ${shareAbleLink}`,
+    url: shareAbleLink,
+    title: "Share App",
+  })
+
+  if (result.action === Share.sharedAction) {
+    if (result.activityType) {
+      // Track sharing with specific activity type
+      console.log(`App shared successfully via ${result.activityType}`);
+      Alert.alert("Thank you!", "Thanks for sharing our app with others!");
+    } else {
+      // Shared without specific activity type
+      console.log("App shared successfully");
+      Alert.alert("Thank you!", "Thanks for sharing our app!");
+    }
+  } else if (result.action === Share.dismissedAction) {
+    // User dismissed the share dialog
+    console.log("Share dismissed by user");
+  }
+
+  } catch (error) {
+    console.error("Error sharing the app:", error);
+  }
+}
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -87,7 +118,7 @@ const Options = () => {
               <TouchableOpacity style={styles.referNowButton}>
                 <Text style={styles.referNowText}>Refer Now</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.shareButton}>
+              <TouchableOpacity style={styles.shareButton} onPress={shareApp}>
                 <Text style={styles.shareText}>Share</Text>
               </TouchableOpacity>
             </View>
