@@ -14,11 +14,13 @@ import { primary_textColor, primaryColor } from "../../constant/contant";
 import { FONT_WEIGHT, TYPOGRAPHY } from "@/utils/fonts";
 import { router } from "expo-router";
 import { account, database, ID } from "@/context/app-write";
+import { Query } from "react-native-appwrite";
 
 const signup = () => {
   const { width, height } = Dimensions.get("window");
   const [phoneNumber, setPhoneNumber] = React.useState("");
   const [isLoading, setIsLoading] = React.useState(false);
+  const [error, setError] = React.useState("");
 
   const handleSignup = async () => {
     setIsLoading(true);
@@ -38,6 +40,23 @@ const signup = () => {
         throw new Error("Database configuration is missing");
       }
 
+      // Check if the user already exists
+      const existingUser = await database.listDocuments(
+        databaseId,
+        usersCollectionId,
+        [Query.equal("phone", `+91${phoneNumber}`)]
+      );
+
+      if (existingUser.total > 0) {
+        setError("User already exists");
+        ToastAndroid.show(
+          "User already exists, Please Login",
+          ToastAndroid.SHORT
+        );
+        setIsLoading(false);
+        return;
+      }
+
       const token = await account.createPhoneToken(
         ID.unique(),
         `+91${phoneNumber}`
@@ -45,35 +64,18 @@ const signup = () => {
 
       //create user in the database
       if (token) {
-        const newUser = await database.createDocument(
-          "6815de2b0004b53475ec",
-          "6815e0be001731ca8b1b",
-          ID.unique(),
-          {
-            phone: `+91${phoneNumber}`,
-            userId: token.userId,
-          }
-        );
-
-        console.log("New user created:", newUser);
-
         router.push({
           pathname: "/auth/otp-verification",
           params: {
             userId: token.userId,
             phoneNumber: `+91${phoneNumber}`,
-            documentId: newUser.$id,
           },
         });
       }
 
       ToastAndroid.show(`OTP sent to +91${phoneNumber}`, ToastAndroid.SHORT);
-    } catch (error : any) {
+    } catch (error) {
       console.error("Error creating token:", error);
-      ToastAndroid.show(
-        error.message || "Failed to create account. Please try again.",
-        ToastAndroid.LONG
-      );
     } finally {
       setIsLoading(false);
     }
@@ -165,6 +167,18 @@ const signup = () => {
               }}
             />
           </View>
+          {error ? (
+            <Text
+              style={{
+                ...TYPOGRAPHY.caption,
+                color: "red",
+                marginTop: 5,
+                textAlign: "left",
+              }}
+            >
+              {error}
+            </Text>
+          ) : null}
         </View>
 
         {/* <Text

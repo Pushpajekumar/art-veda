@@ -5,6 +5,7 @@ import {
   StyleSheet,
   TextInput,
   TouchableOpacity,
+  ToastAndroid,
 } from "react-native";
 import React from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -12,42 +13,72 @@ import { LinearGradient } from "expo-linear-gradient";
 import { primary_textColor, primaryColor } from "../../constant/contant";
 import { FONT_WEIGHT, TYPOGRAPHY } from "@/utils/fonts";
 import { router, useLocalSearchParams } from "expo-router";
-import { account } from "@/context/app-write";
+import { account, database, ID } from "@/context/app-write";
 
 const otpVerification = () => {
-  const { userId, phoneNumber, documentId } = useLocalSearchParams();
+  const { userId, phoneNumber } = useLocalSearchParams();
   console.log(userId, phoneNumber, "🟢");
 
   const { width, height } = Dimensions.get("window");
   const [otp, setOtp] = React.useState("");
   const [isLoading, setIsLoading] = React.useState(false);
   const [token, setToken] = React.useState<{ userId: string } | null>(null);
+  const [error, setError] = React.useState("");
   const handleOtpChange = async () => {
     setIsLoading(true);
-    console.log("OTP logic here");
+    setError("");
     try {
-      const userIdString = userId
-        ? typeof userId === "string"
-          ? userId
-          : Array.isArray(userId)
-          ? userId[0]
-          : ""
-        : token && token.userId
-        ? token.userId
-        : "";
+      // Extract the userId string safely
+      const userIdString = 
+        (typeof userId === "string" ? userId : 
+         Array.isArray(userId) ? userId[0] : "") || 
+        (token?.userId || "");
 
       if (!userIdString) {
         throw new Error("User ID not found");
       }
 
       const session = await account.createSession(userIdString, otp);
-      console.log("Session created:", session);
+
+      if (!session) {
+        setError("Session creation failed");
+        setIsLoading(false);
+        ToastAndroid.show(
+          "Session creation failed, please try again",
+          ToastAndroid.SHORT
+        );
+        return;
+      }
+
+      // Format phone number consistently
+      const phoneStr = typeof phoneNumber === "string" ? phoneNumber : 
+                      Array.isArray(phoneNumber) ? phoneNumber[0] : "";
+      
+      // Create a new user in the database
+      const newUser = await database.createDocument(
+        "6815de2b0004b53475ec",
+        "6815e0be001731ca8b1b",
+        ID.unique(),
+        {
+          phone: `+91${phoneStr}`,
+          userId: session.userId,
+        }
+      );
+
+      if (!newUser) {
+        await account.deleteIdentity(userIdString);
+        setError("User creation failed");
+        setIsLoading(false);
+        ToastAndroid.show(
+          "User creation failed, please try again",
+          ToastAndroid.SHORT
+        );
+        return;
+      }
 
       router.push({
         pathname: "/auth/personal-details",
-        params: {
-          documentId,
-        },
+        params: { documentId: newUser.$id }
       });
     } catch (error) {
       console.error("Error handling OTP:", error);

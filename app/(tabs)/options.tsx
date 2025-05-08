@@ -7,15 +7,38 @@ import {
   ScrollView,
   Alert,
 } from "react-native";
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { Ionicons, FontAwesome, MaterialIcons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { FONT_WEIGHT, TYPOGRAPHY } from "@/utils/fonts";
 import { useRouter } from "expo-router";
-import { account } from "@/context/app-write";
+import { account, database } from "@/context/app-write";
+import { Query } from "react-native-appwrite";
 
 const Options = () => {
   const router = useRouter();
+  const [user, setUser] = useState<any>(null);
+
+  useEffect(() => {
+    const fetchUserData = async () => {
+      try {
+        const userData = await account.get();
+        const userId = userData?.$id;
+        if (userId) {
+          const userDetails = await database.listDocuments(
+            '6815de2b0004b53475ec',
+            '6815e0be001731ca8b1b',
+            [Query.equal('userId', userId)]
+          );
+          setUser(userDetails.documents[0]);
+        }
+      } catch (error) {
+        console.error("Error fetching user data:", error);
+      }
+    };
+    
+    fetchUserData();
+  }, []);
 
   const handleLogout = async () => {
     try {
@@ -40,8 +63,10 @@ const Options = () => {
               defaultSource={require("@/assets/profile-placeholder.png")}
             /> */}
             <View style={styles.profileText}>
-              <Text style={styles.profileName}>Manoj Kumar Ji</Text>
-              <Text style={styles.profilePhone}>9876543210</Text>
+              <Text style={styles.profileName}>{user?.name}</Text>
+                <Text style={styles.profilePhone}>
+                {user?.phone && user.phone.replace(/^(\+\d{2})(\d+)$/, '$1 $2')}
+                </Text>
             </View>
           </View>
           <TouchableOpacity onPress={() => router.push("/edit-profile")}>
