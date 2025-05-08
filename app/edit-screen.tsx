@@ -10,6 +10,7 @@ import {
   Linking,
   Modal,
   ActivityIndicator,
+  ToastAndroid,
 } from "react-native";
 import React, { useEffect, useState, useCallback, useRef } from "react";
 import { useLocalSearchParams } from "expo-router";
@@ -483,7 +484,19 @@ const handleDownload = async () => {
     const asset = await MediaLibrary.createAssetAsync(fileUri);
     await MediaLibrary.createAlbumAsync('ArtVeda', asset, false);
 
-    Alert.alert('Success', 'Image saved to your gallery!');
+    //save in our db as downloaded
+
+     await database.createDocument(
+    '6815de2b0004b53475ec',
+    '681a1b3c0020eb66b3b1',
+    ID.unique(),
+    {
+      posts: currentPostId,
+      users: currentUser[0].$id,
+    }
+  );
+
+   ToastAndroid.show('Image saved successfully!', ToastAndroid.SHORT);
     
     await FileSystem.deleteAsync(fileUri, { idempotent: true });
   } catch (error) {
