@@ -21,6 +21,7 @@ const shareAbleLink = 'https://play.google.com/apps/test/com.evolcrm.artveda/10'
 const Options = () => {
   const router = useRouter();
   const [user, setUser] = useState<any>(null);
+  const [userId, setUserId] = useState<string | null>(null);
 
 const shareApp = async () => {
   try {
@@ -56,6 +57,7 @@ const shareApp = async () => {
         const userData = await account.get();
         const userId = userData?.$id;
         if (userId) {
+          setUserId(userId);
           const userDetails = await database.listDocuments(
             '6815de2b0004b53475ec',
             '6815e0be001731ca8b1b',
@@ -109,9 +111,9 @@ const shareApp = async () => {
         <View style={styles.referralCard}>
           <View style={styles.referralLeft}>
             <View style={styles.referralCode}>
-              <Text style={styles.referralCodeText}>MKwqbZ</Text>
+              <Text style={styles.referralCodeText}>{userId ? userId.slice(0, 5) : ''}</Text>
               <TouchableOpacity>
-                <Ionicons name="copy-outline" size={24} color="white" />
+                <Ionicons name="copy-outline" size={20} color="white" />
               </TouchableOpacity>
             </View>
             <View style={styles.referralActions}>
@@ -124,11 +126,7 @@ const shareApp = async () => {
             </View>
           </View>
           <View style={styles.referralRight}>
-            {/* <Image
-              source={require("@/assets/gift-icon.png")}
-              style={styles.giftIcon}
-              defaultSource={require("@/assets/gift-icon.png")}
-            /> */}
+            <FontAwesome name="gift" size={40} color="white" style={styles.giftIcon} />
             <Text style={styles.referralTitle}>Refer & Earn Wallet coin</Text>
           </View>
         </View>
@@ -331,10 +329,10 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   referralTitle: {
+    ...TYPOGRAPHY.caption,
+    fontFamily: FONT_WEIGHT.medium,
     color: "white",
-    fontSize: 18,
-    fontWeight: "600",
-    textAlign: "center",
+    marginLeft: 16,
   },
   sectionTitle: {
     ...TYPOGRAPHY.caption,
