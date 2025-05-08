@@ -111,7 +111,7 @@ const shareApp = async () => {
         <View style={styles.referralCard}>
           <View style={styles.referralLeft}>
             <View style={styles.referralCode}>
-              <Text style={styles.referralCodeText}>{userId ? userId.slice(0, 5) : ''}</Text>
+                <Text style={styles.referralCodeText}>{userId ? userId.slice(-5) : ''}</Text>
               <TouchableOpacity>
                 <Ionicons name="copy-outline" size={20} color="white" />
               </TouchableOpacity>
