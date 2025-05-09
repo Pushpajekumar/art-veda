@@ -21,6 +21,7 @@ const otpVerification = () => {
 
   const { width, height } = Dimensions.get("window");
   const [otp, setOtp] = React.useState("");
+  const [referralCode, setReferralCode] = React.useState(""); // New state for referral code
   const [isLoading, setIsLoading] = React.useState(false);
   const [token, setToken] = React.useState<{ userId: string } | null>(null);
   const [error, setError] = React.useState("");
@@ -29,10 +30,12 @@ const otpVerification = () => {
     setError("");
     try {
       // Extract the userId string safely
-      const userIdString = 
-        (typeof userId === "string" ? userId : 
-         Array.isArray(userId) ? userId[0] : "") || 
-        (token?.userId || "");
+      const userIdString =
+        (typeof userId === "string"
+          ? userId
+          : Array.isArray(userId)
+          ? userId[0]
+          : "") || (token?.userId || "");
 
       if (!userIdString) {
         throw new Error("User ID not found");
@@ -51,18 +54,34 @@ const otpVerification = () => {
       }
 
       // Format phone number consistently
-      const phoneStr = typeof phoneNumber === "string" ? phoneNumber : 
-                      Array.isArray(phoneNumber) ? phoneNumber[0] : "";
-      
-      // Create a new user in the database
+      const phoneStr =
+        typeof phoneNumber === "string"
+          ? phoneNumber
+          : Array.isArray(phoneNumber)
+          ? phoneNumber[0]
+          : "";
+
+      // Create user data object with optional referral code
+      const userData: {
+        phone: string;
+        userId: string;
+        referralCode?: string;
+      } = {
+        phone: `+91${phoneStr}`,
+        userId: session.userId,
+      };
+
+      // Add referral code if provided
+      if (referralCode.trim()) {
+        userData.referralCode = referralCode.trim();
+      }
+
+      // Create a new user in the database with the userData
       const newUser = await database.createDocument(
         "6815de2b0004b53475ec",
         "6815e0be001731ca8b1b",
         ID.unique(),
-        {
-          phone: `+91${phoneStr}`,
-          userId: session.userId,
-        }
+        userData
       );
 
       if (!newUser) {
@@ -78,7 +97,7 @@ const otpVerification = () => {
 
       router.push({
         pathname: "/auth/personal-details",
-        params: { documentId: newUser.$id }
+        params: { documentId: newUser.$id },
       });
     } catch (error) {
       console.error("Error handling OTP:", error);
@@ -182,6 +201,27 @@ const otpVerification = () => {
           />
         </View>
 
+        {/* New Referral Code Input */}
+        <View style={{ marginTop: 10, marginBottom: 15 }}>
+          <Text
+            style={{
+              ...TYPOGRAPHY.caption,
+              fontFamily: FONT_WEIGHT.medium,
+              color: "grey",
+              marginBottom: 5,
+            }}
+          >
+            Have a referral code? (Optional)
+          </Text>
+          <TextInput
+            placeholder="Enter referral code if available"
+            style={styles.input}
+            value={referralCode}
+            onChange={(e) => setReferralCode(e.nativeEvent.text)}
+            autoCapitalize="characters"
+          />
+        </View>
+
         <Text
           style={{
             ...TYPOGRAPHY.body,
@@ -214,7 +254,7 @@ const otpVerification = () => {
                 ...TYPOGRAPHY.button,
               }}
             >
-              Continue
+              {isLoading ? "Processing..." : "Continue"}
             </Text>
           </TouchableOpacity>
         </View>

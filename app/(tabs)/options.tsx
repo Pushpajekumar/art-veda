@@ -16,7 +16,7 @@ import { useRouter } from "expo-router";
 import { account, database } from "@/context/app-write";
 import { Query } from "react-native-appwrite";
 
-const shareAbleLink = 'https://play.google.com/apps/test/com.evolcrm.artveda/10'
+const shareAbleLink = 'https://play.google.com/apps/test/com.evolcrm.artveda'
 
 const Options = () => {
   const router = useRouter();

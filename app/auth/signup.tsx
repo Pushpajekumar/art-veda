@@ -40,22 +40,22 @@ const signup = () => {
         throw new Error("Database configuration is missing");
       }
 
-      // Check if the user already exists
-      const existingUser = await database.listDocuments(
-        databaseId,
-        usersCollectionId,
-        [Query.equal("phone", `+91${phoneNumber}`)]
-      );
+      // // Check if the user already exists
+      // const existingUser = await database.listDocuments(
+      //   databaseId,
+      //   usersCollectionId,
+      //   [Query.equal("phone", `+91${phoneNumber}`)]
+      // );
 
-      if (existingUser.total > 0) {
-        setError("User already exists");
-        ToastAndroid.show(
-          "User already exists, Please Login",
-          ToastAndroid.SHORT
-        );
-        setIsLoading(false);
-        return;
-      }
+      // if (existingUser.total > 0) {
+      //   setError("User already exists");
+      //   ToastAndroid.show(
+      //     "User already exists, Please Login",
+      //     ToastAndroid.SHORT
+      //   );
+      //   setIsLoading(false);
+      //   return;
+      // }
 
       const token = await account.createPhoneToken(
         ID.unique(),
