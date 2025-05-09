@@ -485,7 +485,6 @@ const handleDownload = async () => {
     await MediaLibrary.createAlbumAsync('ArtVeda', asset, false);
 
     //save in our db as downloaded
-
      await database.createDocument(
     '6815de2b0004b53475ec',
     '681a1b3c0020eb66b3b1',
