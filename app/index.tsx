@@ -2,8 +2,9 @@ import { View, Text } from "../context/ThemeContext";
 import { Dimensions, Image, StyleSheet, Animated } from "react-native";
 import { TYPOGRAPHY, FONT_SIZE, FONT_WEIGHT } from "../utils/fonts";
 import { useEffect, useRef, useState } from "react";
-import { router } from "expo-router";
+import { Redirect, router } from "expo-router";
 import { account } from "@/context/app-write";
+import * as Network from "expo-network";
 
 export default function Index() {
   const { width, height } = Dimensions.get("window");
@@ -39,6 +40,14 @@ export default function Index() {
   useEffect(() => {
     const checkAuth = async () => {
       try {
+        //check user phone has connected to internet or not
+        const networkState = await Network.getNetworkStateAsync();
+        if (!networkState.isConnected || !networkState.isInternetReachable) {
+          router.replace("/no-network");
+          return;
+        }
+
+        // Check if the user is authenticated
         const session = await account.getSession("current");
         if (session) {
           setIsAuthenticated(true);
