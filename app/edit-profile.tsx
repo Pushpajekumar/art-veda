@@ -18,13 +18,15 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { database, ID } from "@/context/app-write";
 import * as ImagePicker from "expo-image-picker";
 import { storage } from "@/context/app-write"; // Make sure this is imported or available
+import DateTimePicker from "@react-native-community/datetimepicker";
 
 const EditProfile = () => {
-  const { userId } = useLocalSearchParams();
   const router = useRouter();
+  const { userId } = useLocalSearchParams();
   const [loading, setLoading] = useState(true);
   const [imageUploading, setImageUploading] = useState(false);
   const [error, setError] = useState("");
+  const [showDatePicker, setShowDatePicker] = useState(false);
 
   const [profileData, setProfileData] = useState({
     name: "",
@@ -309,17 +311,43 @@ const EditProfile = () => {
             />
           </View>
 
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Date of Birth</Text>
-            <TextInput
-              style={styles.input}
-              value={profileData.dob}
-              onChangeText={(text) =>
-                setProfileData({ ...profileData, dob: text })
-              }
-              placeholder="DD/MM/YYYY"
-            />
-          </View>
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Date of Birth</Text>
+              <TouchableOpacity
+                style={[styles.input, styles.dateInput]}
+                onPress={() => setShowDatePicker(true)}
+              >
+                <Text style={profileData.dob ? styles.dateText : styles.placeholderText}>
+                  {profileData.dob
+                    ? new Date(profileData.dob).toLocaleDateString('en-US', {
+                        day: 'numeric',
+                        month: 'long',
+                        year: 'numeric'
+                      })
+                    : "Select date of birth"}
+                </Text>
+                <Ionicons name="calendar-outline" size={20} color={primaryColor} />
+              </TouchableOpacity>
+
+              {showDatePicker && (
+                <DateTimePicker
+                  value={profileData.dob ? new Date(profileData.dob) : new Date()}
+                  mode="date"
+                  display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                  onChange={(event, selectedDate) => {
+                    setShowDatePicker(false);
+                    if (selectedDate && event.type !== "dismissed") {
+                      setProfileData({
+                        ...profileData,
+                        dob: selectedDate.toISOString(),
+                      });
+                    }
+                  }}
+                  maximumDate={new Date()}
+                  style={styles.datePicker}
+                />
+              )}
+            </View>
 
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Occupation</Text>
@@ -592,6 +620,22 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: 16,
     fontWeight: "600",
+  },
+  dateInput: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  dateText: {
+    fontSize: 16,
+    color: "#333",
+  },
+  placeholderText: {
+    fontSize: 16,
+    color: "#999",
+  },
+  datePicker: {
+    width: "100%",
   },
 });
 
