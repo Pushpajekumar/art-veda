@@ -12,9 +12,14 @@ import { router } from "expo-router";
 import DailyEvent from "@/component/daily-event";
 import { database } from "@/context/app-write";
 import { Query } from "react-native-appwrite";
+import { useNotification } from "@/context/notificationContext";
 
 const OfficialHome = () => {
   const [subCategories, setSubCategories] = React.useState<any[]>([]);
+
+  const { expoPushToken, error, notification } = useNotification();
+
+  console.log(expoPushToken, error, notification);
 
   useEffect(() => {
     const fetchSubCategories = async () => {
