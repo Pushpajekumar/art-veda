@@ -40,7 +40,7 @@ const OfficialHome = () => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView>
+      <ScrollView showsVerticalScrollIndicator={false}>
         <LinearGradient
           colors={["#ffffff", "#DAF0FF"]}
           start={{ x: 0, y: 0 }}

@@ -177,7 +177,7 @@ const otpVerification = () => {
       <View
         style={{
           padding: 20,
-          marginTop: (height - 600) / 2, // Dynamically calculate margin to center vertically
+          marginTop: (height - 600) / 2, 
         }}
       >
         <View style={{ marginTop: 10 }}>
@@ -219,6 +219,8 @@ const otpVerification = () => {
             value={referralCode}
             onChange={(e) => setReferralCode(e.nativeEvent.text)}
             autoCapitalize="characters"
+            autoCorrect={false}
+            maxLength={5}
           />
         </View>
 

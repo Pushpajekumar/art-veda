@@ -7,6 +7,7 @@ import {
   ScrollView,
   Alert,
   Share,
+  Linking,
 } from "react-native";
 import React, { useEffect, useState } from "react";
 import { Ionicons, FontAwesome, MaterialIcons } from "@expo/vector-icons";
@@ -17,6 +18,12 @@ import { account, database } from "@/context/app-write";
 import { Query } from "react-native-appwrite";
 
 const shareAbleLink = 'https://play.google.com/apps/test/com.evolcrm.artveda'
+const privacyPolicyLink = 'https://docs.google.com/document/d/1SVfjgbdCI6ZfXyqGefDGJ6i4eUF9Nr2WlyQbN8uUfp4/edit?usp=sharing'
+const termsAndConditionLink = 'https://docs.google.com/document/d/1IekV0wKw4EJOM5lgQR8KPajbN-dUcpiDZDLT72YWoOU/edit?usp=sharing'
+const faqsLink = 'https://docs.google.com/document/d/15EKnE8FwOp2CDknEkkEvXcBM29XG1hF73fpK-jHuh_o/edit?usp=sharing'
+const contactUsLink = 'https://docs.google.com/document/d/1xpYw3TNPnYjlaekH7SvR0HyWEhf9dLWztUs4WAOUyAI/edit?usp=sharing'
+const callSupportLink = 'tel:+919999999999' // Replace with your support number
+ 
 
 const Options = () => {
   const router = useRouter();
@@ -134,15 +141,24 @@ const shareApp = async () => {
         {/* Help & Support Section */}
         <Text style={styles.sectionTitle}>Help & Support</Text>
         <View style={styles.sectionContainer}>
-          <TouchableOpacity style={styles.optionItem}>
+            <TouchableOpacity 
+            style={styles.optionItem} 
+            onPress={() => {
+              // Open the contact us link
+              Linking.openURL(contactUsLink);
+            }}>
             <View style={styles.optionIconText}>
               <FontAwesome name="comment" size={20} color="#333" />
               <Text style={styles.optionText}>Chat Support</Text>
             </View>
             <Ionicons name="chevron-forward" size={20} color="#333" />
-          </TouchableOpacity>
+            </TouchableOpacity>
 
-          <TouchableOpacity style={styles.optionItem}>
+          <TouchableOpacity style={styles.optionItem} 
+          onPress={() => {
+            // Open the call support link
+            Linking.openURL(callSupportLink);
+          }}>
             <View style={styles.optionIconText}>
               <FontAwesome name="phone" size={20} color="#333" />
               <Text style={styles.optionText}>Call Support</Text>
@@ -150,7 +166,11 @@ const shareApp = async () => {
             <Ionicons name="chevron-forward" size={20} color="#333" />
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.optionItem}>
+          <TouchableOpacity style={styles.optionItem}
+          onPress={() => {
+            // Open the FAQs link
+            Linking.openURL(faqsLink);
+          }}>
             <View style={styles.optionIconText}>
               <FontAwesome name="question-circle" size={20} color="#333" />
               <Text style={styles.optionText}>FAQs</Text>
@@ -170,7 +190,12 @@ const shareApp = async () => {
             <Ionicons name="chevron-forward" size={20} color="#333" />
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.optionItem}>
+          <TouchableOpacity style={styles.optionItem}
+          onPress={() => {
+            // Open the privacy policy link
+            Linking.openURL(privacyPolicyLink);
+          }}
+          >
             <View style={styles.optionIconText}>
               <MaterialIcons name="privacy-tip" size={20} color="#333" />
               <Text style={styles.optionText}>Privacy Policy</Text>
@@ -178,7 +203,11 @@ const shareApp = async () => {
             <Ionicons name="chevron-forward" size={20} color="#333" />
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.optionItem}>
+          <TouchableOpacity style={styles.optionItem}
+          onPress={() => {
+            // Open the terms and conditions link
+            Linking.openURL(termsAndConditionLink);
+          }}>
             <View style={styles.optionIconText}>
               <MaterialIcons name="description" size={20} color="#333" />
               <Text style={styles.optionText}>Term & Condition</Text>
