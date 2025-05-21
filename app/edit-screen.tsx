@@ -11,6 +11,7 @@ import {
   Modal,
   ActivityIndicator,
   ToastAndroid,
+  Platform,
 } from "react-native";
 import React, { useEffect, useState, useCallback, useRef } from "react";
 import { useLocalSearchParams } from "expo-router";
@@ -450,53 +451,170 @@ const EditScreen = () => {
 //     }
 //   };
 
+// const handleDownload = async () => {
+//   try {
+//     // Request permission directly before saving
+//     const { status } = await MediaLibrary.requestPermissionsAsync();
+//     console.log('Permission status: 🟢', status);
+    
+//     if (status !== 'granted') {
+//       Alert.alert(
+//         'Permission Required',
+//         'To save images, this app needs access to your media library.',
+//         [
+//           { text: 'Cancel', style: 'cancel' },
+//           { text: 'Open Settings', onPress: () => Linking.openSettings() }
+//         ]
+//       );
+//       return;
+//     }
+
+//     if (!canvasRef.current) {
+//       Alert.alert('Error', 'Canvas not ready. Please try again.');
+//       return;
+//     }
+
+//     const snapshot = await canvasRef.current.makeImageSnapshot();
+//     const base64 = snapshot.encodeToBase64();
+
+//     const fileUri = FileSystem.cacheDirectory + `artframe_${Date.now()}.png`;
+//     console.log(fileUri, "File URI");
+//     await FileSystem.writeAsStringAsync(fileUri, base64, {
+//       encoding: FileSystem.EncodingType.Base64,
+//     });
+
+//     console.log(fileUri, "File URI after writing");
+//     // Save to media library
+
+//     const asset = await MediaLibrary.createAssetAsync(fileUri);
+
+//     console.log(asset, "Asset");
+
+//     // Create album if it doesn't exist
+//     console.log()
+//     const album = await MediaLibrary.getAlbumAsync('ArtVeda');
+
+//     console.log(album, "Album");
+
+//     if (!album) {
+//       console.log("Album doesn't exist, creating a new one");
+//       await MediaLibrary.createAlbumAsync('ArtVeda', asset, false);
+//     }
+//     else {
+//       console.log("Album exists, adding asset to it");
+//       await MediaLibrary.addAssetsToAlbumAsync([asset], album, false);
+//     }
+//     console.log('Image saved to gallery!');
+//     //save in our db as downloaded
+//      await database.createDocument(
+//     '6815de2b0004b53475ec',
+//     '681a1b3c0020eb66b3b1',
+//     ID.unique(),
+//     {
+//       posts: currentPostId,
+//       users: currentUser[0].$id,
+//     }
+//   );
+
+//    ToastAndroid.show('Image saved successfully!', ToastAndroid.SHORT);
+    
+//     await FileSystem.deleteAsync(fileUri, { idempotent: true });
+//   } catch (error) {
+//     console.error('Download error:', error);
+//     Alert.alert('Error', 'Failed to save image. Check permissions and try again.');
+//   }
+// };
+
 const handleDownload = async () => {
   try {
-    // Request permission directly before saving
-    const { status } = await MediaLibrary.requestPermissionsAsync();
-    console.log('Permission status:', status);
-    
-    if (status !== 'granted') {
+    // Request permissions
+    const { status, accessPrivileges } = await MediaLibrary.requestPermissionsAsync();
+
+    console.log('Permission status: 🟢', status);
+    console.log('Access privileges: 🔑', accessPrivileges);
+
+    // Ensure full access on iOS
+    if (status !== 'granted' || (Platform.OS === 'ios' && accessPrivileges !== 'all')) {
       Alert.alert(
         'Permission Required',
-        'To save images, this app needs access to your media library.',
+        'To save images, this app needs full access to your media library.',
         [
           { text: 'Cancel', style: 'cancel' },
-          { text: 'Open Settings', onPress: () => Linking.openSettings() }
+          { text: 'Open Settings', onPress: () => Linking.openSettings() },
         ]
       );
       return;
     }
 
+    // Ensure canvas is ready
     if (!canvasRef.current) {
       Alert.alert('Error', 'Canvas not ready. Please try again.');
       return;
     }
 
+    // Take snapshot and encode to base64
     const snapshot = await canvasRef.current.makeImageSnapshot();
-    const base64 = snapshot.encodeToBase64();
+    if (!snapshot) {
+      Alert.alert('Error', 'Failed to take a snapshot. Please try again.');
+      return;
+    }
 
-    const fileUri = `${FileSystem.cacheDirectory}artframe_${Date.now()}.png`;
+    const base64 = snapshot.encodeToBase64();
+    const fileUri = FileSystem.cacheDirectory + `artframe_${Date.now()}.png`;
+
+    console.log(fileUri, 'File URI');
     await FileSystem.writeAsStringAsync(fileUri, base64, {
       encoding: FileSystem.EncodingType.Base64,
     });
+    console.log(fileUri, 'File URI after writing');
 
+    // Save to media library
     const asset = await MediaLibrary.createAssetAsync(fileUri);
-    await MediaLibrary.createAlbumAsync('ArtVeda', asset, false);
+    console.log(asset, 'Asset');
 
-    //save in our db as downloaded
-     await database.createDocument(
-    '6815de2b0004b53475ec',
-    '681a1b3c0020eb66b3b1',
-    ID.unique(),
-    {
-      posts: currentPostId,
-      users: currentUser[0].$id,
+    // Handle album
+    const albumName = 'ArtVeda';
+    console.log('Checking for album existence');
+    let album = await MediaLibrary.getAlbumAsync(albumName);
+
+    // On Android, check for migration
+    if (Platform.OS === 'android' && album) {
+      const needsMigration = await MediaLibrary.albumNeedsMigrationAsync(album);
+      if (needsMigration) {
+        Alert.alert('Migration Needed', 'Please migrate the album in your system gallery settings.');
+        return;
+      }
     }
-  );
 
-   ToastAndroid.show('Image saved successfully!', ToastAndroid.SHORT);
-    
+    if (!album) {
+      console.log("Album doesn't exist, creating a new one");
+      album = await MediaLibrary.createAlbumAsync(albumName, asset, false);
+    } else {
+      console.log('Album exists, adding asset to it');
+      await MediaLibrary.addAssetsToAlbumAsync([asset], album, false);
+    }
+
+    console.log('Image saved to gallery!');
+
+    // Save in DB as downloaded
+    await database.createDocument(
+      '6815de2b0004b53475ec', // DB ID
+      '681a1b3c0020eb66b3b1', // Collection ID
+      ID.unique(),
+      {
+        posts: currentPostId,
+        users: currentUser[0].$id,
+      }
+    );
+
+    // Show success toast/alert
+    if (Platform.OS === 'android') {
+      ToastAndroid.show('Image saved successfully!', ToastAndroid.SHORT);
+    } else {
+      Alert.alert('Success', 'Image saved to your Photos!');
+    }
+
+    // Clean up temporary file
     await FileSystem.deleteAsync(fileUri, { idempotent: true });
   } catch (error) {
     console.error('Download error:', error);
