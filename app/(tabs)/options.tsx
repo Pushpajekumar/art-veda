@@ -83,9 +83,8 @@ const shareApp = async () => {
   const handleLogout = async () => {
     try {
       await account.deleteSession("current");
-      // Optionally, you can navigate to the login screen or show a success message
       Alert.alert("Success", "Logged out successfully");
-      router.push("/auth/login");
+      router.replace("/auth/login");
     } catch (error) {
       console.error("Logout error:", error);
       Alert.alert("Error", "Failed to log out. Please try again.");

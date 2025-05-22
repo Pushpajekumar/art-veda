@@ -8,11 +8,11 @@ import {
 } from "react-native";
 import { useRouter } from "expo-router";
 import { MaterialCommunityIcons } from "@expo/vector-icons"; // Import an icon set
-import { LinearGradient } from "expo-linear-gradient"; // For a gradient background
 import * as Network from "expo-network";
-import { useState, useEffect } from "react";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { TYPOGRAPHY } from "@/utils/fonts";
 
-const { width, height } = Dimensions.get("window");
+const { width } = Dimensions.get("window");
 
 export default function NoNetworkScreen() {
   const router = useRouter();
@@ -45,40 +45,34 @@ export default function NoNetworkScreen() {
   };
 
   return (
-    <LinearGradient
-      colors={["#6DD5FA", "#2980B9"]} // Example gradient colors
-      style={styles.gradientContainer}
-    >
+    <SafeAreaView style={styles.gradientContainer}>
       <View style={styles.contentContainer}>
         <MaterialCommunityIcons
           name="wifi-off"
-          size={width * 0.3} // Responsive icon size
-          color="#FFFFFF"
+          size={width * 0.16}
+          color="rgba(31, 133, 222, 0.9)"
           style={styles.icon}
         />
 
-        <Text style={styles.title}>Oops! No Connection</Text>
+        <View style={{ alignItems: "center" }}>
+          <Text style={styles.title}>No Internet</Text>
+          <Text style={styles.message}>
+            It seems you're not connected. Please check your internet settings
+            and try again.
+          </Text>
+        </View>
 
-        <Text style={styles.message}>
-          It seems you're offline. Please check your internet connection and try
-          again.
-        </Text>
-
-        <TouchableOpacity
-          style={styles.button}
-          onPress={handleRetry}
-          activeOpacity={0.7}
-        >
+        <TouchableOpacity style={styles.button} onPress={handleRetry}>
           <Text style={styles.buttonText}>Retry</Text>
           <MaterialCommunityIcons
-            name="reload"
-            size={20}
+            name="sync"
+            size={18}
             color="#FFFFFF"
             style={{ marginLeft: 8 }}
           />
         </TouchableOpacity>
       </View>
-    </LinearGradient>
+    </SafeAreaView>
   );
 }
 
@@ -91,54 +85,35 @@ const styles = StyleSheet.create({
   contentContainer: {
     alignItems: "center",
     justifyContent: "center",
-    paddingHorizontal: 30,
-    paddingVertical: 50,
-    backgroundColor: "rgba(255, 255, 255, 0.1)", // Slight overlay for content
-    borderRadius: 20,
-    margin: 20,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 5 },
-    shadowOpacity: 0.3,
-    shadowRadius: 10,
-    elevation: 10, // For Android shadow
   },
   icon: {
-    marginBottom: 30,
+    marginBottom: 20,
     opacity: 0.8,
   },
   title: {
-    fontSize: 28,
-    fontWeight: "bold",
-    color: "#FFFFFF",
-    marginBottom: 20,
-    textAlign: "center",
-    fontFamily: "System", // Consider using a custom font if available
+    ...TYPOGRAPHY.title,
+    opacity: 0.8,
+    marginBottom: 10,
   },
   message: {
-    fontSize: 16,
-    color: "#E0E0E0", // Lighter text color for contrast on dark background
+    ...TYPOGRAPHY.caption,
+    opacity: 0.8,
     textAlign: "center",
-    marginBottom: 40,
-    lineHeight: 24,
-    fontFamily: "System",
+    paddingHorizontal: 20,
+    lineHeight: 20,
   },
   button: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#FF6B6B", // A vibrant button color
+    marginTop: 20,
+    backgroundColor: "rgba(31, 133, 222, 0.9)", // A vibrant button color
     paddingVertical: 15,
     paddingHorizontal: 35,
     borderRadius: 30, // More rounded button
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.2,
-    shadowRadius: 5,
-    elevation: 6,
   },
   buttonText: {
     color: "#FFFFFF",
-    fontSize: 18,
+    fontSize: 14,
     fontWeight: "600", // Semi-bold
-    fontFamily: "System",
   },
 });

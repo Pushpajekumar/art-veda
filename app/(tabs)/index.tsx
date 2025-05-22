@@ -1,4 +1,12 @@
-import { View, Text, ScrollView, StyleSheet, TextInput } from "react-native";
+import {
+  View,
+  Text,
+  ScrollView,
+  StyleSheet,
+  TextInput,
+  Touchable,
+  TouchableOpacity,
+} from "react-native";
 import React, { useEffect } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
@@ -40,6 +48,12 @@ const OfficialHome = () => {
 
   return (
     <SafeAreaView style={styles.container}>
+      <TouchableOpacity onPress={() => router.push("/select-political-party")}>
+        <Text>Select Political Party</Text>
+      </TouchableOpacity>
+      <TouchableOpacity onPress={() => router.push("/no-network")}>
+        <Text>Select Political Party</Text>
+      </TouchableOpacity>
       <ScrollView showsVerticalScrollIndicator={false}>
         <LinearGradient
           colors={["#ffffff", "#DAF0FF"]}

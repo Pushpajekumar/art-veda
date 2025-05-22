@@ -20,15 +20,14 @@ export default function Index() {
       useNativeDriver: true,
     }).start();
 
-    // Set timeout to navigate after 1 second
+    // Set timeout to navigate after 2 second
     const timeout = setTimeout(() => {
       if (isAuthenticated) {
         router.replace("/(tabs)");
       } else {
         router.replace("/auth/login");
       }
-    }, 1000);
-
+    }, 1500);
     // Clean up function
     return () => {
       clearTimeout(timeout);

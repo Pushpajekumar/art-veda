@@ -14,9 +14,8 @@ import { router, useLocalSearchParams } from "expo-router";
 import { primaryColor } from "@/constant/contant";
 import * as ImagePicker from "expo-image-picker";
 import { Ionicons } from "@expo/vector-icons";
-import { account, database, storage } from "@/context/app-write";
+import { database, storage } from "@/context/app-write";
 import { ID } from "react-native-appwrite";
-import profile from "../(tabs)/profile";
 
 const PersonalDetails = () => {
   const params = useLocalSearchParams();
@@ -40,7 +39,7 @@ const PersonalDetails = () => {
       } = await ImagePicker.requestMediaLibraryPermissionsAsync();
 
       if (status !== "granted") {
-        alert("Sorry, we need camera roll permissions to make this work!");
+        alert("Sorry, we need storage permissions to make this work!");
         return;
       }
 
@@ -67,19 +66,10 @@ const PersonalDetails = () => {
       setError("Please enter your full name and address");
       return;
     }
-
     setUploading(true);
     setError("");
 
     try {
-      // const databaseId = process.env.EXPO_PUBLIC_APPWRITE_DATABASE_ID;
-      // const usersCollectionId =
-      //   process.env.EXPO_PUBLIC_APPWRITE_USERS_COLLECTION_ID;
-
-      // if (!databaseId || !usersCollectionId) {
-      //   throw new Error("Database configuration is missing");
-      // }
-
       // Upload profile image if selected
       if (image) {
         const imageUri: string = image;
@@ -112,7 +102,10 @@ const PersonalDetails = () => {
         );
       }
 
-      router.replace("/(tabs)");
+      router.replace({
+        pathname: "/select-political-party",
+        params: { userId: documentId },
+      });
     } catch (err) {
       console.error("Error saving details:", err);
       setError("Failed to save your details. Please try again.");

@@ -5,6 +5,7 @@ import {
   TextInput,
   FlatList,
   TouchableOpacity,
+  ActivityIndicator,
 } from "react-native";
 import React, { useState, useEffect } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -12,40 +13,64 @@ import { FONT_WEIGHT, TYPOGRAPHY } from "@/utils/fonts";
 import Entypo from "@expo/vector-icons/Entypo";
 import EvilIcons from "@expo/vector-icons/EvilIcons";
 import PoliticalPartyCard from "@/component/political-party-card";
-import { router } from "expo-router";
-import { account } from "@/context/app-write";
+import { router, useLocalSearchParams } from "expo-router";
+import { database } from "@/context/app-write";
 
-const politicalParties = [
-  {
-    name: "Democratic Party",
-    shortName: "Dem",
-    logo: "https://picsum.photos/200?random=1",
-  },
-  {
-    name: "Republican Party",
-    shortName: "Rep",
-    logo: "https://picsum.photos/200?random=2",
-  },
-  {
-    name: "Green Party",
-    shortName: "Green",
-    logo: "https://picsum.photos/200?random=3",
-  },
-  {
-    name: "Libertarian Party",
-    shortName: "Lib",
-    logo: "https://picsum.photos/200?random=4",
-  },
-  {
-    name: "Independent Party",
-    shortName: "Ind",
-    logo: "https://picsum.photos/200?random=5",
-  },
-];
+// Define the structure we need for our UI components
+type PoliticalParty = {
+  id: string;
+  name: string;
+  shortName: string;
+  logo: string;
+};
 
 const selectpoliticalparty = () => {
+  const params = useLocalSearchParams();
+  const userId = Array.isArray(params.userId)
+    ? params.userId[0]
+    : (params.userId as string);
+
+  console.log(userId, "🟢");
+
+  const [politicalParties, setPoliticalParties] = useState<PoliticalParty[]>(
+    []
+  );
   const [searchQuery, setSearchQuery] = useState("");
-  const [filteredParties, setFilteredParties] = useState(politicalParties);
+  const [filteredParties, setFilteredParties] = useState<PoliticalParty[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchPoliticalParties = async () => {
+      setLoading(true);
+      try {
+        const response = await database.getDocument(
+          process.env.EXPO_PUBLIC_APPWRITE_DATABASE_ID!,
+          "6815de6e00023c32614a",
+          "682da2c7003407a61553"
+        );
+
+        // Map the response data to the format our UI expects
+        const mappedData: PoliticalParty[] = response.subCategory.map(
+          (party: any) => ({
+            id: party.$id,
+            name: party.name,
+            shortName: party.name, // Use the full name if shortName doesn't exist
+            logo: party.logoUrl,
+          })
+        );
+
+        console.log("Political parties fetched successfully:", mappedData);
+        setPoliticalParties(mappedData);
+        setFilteredParties(mappedData);
+      } catch (error) {
+        console.error("Error fetching political parties:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchPoliticalParties();
+  }, []);
 
   // Update filtered parties whenever search query changes
   useEffect(() => {
@@ -60,24 +85,25 @@ const selectpoliticalparty = () => {
       );
       setFilteredParties(filtered);
     }
-  }, [searchQuery]);
+  }, [searchQuery, politicalParties]);
 
   const handleSkip = () => {
     // Navigate to the next screen
     router.replace("/(tabs)");
   };
 
-  type PoliticalParty = {
-    name: string;
-    shortName: string;
-    logo: string;
-  };
-
   const handlePartySelect = async (party: PoliticalParty) => {
     try {
-      // await account.updatePrefs({
-      //   politicalParty: party.shortName,
-      // });
+      // Store the selected party in user preferences
+      await database.updateDocument(
+        process.env.EXPO_PUBLIC_APPWRITE_DATABASE_ID!,
+        process.env.EXPO_PUBLIC_APPWRITE_USER_COLLECTION_ID!,
+        userId.toString(),
+        {
+          politicalParty: party.id,
+        }
+      );
+
       console.log("Selected party:", party);
       // Navigate to the next screen
       router.replace("/auth/personal-details");
@@ -115,22 +141,29 @@ const selectpoliticalparty = () => {
         </View>
       </View>
 
-      <FlatList
-        data={filteredParties}
-        keyExtractor={(item) => item.shortName}
-        renderItem={({ item }) => (
-          <TouchableOpacity onPress={() => handlePartySelect(item)}>
-            <PoliticalPartyCard party={item} />
-          </TouchableOpacity>
-        )}
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.listContainer}
-        ListEmptyComponent={
-          <View style={styles.emptyContainer}>
-            <Text style={styles.emptyText}>No political parties found</Text>
-          </View>
-        }
-      />
+      {loading ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#4A6572" />
+          <Text style={styles.loadingText}>Loading political parties...</Text>
+        </View>
+      ) : (
+        <FlatList
+          data={filteredParties}
+          keyExtractor={(item) => item.id}
+          renderItem={({ item }) => (
+            <TouchableOpacity onPress={() => handlePartySelect(item)}>
+              <PoliticalPartyCard party={item} />
+            </TouchableOpacity>
+          )}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.listContainer}
+          ListEmptyComponent={
+            <View style={styles.emptyContainer}>
+              <Text style={styles.emptyText}>No political parties found</Text>
+            </View>
+          }
+        />
+      )}
     </SafeAreaView>
   );
 };
@@ -197,6 +230,17 @@ export const styles = StyleSheet.create({
   },
   emptyText: {
     ...TYPOGRAPHY.body,
+    color: "#666",
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 20,
+  },
+  loadingText: {
+    ...TYPOGRAPHY.body,
+    marginTop: 10,
     color: "#666",
   },
 });
