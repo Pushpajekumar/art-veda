@@ -1,12 +1,4 @@
-import {
-  View,
-  Text,
-  ScrollView,
-  StyleSheet,
-  TextInput,
-  Touchable,
-  TouchableOpacity,
-} from "react-native";
+import { View, Text, ScrollView, StyleSheet } from "react-native";
 import React, { useEffect } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
@@ -18,7 +10,7 @@ import AntDesign from "@expo/vector-icons/AntDesign";
 import CarouselComp from "@/component/carousel-comp";
 import { router } from "expo-router";
 import DailyEvent from "@/component/daily-event";
-import { database } from "@/context/app-write";
+import { account, database } from "@/context/app-write";
 import { Query } from "react-native-appwrite";
 import { useNotification } from "@/context/notificationContext";
 
@@ -26,6 +18,7 @@ const OfficialHome = () => {
   const [subCategories, setSubCategories] = React.useState<any[]>([]);
 
   const { expoPushToken, error, notification } = useNotification();
+  const [favPoliticalParty, setFavPoliticalParty] = React.useState<any>([]);
 
   console.log(expoPushToken, error, notification);
 
@@ -44,6 +37,30 @@ const OfficialHome = () => {
     };
 
     fetchSubCategories();
+  }, []);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      const user = await account.get();
+      const userId = user.$id;
+
+      const userDetailsResponse = await database.listDocuments(
+        "6815de2b0004b53475ec",
+        "6815e0be001731ca8b1b",
+        [Query.equal("userId", userId)]
+      );
+
+      const favPoliticalParty = userDetailsResponse.documents[0].politicalParty;
+
+      const response = await database.listDocuments(
+        process.env.EXPO_PUBLIC_APPWRITE_DATABASE_ID!,
+        "6815de600031711fadff",
+        [Query.equal("$id", favPoliticalParty)]
+      );
+      setFavPoliticalParty(response.documents[0]);
+      console.log(response.documents[0], "response");
+    };
+    fetchData();
   }, []);
 
   return (
@@ -84,6 +101,27 @@ const OfficialHome = () => {
           </View>
 
           <DailyEvent />
+        </View>
+
+        <View
+          style={{
+            padding: 16,
+          }}
+        >
+          <CarouselComp
+            images={
+              favPoliticalParty.length > 0
+                ? favPoliticalParty.posts.map((item: any) => ({
+                    previewImage:
+                      item.previewImage || "https://via.placeholder.com/400",
+                    id: item.$id,
+                  }))
+                : []
+            }
+            title={favPoliticalParty.name}
+            subCatName={favPoliticalParty.name}
+            subCatId={favPoliticalParty.$id}
+          />
         </View>
 
         {/* Dynamic subcategories carousels */}
