@@ -1,5 +1,5 @@
-import { View, Text, ScrollView, StyleSheet } from "react-native";
-import React, { useEffect } from "react";
+import { View, Text, ScrollView, StyleSheet, ActivityIndicator } from "react-native";
+import React, { useEffect, useState } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import { FONT_WEIGHT, TYPOGRAPHY } from "@/utils/fonts";
@@ -15,53 +15,81 @@ import { Query } from "react-native-appwrite";
 import { useNotification } from "@/context/notificationContext";
 
 const OfficialHome = () => {
-  const [subCategories, setSubCategories] = React.useState<any[]>([]);
+  const [subCategories, setSubCategories] = useState<any[]>([]);
+  const [favPoliticalParty, setFavPoliticalParty] = useState<any>(null); // Initialize as null
+  const [isLoading, setIsLoading] = useState(true); // Add loading state
 
   const { expoPushToken, error, notification } = useNotification();
-  const [favPoliticalParty, setFavPoliticalParty] = React.useState<any>([]);
 
   console.log(expoPushToken, error, notification);
 
   useEffect(() => {
-    const fetchSubCategories = async () => {
+    const fetchInitialData = async () => {
+      setIsLoading(true);
       try {
-        const subCategories = await database.listDocuments(
-          process.env.EXPO_PUBLIC_APPWRITE_DATABASE_ID!,
-          process.env.EXPO_PUBLIC_APPWRITE_SUB_CATEGORY_COLLECTION_ID!,
-          [Query.equal("isOnHomescreen", true)]
-        );
-        setSubCategories(subCategories.documents);
+        const fetchSubCategories = async () => {
+          const subCategoriesData = await database.listDocuments(
+            process.env.EXPO_PUBLIC_APPWRITE_DATABASE_ID!,
+            process.env.EXPO_PUBLIC_APPWRITE_SUB_CATEGORY_COLLECTION_ID!,
+            [Query.equal("isOnHomescreen", true)]
+          );
+          setSubCategories(subCategoriesData.documents);
+        };
+
+        const fetchFavPoliticalParty = async () => {
+          const user = await account.get();
+          const userId = user.$id;
+
+          const userDetailsResponse = await database.listDocuments(
+            "6815de2b0004b53475ec",
+            "6815e0be001731ca8b1b",
+            [Query.equal("userId", userId)]
+          );
+
+          if (userDetailsResponse.documents.length > 0) {
+            const politicalPartyId = userDetailsResponse.documents[0].politicalParty;
+            if (politicalPartyId) {
+              const response = await database.listDocuments(
+                process.env.EXPO_PUBLIC_APPWRITE_DATABASE_ID!,
+                "6815de600031711fadff",
+                [Query.equal("$id", politicalPartyId)]
+              );
+              if (response.documents.length > 0) {
+                setFavPoliticalParty(response.documents[0]);
+                console.log(response.documents[0], "response");
+              } else {
+                setFavPoliticalParty({}); // Set to empty object if not found
+              }
+            } else {
+              setFavPoliticalParty({}); // Set to empty object if no politicalPartyId
+            }
+          } else {
+            setFavPoliticalParty({}); // Set to empty object if no user details
+          }
+        };
+
+        await Promise.all([fetchSubCategories(), fetchFavPoliticalParty()]);
+
       } catch (error) {
-        console.error("Error fetching subcategories:", error);
+        console.error("Error fetching initial data:", error);
+        // Optionally set an error state here
+      } finally {
+        setIsLoading(false);
       }
     };
 
-    fetchSubCategories();
+    fetchInitialData();
   }, []);
 
-  useEffect(() => {
-    const fetchData = async () => {
-      const user = await account.get();
-      const userId = user.$id;
 
-      const userDetailsResponse = await database.listDocuments(
-        "6815de2b0004b53475ec",
-        "6815e0be001731ca8b1b",
-        [Query.equal("userId", userId)]
-      );
-
-      const favPoliticalParty = userDetailsResponse.documents[0].politicalParty;
-
-      const response = await database.listDocuments(
-        process.env.EXPO_PUBLIC_APPWRITE_DATABASE_ID!,
-        "6815de600031711fadff",
-        [Query.equal("$id", favPoliticalParty)]
-      );
-      setFavPoliticalParty(response.documents[0]);
-      console.log(response.documents[0], "response");
-    };
-    fetchData();
-  }, []);
+  if (isLoading) {
+    return (
+      <SafeAreaView style={[styles.container, styles.loadingContainer]}>
+        <ActivityIndicator size="large" color={primary_textColor} />
+        <Text style={styles.loadingText}>Loading...</Text>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container}>
@@ -103,26 +131,28 @@ const OfficialHome = () => {
           <DailyEvent />
         </View>
 
-        <View
-          style={{
-            padding: 16,
-          }}
-        >
-          <CarouselComp
-            images={
-              favPoliticalParty.length > 0
-                ? favPoliticalParty.posts.map((item: any) => ({
-                    previewImage:
-                      item.previewImage || "https://via.placeholder.com/400",
-                    id: item.$id,
-                  }))
-                : []
-            }
-            title={favPoliticalParty.name}
-            subCatName={favPoliticalParty.name}
-            subCatId={favPoliticalParty.$id}
-          />
-        </View>
+        {favPoliticalParty && favPoliticalParty.name && (
+          <View
+            style={{
+              padding: 16,
+            }}
+          >
+            <CarouselComp
+              images={
+                favPoliticalParty.posts && favPoliticalParty.posts.length > 0
+                  ? favPoliticalParty.posts.map((item: any) => ({
+                      previewImage:
+                        item.previewImage || "https://via.placeholder.com/400",
+                      id: item.$id,
+                    }))
+                  : []
+              }
+              title={favPoliticalParty.name}
+              subCatName={favPoliticalParty.name}
+              subCatId={favPoliticalParty.$id}
+            />
+          </View>
+        )}
 
         {/* Dynamic subcategories carousels */}
         {subCategories
@@ -136,7 +166,7 @@ const OfficialHome = () => {
             >
               <CarouselComp
                 images={
-                  subcategory.posts
+                  subcategory.posts && subcategory.posts.length > 0
                     ? subcategory.posts.map((item: any) => ({
                         previewImage:
                           item.previewImage ||
@@ -162,6 +192,15 @@ export const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#fff",
+  },
+  loadingContainer: {
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  loadingText: {
+    marginTop: 10,
+    ...TYPOGRAPHY.body,
+    color: primary_textColor,
   },
   header_container: {
     width: "100%",
