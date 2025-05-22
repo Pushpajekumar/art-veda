@@ -220,10 +220,18 @@ const shareApp = async () => {
               <Text style={styles.optionText}>Follow Us</Text>
             </View>
             <View style={styles.socialIcons}>
+              <TouchableOpacity onPress={() => Linking.openURL('https://www.facebook.com/share/1CLjutm3v3/')}>
               <FontAwesome name="facebook" size={24} color="#1877F2" />
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => Linking.openURL('https://www.instagram.com/_artveda_?utm_source=qr&igsh=MWk0ejRzaXJxcGly')}>
               <FontAwesome name="instagram" size={24} color="#E4405F" />
-              <FontAwesome name="twitter" size={24} color="#1DA1F2" />
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => Linking.openURL('https://youtube.com/@art_veda?si=GZtV13cMBAF91i9d')}>
               <FontAwesome name="youtube-play" size={24} color="#FF0000" />
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => Linking.openURL('https://wa.me/8218551994')}>
+              <FontAwesome name="whatsapp" size={24} color="#25D366" />
+              </TouchableOpacity>
             </View>
           </TouchableOpacity>
         </View>
