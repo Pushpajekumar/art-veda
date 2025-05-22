@@ -1,4 +1,10 @@
-import { View, Text, ScrollView, StyleSheet, ActivityIndicator } from "react-native";
+import {
+  View,
+  Text,
+  ScrollView,
+  StyleSheet,
+  ActivityIndicator,
+} from "react-native";
 import React, { useEffect, useState } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
@@ -47,7 +53,8 @@ const OfficialHome = () => {
           );
 
           if (userDetailsResponse.documents.length > 0) {
-            const politicalPartyId = userDetailsResponse.documents[0].politicalParty;
+            const politicalPartyId =
+              userDetailsResponse.documents[0].politicalParty;
             if (politicalPartyId) {
               const response = await database.listDocuments(
                 process.env.EXPO_PUBLIC_APPWRITE_DATABASE_ID!,
@@ -69,7 +76,6 @@ const OfficialHome = () => {
         };
 
         await Promise.all([fetchSubCategories(), fetchFavPoliticalParty()]);
-
       } catch (error) {
         console.error("Error fetching initial data:", error);
         // Optionally set an error state here
@@ -80,7 +86,6 @@ const OfficialHome = () => {
 
     fetchInitialData();
   }, []);
-
 
   if (isLoading) {
     return (

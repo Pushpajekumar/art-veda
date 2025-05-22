@@ -24,6 +24,9 @@ import {
   useImage,
   Text as SkiaText,
   useFont,
+  Group,
+  rrect,
+  rect,
 } from "@shopify/react-native-skia";
 import { primaryColor, width } from "@/constant/contant";
 import * as MediaLibrary from 'expo-media-library';
@@ -41,8 +44,9 @@ type FabricObject = {
   [key: string]: any;
 };
 
-type SkiaRenderable = 
-  | {  type: 'text';
+type SkiaRenderable =
+  | {
+    type: 'text';
     id: string;
     x: number;
     y: number;
@@ -57,7 +61,7 @@ type SkiaRenderable =
 
 const ImageLoader = ({ maxImages = 20 }) => {
   const [urls, setUrls] = useState<Array<string | null>>(Array(maxImages).fill(null));
-  
+
   const img1 = useImage(urls[0]);
   const img2 = useImage(urls[1]);
   const img3 = useImage(urls[2]);
@@ -78,12 +82,12 @@ const ImageLoader = ({ maxImages = 20 }) => {
   const img18 = useImage(urls[17]);
   const img19 = useImage(urls[18]);
   const img20 = useImage(urls[19]);
-  
+
   const imageHooks = [
     img1, img2, img3, img4, img5, img6, img7, img8, img9, img10,
     img11, img12, img13, img14, img15, img16, img17, img18, img19, img20
   ];
-  
+
   const updateUrls = useCallback((newUrls: string[]) => {
     const updatedUrls = Array(maxImages).fill(null);
     newUrls.forEach((url, i) => {
@@ -93,7 +97,7 @@ const ImageLoader = ({ maxImages = 20 }) => {
     });
     setUrls(updatedUrls);
   }, [maxImages]);
-  
+
   return { imageHooks, updateUrls };
 };
 
@@ -115,8 +119,7 @@ const EditScreen = () => {
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [fontSelectorVisible, setFontSelectorVisible] = useState(false);
   const [isFrameLoading, setIsFrameLoading] = useState(false);
-  const [mediaLibraryPermissions, requestMediaLibraryPermissions] = MediaLibrary.usePermissions();
- 
+
   // Canvas reference to access makeImageSnapshot method
   const canvasRef = useRef<any>(null);
 
@@ -138,16 +141,16 @@ const EditScreen = () => {
 
   const fontSizes = [8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50];
   // Font loading
-  const regularFonts = fontSizes.map(size => 
+  const regularFonts = fontSizes.map(size =>
     useFont(require("../assets/fonts/Montserrat-Medium.ttf"), size)
   );
-  const boldFonts = fontSizes.map(size => 
+  const boldFonts = fontSizes.map(size =>
     useFont(require("../assets/fonts/Montserrat-Bold.ttf"), size)
   );
-  const robotoRegularFonts = fontSizes.map(size => 
+  const robotoRegularFonts = fontSizes.map(size =>
     useFont(require("../assets/fonts/Roboto-Medium.ttf"), size)
   );
-  const robotoBoldFonts = fontSizes.map(size => 
+  const robotoBoldFonts = fontSizes.map(size =>
     useFont(require("../assets/fonts/Roboto-Bold.ttf"), size)
   );
 
@@ -155,9 +158,9 @@ const EditScreen = () => {
   const [selectedFontFamily, setSelectedFontFamily] = useState<'montserrat' | 'roboto'>('montserrat');
 
   const getClosestFontSize = (size: number) => {
-    return fontSizes.reduce((prev, curr) => 
+    return fontSizes.reduce((prev, curr) =>
       Math.abs(curr - size) < Math.abs(prev - size) ? curr : prev
-    , fontSizes[0]);
+      , fontSizes[0]);
   };
 
   const getFontWithSize = (weight: string, fontSize: number) => {
@@ -165,29 +168,29 @@ const EditScreen = () => {
       const index = fontSizes.indexOf(12); // Default font size
       return weight === 'bold' ? boldFonts[index] : regularFonts[index];
     }
-    
+
     const screenWidth = width - 40;
     const screenHeight = screenWidth * (frameHeight / frameWidth);
-    
+
     // Scale ratio from original frame to screen size
     const scaleX = screenWidth / (frameWidth / 2);;
     const scaleY = screenHeight / (frameHeight / 2);
-    
+
     // Use minimum of both scales for proportional scaling
     const scale = Math.min(scaleX, scaleY);
 
     console.log(scaleX, scaleY, scale, "Scale X and Y");
-    
+
     // Scale the font size
     const scaledSize = fontSize * scale;
 
     console.log(scaledSize, "Scaled Size");
-    
+
     // Find closest available font size
     const closestSize = getClosestFontSize(scaledSize);
     console.log(closestSize, "Closest Size");
     const index = fontSizes.indexOf(closestSize - 5);
-    
+
     if (index === -1) return null;
     if (selectedFontFamily === 'montserrat') {
       return weight === 'bold' ? boldFonts[index] : regularFonts[index];
@@ -239,7 +242,7 @@ const EditScreen = () => {
 
     const objects = fabricObjects?.objects || [];
     console.log(fabricObjects, "Fabric Json 🟡");
-    
+
     return objects.map((obj: FabricObject) => {
       if (obj.type === 'IText') {
         return {
@@ -256,13 +259,18 @@ const EditScreen = () => {
         };
       }
       if (obj.type === 'Image') {
+        const isConstrainedSize = obj.label === 'logo' || obj.label === 'userImage';
         return {
           type: 'image',
           id: obj.id,
           x: obj.left ?? 0,
           y: obj.top ?? 0,
-          width: (obj.label === 'logo') ? Math.min(80, (obj.width ?? 50) * (obj.scaleX ?? 1)) : (obj.width ?? 50) * (obj.scaleX ?? 1),
-          height: (obj.label === 'logo') ? Math.min(80, (obj.height ?? 50) * (obj.scaleY ?? 1)) : (obj.height ?? 50) * (obj.scaleY ?? 1),
+          width: isConstrainedSize
+            ? Math.min(80, (obj.width ?? 50) * (obj.scaleX ?? 1))
+            : (obj.width ?? 50) * (obj.scaleX ?? 1),
+          height: isConstrainedSize
+            ? Math.min(80, (obj.height ?? 50) * (obj.scaleY ?? 1))
+            : (obj.height ?? 50) * (obj.scaleY ?? 1),
           src: obj.src ?? '',
           label: obj.label ?? '',
         };
@@ -273,22 +281,22 @@ const EditScreen = () => {
 
   const calculatePositionFromRatio = (x: number, y: number) => {
     if (!frameWidth || !frameHeight) return { x, y };
-    
+
     const screenWidth = width - 40;
     const screenHeight = screenWidth * (frameHeight / frameWidth);
-    
+
     // Scale ratio from original frame to screen size
     const scaleX = screenWidth / (frameWidth / 2);
     const scaleY = screenHeight / (frameHeight / 2);
-    
+
     // Apply the scale to position elements correctly
     const newX = x * scaleX;
     const newY = y * scaleY;
-    
-  
-    
+
+
+
     console.log(`Original (${x},${y}) -> Scaled (${newX},${newY}), Scale: ${scaleX.toFixed(2)}x${scaleY.toFixed(2)}`);
-    
+
     return { x: newX, y: newY };
   };
 
@@ -298,7 +306,7 @@ const EditScreen = () => {
       setSelectedFrameIndex(index);
       const frame = frames[index];
       setSelectedFrame(frame);
-      
+
       // Update elements, frame width and height based on selected frame
       if (frame?.template) {
         try {
@@ -320,318 +328,318 @@ const EditScreen = () => {
     }
   };
 
-//   const handleDownload = async () => {
-//     try {
-   
-//       // // First check if we already have permissions
-//       // let permissionStatus = await MediaLibrary.getPermissionsAsync();
+  //   const handleDownload = async () => {
+  //     try {
 
-      
-//       // // If we don't have permissions, request them
-//       // if (!permissionStatus.granted) {
-//       //   permissionStatus = await MediaLibrary.requestPermissionsAsync();
-        
-//       //   // If the user denied permissions, show an alert with instructions
-//       //   if (!permissionStatus.granted) {
-//       //     Alert.alert(
-//       //       'Permission Required',
-//       //       'To save images, this app needs access to your media library. Please go to app settings and enable Media Library permissions.',
-//       //       [
-//       //         { text: 'Cancel', style: 'cancel' },
-//       //         { 
-//       //           text: 'Open Settings', 
-//       //           onPress: () => Linking.openSettings() 
-//       //         }
-//       //       ]
-//       //     );
-//       //     return;
-//       //   }
-//       // }
+  //       // // First check if we already have permissions
+  //       // let permissionStatus = await MediaLibrary.getPermissionsAsync();
 
-//       // Check if we have permission to access the media library
-//       console.log(mediaLibraryPermissions?.status, "Media Library Permission Status🟢🟡🔴");
-//       if (!mediaLibraryPermissions?.granted) {
-//         const { status } = await requestMediaLibraryPermissions();
-//         console.log(status, "Media Library Permission Status🟢🟡🔴");
-//         if (status !== 'granted') {
-//           Alert.alert(
-//             'Permission Required',
-//             'To save images, this app needs access to your media library. Please go to app settings and enable Media Library permissions.',
-//             [
-//               { text: 'Cancel', style: 'cancel' },
-//               { 
-//                 text: 'Open Settings', 
-//                 onPress: () => Linking.openSettings() 
-//               }
-//             ]
-//           );
-//           return;
-//         }
-//       }
-      
-//       // Check for canvas reference
-//       if (!canvasRef.current) {
-//         Alert.alert('Error', 'Canvas not ready. Please try again.');
-//         return;
-//       }
-      
-//       // Create a snapshot using makeImageSnapshot
-   
-//       const snapshot = await canvasRef.current.makeImageSnapshot();
-      
-//       if (!snapshot) {
-//         Alert.alert('Error', 'Failed to capture image');
-//         return;
-//       }
-      
-//       // Use the correct method to encode to base64
-//       const base64 = snapshot.encodeToBase64();
 
-//       if (!base64) {
-//         Alert.alert('Error', 'Failed to encode image');
-//         return;
-//       }
-      
-//       // Create a temporary file path with proper naming
-//       const fileUri = `${FileSystem.cacheDirectory}artframe_${Date.now()}.png`;
+  //       // // If we don't have permissions, request them
+  //       // if (!permissionStatus.granted) {
+  //       //   permissionStatus = await MediaLibrary.requestPermissionsAsync();
 
-//      console.log(fileUri, "File URI");
+  //       //   // If the user denied permissions, show an alert with instructions
+  //       //   if (!permissionStatus.granted) {
+  //       //     Alert.alert(
+  //       //       'Permission Required',
+  //       //       'To save images, this app needs access to your media library. Please go to app settings and enable Media Library permissions.',
+  //       //       [
+  //       //         { text: 'Cancel', style: 'cancel' },
+  //       //         { 
+  //       //           text: 'Open Settings', 
+  //       //           onPress: () => Linking.openSettings() 
+  //       //         }
+  //       //       ]
+  //       //     );
+  //       //     return;
+  //       //   }
+  //       // }
 
-//       // Write the base64 data to the file
-//       await FileSystem.writeAsStringAsync(fileUri, base64, {
-//         encoding: FileSystem.EncodingType.Base64,
-//       });
+  //       // Check if we have permission to access the media library
+  //       console.log(mediaLibraryPermissions?.status, "Media Library Permission Status🟢🟡🔴");
+  //       if (!mediaLibraryPermissions?.granted) {
+  //         const { status } = await requestMediaLibraryPermissions();
+  //         console.log(status, "Media Library Permission Status🟢🟡🔴");
+  //         if (status !== 'granted') {
+  //           Alert.alert(
+  //             'Permission Required',
+  //             'To save images, this app needs access to your media library. Please go to app settings and enable Media Library permissions.',
+  //             [
+  //               { text: 'Cancel', style: 'cancel' },
+  //               { 
+  //                 text: 'Open Settings', 
+  //                 onPress: () => Linking.openSettings() 
+  //               }
+  //             ]
+  //           );
+  //           return;
+  //         }
+  //       }
 
-//       console.log(fileUri, "File URI after writing");
-      
-//       // Save to media library with proper error handling
-//       try {
-//         const asset = await MediaLibrary.createAssetAsync(fileUri);
-//         console.log(asset, "Asset");
-//         await MediaLibrary.createAlbumAsync("ArtVeda", asset, false);
+  //       // Check for canvas reference
+  //       if (!canvasRef.current) {
+  //         Alert.alert('Error', 'Canvas not ready. Please try again.');
+  //         return;
+  //       }
 
-// //save in our db as downloaded
-// try {
-//   await database.createDocument(
-//     '6815de2b0004b53475ec',
-//     '681a1b3c0020eb66b3b1',
-//     ID.unique(),
-//     {
-//       posts: currentPostId,
-//       users: currentUser[0].$id,
-//     }
-//   );
+  //       // Create a snapshot using makeImageSnapshot
 
-//   console.log('Document created successfully', { posts: currentPostId, users: currentUser[0].$id });
-// } catch (dbError: any) {
-//   // If there's a duplicate ID error, just log it and continue - the image is still saved
-//   if (dbError.message && dbError.message.includes('already exists')) {
-//     console.log('Download record already exists, continuing with save operation');
-//   } else {
-//     // For other database errors, log but don't block the image save
-//     console.error('Database error when recording download:', dbError);
-//   }
-// }
+  //       const snapshot = await canvasRef.current.makeImageSnapshot();
 
-//         Alert.alert('Success', 'Image saved to your gallery!');
-//       } catch (mediaError) {
-//         console.error('Media library error:', mediaError);
-//         Alert.alert(
-//           'Save Failed',
-//           'Failed to save to gallery. Please check your permissions and try again.'
-//         );
-//       }
-      
-//       // Clean up the temporary file
-//       await FileSystem.deleteAsync(fileUri, { idempotent: true });
-      
-//     } catch (error:any) {
-//       console.error('Error saving image:', error);
-//       Alert.alert('Error', `Failed to save image: ${error.message}`);
-//     }
-//   };
+  //       if (!snapshot) {
+  //         Alert.alert('Error', 'Failed to capture image');
+  //         return;
+  //       }
 
-// const handleDownload = async () => {
-//   try {
-//     // Request permission directly before saving
-//     const { status } = await MediaLibrary.requestPermissionsAsync();
-//     console.log('Permission status: 🟢', status);
-    
-//     if (status !== 'granted') {
-//       Alert.alert(
-//         'Permission Required',
-//         'To save images, this app needs access to your media library.',
-//         [
-//           { text: 'Cancel', style: 'cancel' },
-//           { text: 'Open Settings', onPress: () => Linking.openSettings() }
-//         ]
-//       );
-//       return;
-//     }
+  //       // Use the correct method to encode to base64
+  //       const base64 = snapshot.encodeToBase64();
 
-//     if (!canvasRef.current) {
-//       Alert.alert('Error', 'Canvas not ready. Please try again.');
-//       return;
-//     }
+  //       if (!base64) {
+  //         Alert.alert('Error', 'Failed to encode image');
+  //         return;
+  //       }
 
-//     const snapshot = await canvasRef.current.makeImageSnapshot();
-//     const base64 = snapshot.encodeToBase64();
+  //       // Create a temporary file path with proper naming
+  //       const fileUri = `${FileSystem.cacheDirectory}artframe_${Date.now()}.png`;
 
-//     const fileUri = FileSystem.cacheDirectory + `artframe_${Date.now()}.png`;
-//     console.log(fileUri, "File URI");
-//     await FileSystem.writeAsStringAsync(fileUri, base64, {
-//       encoding: FileSystem.EncodingType.Base64,
-//     });
+  //      console.log(fileUri, "File URI");
 
-//     console.log(fileUri, "File URI after writing");
-//     // Save to media library
+  //       // Write the base64 data to the file
+  //       await FileSystem.writeAsStringAsync(fileUri, base64, {
+  //         encoding: FileSystem.EncodingType.Base64,
+  //       });
 
-//     const asset = await MediaLibrary.createAssetAsync(fileUri);
+  //       console.log(fileUri, "File URI after writing");
 
-//     console.log(asset, "Asset");
+  //       // Save to media library with proper error handling
+  //       try {
+  //         const asset = await MediaLibrary.createAssetAsync(fileUri);
+  //         console.log(asset, "Asset");
+  //         await MediaLibrary.createAlbumAsync("ArtVeda", asset, false);
 
-//     // Create album if it doesn't exist
-//     console.log()
-//     const album = await MediaLibrary.getAlbumAsync('ArtVeda');
+  // //save in our db as downloaded
+  // try {
+  //   await database.createDocument(
+  //     '6815de2b0004b53475ec',
+  //     '681a1b3c0020eb66b3b1',
+  //     ID.unique(),
+  //     {
+  //       posts: currentPostId,
+  //       users: currentUser[0].$id,
+  //     }
+  //   );
 
-//     console.log(album, "Album");
+  //   console.log('Document created successfully', { posts: currentPostId, users: currentUser[0].$id });
+  // } catch (dbError: any) {
+  //   // If there's a duplicate ID error, just log it and continue - the image is still saved
+  //   if (dbError.message && dbError.message.includes('already exists')) {
+  //     console.log('Download record already exists, continuing with save operation');
+  //   } else {
+  //     // For other database errors, log but don't block the image save
+  //     console.error('Database error when recording download:', dbError);
+  //   }
+  // }
 
-//     if (!album) {
-//       console.log("Album doesn't exist, creating a new one");
-//       await MediaLibrary.createAlbumAsync('ArtVeda', asset, false);
-//     }
-//     else {
-//       console.log("Album exists, adding asset to it");
-//       await MediaLibrary.addAssetsToAlbumAsync([asset], album, false);
-//     }
-//     console.log('Image saved to gallery!');
-//     //save in our db as downloaded
-//      await database.createDocument(
-//     '6815de2b0004b53475ec',
-//     '681a1b3c0020eb66b3b1',
-//     ID.unique(),
-//     {
-//       posts: currentPostId,
-//       users: currentUser[0].$id,
-//     }
-//   );
+  //         Alert.alert('Success', 'Image saved to your gallery!');
+  //       } catch (mediaError) {
+  //         console.error('Media library error:', mediaError);
+  //         Alert.alert(
+  //           'Save Failed',
+  //           'Failed to save to gallery. Please check your permissions and try again.'
+  //         );
+  //       }
 
-//    ToastAndroid.show('Image saved successfully!', ToastAndroid.SHORT);
-    
-//     await FileSystem.deleteAsync(fileUri, { idempotent: true });
-//   } catch (error) {
-//     console.error('Download error:', error);
-//     Alert.alert('Error', 'Failed to save image. Check permissions and try again.');
-//   }
-// };
+  //       // Clean up the temporary file
+  //       await FileSystem.deleteAsync(fileUri, { idempotent: true });
 
-const handleDownload = async () => {
-  try {
-    // Request permissions
-    const { status, accessPrivileges } = await MediaLibrary.requestPermissionsAsync();
+  //     } catch (error:any) {
+  //       console.error('Error saving image:', error);
+  //       Alert.alert('Error', `Failed to save image: ${error.message}`);
+  //     }
+  //   };
 
-    console.log('Permission status: 🟢', status);
-    console.log('Access privileges: 🔑', accessPrivileges);
+  // const handleDownload = async () => {
+  //   try {
+  //     // Request permission directly before saving
+  //     const { status } = await MediaLibrary.requestPermissionsAsync();
+  //     console.log('Permission status: 🟢', status);
 
-    // Ensure full access on iOS
-    if (status !== 'granted' || (Platform.OS === 'ios' && accessPrivileges !== 'all')) {
-      Alert.alert(
-        'Permission Required',
-        'To save images, this app needs full access to your media library.',
-        [
-          { text: 'Cancel', style: 'cancel' },
-          { text: 'Open Settings', onPress: () => Linking.openSettings() },
-        ]
-      );
-      return;
-    }
+  //     if (status !== 'granted') {
+  //       Alert.alert(
+  //         'Permission Required',
+  //         'To save images, this app needs access to your media library.',
+  //         [
+  //           { text: 'Cancel', style: 'cancel' },
+  //           { text: 'Open Settings', onPress: () => Linking.openSettings() }
+  //         ]
+  //       );
+  //       return;
+  //     }
 
-    // Ensure canvas is ready
-    if (!canvasRef.current) {
-      Alert.alert('Error', 'Canvas not ready. Please try again.');
-      return;
-    }
+  //     if (!canvasRef.current) {
+  //       Alert.alert('Error', 'Canvas not ready. Please try again.');
+  //       return;
+  //     }
 
-    // Take snapshot and encode to base64
-    const snapshot = await canvasRef.current.makeImageSnapshot();
-    if (!snapshot) {
-      Alert.alert('Error', 'Failed to take a snapshot. Please try again.');
-      return;
-    }
+  //     const snapshot = await canvasRef.current.makeImageSnapshot();
+  //     const base64 = snapshot.encodeToBase64();
 
-    const base64 = snapshot.encodeToBase64();
-    const fileUri = FileSystem.cacheDirectory + `artframe_${Date.now()}.png`;
+  //     const fileUri = FileSystem.cacheDirectory + `artframe_${Date.now()}.png`;
+  //     console.log(fileUri, "File URI");
+  //     await FileSystem.writeAsStringAsync(fileUri, base64, {
+  //       encoding: FileSystem.EncodingType.Base64,
+  //     });
 
-    console.log(fileUri, 'File URI');
-    await FileSystem.writeAsStringAsync(fileUri, base64, {
-      encoding: FileSystem.EncodingType.Base64,
-    });
-    console.log(fileUri, 'File URI after writing');
+  //     console.log(fileUri, "File URI after writing");
+  //     // Save to media library
 
-    // Save to media library
-    const asset = await MediaLibrary.createAssetAsync(fileUri);
-    console.log(asset, 'Asset');
+  //     const asset = await MediaLibrary.createAssetAsync(fileUri);
 
-    // Handle album
-    const albumName = 'ArtVeda';
-    console.log('Checking for album existence');
-    let album = await MediaLibrary.getAlbumAsync(albumName);
+  //     console.log(asset, "Asset");
 
-    // On Android, check for migration
-    if (Platform.OS === 'android' && album) {
-      const needsMigration = await MediaLibrary.albumNeedsMigrationAsync(album);
-      if (needsMigration) {
-        Alert.alert('Migration Needed', 'Please migrate the album in your system gallery settings.');
+  //     // Create album if it doesn't exist
+  //     console.log()
+  //     const album = await MediaLibrary.getAlbumAsync('ArtVeda');
+
+  //     console.log(album, "Album");
+
+  //     if (!album) {
+  //       console.log("Album doesn't exist, creating a new one");
+  //       await MediaLibrary.createAlbumAsync('ArtVeda', asset, false);
+  //     }
+  //     else {
+  //       console.log("Album exists, adding asset to it");
+  //       await MediaLibrary.addAssetsToAlbumAsync([asset], album, false);
+  //     }
+  //     console.log('Image saved to gallery!');
+  //     //save in our db as downloaded
+  //      await database.createDocument(
+  //     '6815de2b0004b53475ec',
+  //     '681a1b3c0020eb66b3b1',
+  //     ID.unique(),
+  //     {
+  //       posts: currentPostId,
+  //       users: currentUser[0].$id,
+  //     }
+  //   );
+
+  //    ToastAndroid.show('Image saved successfully!', ToastAndroid.SHORT);
+
+  //     await FileSystem.deleteAsync(fileUri, { idempotent: true });
+  //   } catch (error) {
+  //     console.error('Download error:', error);
+  //     Alert.alert('Error', 'Failed to save image. Check permissions and try again.');
+  //   }
+  // };
+
+  const handleDownload = async () => {
+    try {
+      // Request permissions
+      const { status, accessPrivileges } = await MediaLibrary.requestPermissionsAsync();
+
+      console.log('Permission status: 🟢', status);
+      console.log('Access privileges: 🔑', accessPrivileges);
+
+      // Ensure full access on iOS
+      if (status !== 'granted' || (Platform.OS === 'ios' && accessPrivileges !== 'all')) {
+        Alert.alert(
+          'Permission Required',
+          'To save images, this app needs full access to your media library.',
+          [
+            { text: 'Cancel', style: 'cancel' },
+            { text: 'Open Settings', onPress: () => Linking.openSettings() },
+          ]
+        );
         return;
       }
-    }
 
-    if (!album) {
-      console.log("Album doesn't exist, creating a new one");
-      album = await MediaLibrary.createAlbumAsync(albumName, asset, false);
-    } else {
-      console.log('Album exists, adding asset to it');
-      await MediaLibrary.addAssetsToAlbumAsync([asset], album, false);
-    }
-
-    console.log('Image saved to gallery!');
-
-    // Save in DB as downloaded
-    await database.createDocument(
-      '6815de2b0004b53475ec', // DB ID
-      '681a1b3c0020eb66b3b1', // Collection ID
-      ID.unique(),
-      {
-        posts: currentPostId,
-        users: currentUser[0].$id,
+      // Ensure canvas is ready
+      if (!canvasRef.current) {
+        Alert.alert('Error', 'Canvas not ready. Please try again.');
+        return;
       }
-    );
 
-    // Show success toast/alert
-    if (Platform.OS === 'android') {
-      ToastAndroid.show('Image saved successfully!', ToastAndroid.SHORT);
-    } else {
-      Alert.alert('Success', 'Image saved to your Photos!');
+      // Take snapshot and encode to base64
+      const snapshot = await canvasRef.current.makeImageSnapshot();
+      if (!snapshot) {
+        Alert.alert('Error', 'Failed to take a snapshot. Please try again.');
+        return;
+      }
+
+      const base64 = snapshot.encodeToBase64();
+      const fileUri = FileSystem.cacheDirectory + `artframe_${Date.now()}.png`;
+
+      console.log(fileUri, 'File URI');
+      await FileSystem.writeAsStringAsync(fileUri, base64, {
+        encoding: FileSystem.EncodingType.Base64,
+      });
+      console.log(fileUri, 'File URI after writing');
+
+      // Save to media library
+      const asset = await MediaLibrary.createAssetAsync(fileUri);
+      console.log(asset, 'Asset');
+
+      // Handle album
+      const albumName = 'ArtVeda';
+      console.log('Checking for album existence');
+      let album = await MediaLibrary.getAlbumAsync(albumName);
+
+      // On Android, check for migration
+      if (Platform.OS === 'android' && album) {
+        const needsMigration = await MediaLibrary.albumNeedsMigrationAsync(album);
+        if (needsMigration) {
+          Alert.alert('Migration Needed', 'Please migrate the album in your system gallery settings.');
+          return;
+        }
+      }
+
+      if (!album) {
+        console.log("Album doesn't exist, creating a new one");
+        album = await MediaLibrary.createAlbumAsync(albumName, asset, false);
+      } else {
+        console.log('Album exists, adding asset to it');
+        await MediaLibrary.addAssetsToAlbumAsync([asset], album, false);
+      }
+
+      console.log('Image saved to gallery!');
+
+      // Save in DB as downloaded
+      await database.createDocument(
+        '6815de2b0004b53475ec', // DB ID
+        '681a1b3c0020eb66b3b1', // Collection ID
+        ID.unique(),
+        {
+          posts: currentPostId,
+          users: currentUser[0].$id,
+        }
+      );
+
+      // Show success toast/alert
+      if (Platform.OS === 'android') {
+        ToastAndroid.show('Image saved successfully!', ToastAndroid.SHORT);
+      } else {
+        Alert.alert('Success', 'Image saved to your Photos!');
+      }
+
+      // Clean up temporary file
+      await FileSystem.deleteAsync(fileUri, { idempotent: true });
+    } catch (error) {
+      console.error('Download error:', error);
+      Alert.alert('Error', 'Failed to save image. Check permissions and try again.');
     }
-
-    // Clean up temporary file
-    await FileSystem.deleteAsync(fileUri, { idempotent: true });
-  } catch (error) {
-    console.error('Download error:', error);
-    Alert.alert('Error', 'Failed to save image. Check permissions and try again.');
-  }
-};
+  };
 
   useEffect(() => {
     const fetchInitialData = async () => {
       try {
-        setLoading(true);     
-        
+        setLoading(true);
+
         // Fetch current post and frames
         const [postDetails, framesResponse] = await Promise.all([
           database.getDocument(
             "6815de2b0004b53475ec",
-           "6815de8d00124a0a9572",
+            "6815de8d00124a0a9572",
             currentPostId
           ),
           database.listDocuments(
@@ -644,7 +652,7 @@ const handleDownload = async () => {
         setCanvasWidth(postDetails.width);
         setCanvasHeight(postDetails.height);
         setFrames(framesResponse.documents);
-        
+
         // Initialize with first frame
         if (framesResponse.documents && framesResponse.documents.length > 0) {
           selectFrame(0);
@@ -680,7 +688,7 @@ const handleDownload = async () => {
         animationType="slide"
         onRequestClose={() => setFontSelectorVisible(false)}
       >
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.modalOverlay}
           activeOpacity={1}
           onPress={() => setFontSelectorVisible(false)}
@@ -688,7 +696,7 @@ const handleDownload = async () => {
           <View style={styles.bottomSheet}>
             <View style={styles.bottomSheetHandle} />
             <Text style={styles.bottomSheetTitle}>Select Font</Text>
-            
+
             <View style={styles.fontOptionsContainer}>
               <TouchableOpacity
                 style={[
@@ -701,16 +709,16 @@ const handleDownload = async () => {
                 }}
               >
                 <Text style={styles.fontLabel}>Montserrat</Text>
-                <Text 
+                <Text
                   style={[
-                    styles.fontPreview, 
+                    styles.fontPreview,
                     { fontFamily: 'Montserrat' }
                   ]}
                 >
                   Sample Text
                 </Text>
               </TouchableOpacity>
-              
+
               <TouchableOpacity
                 style={[
                   styles.fontOption,
@@ -722,9 +730,9 @@ const handleDownload = async () => {
                 }}
               >
                 <Text style={styles.fontLabel}>Roboto</Text>
-                <Text 
+                <Text
                   style={[
-                    styles.fontPreview, 
+                    styles.fontPreview,
                     { fontFamily: 'Roboto' }
                   ]}
                 >
@@ -774,7 +782,7 @@ const handleDownload = async () => {
                   {/* Only render content when not loading */}
                   {!isFrameLoading && (
                     <>
-                      <SkiaImage 
+                      <SkiaImage
                         image={anotherImage}
                         fit="contain"
                         x={0}
@@ -790,33 +798,34 @@ const handleDownload = async () => {
 
                           // Determine text content based on label
                           let displayText = el.text;
-                            if (el.label && currentUser && currentUser[0]) {
+                          if (el.label && currentUser && currentUser[0]) {
                             if (el.label === 'name' && currentUser[0].name) {
                               displayText = currentUser[0].name;
                             } else if (el.label === 'email' && currentUser[0].email) {
                               displayText = currentUser[0].email;
                             } else if (el.label === 'address' && currentUser[0].address) {
                               displayText = currentUser[0].address;
-                            }else if (el.label === 'phone' && currentUser[0].phone) {
+                            } else if (el.label === 'phone' && currentUser[0].phone) {
                               displayText = currentUser[0].phone;
-                            }}
+                            }
+                          }
 
                           return (
-                          <SkiaText
-                            key={el.id}
-                            x={position.x} 
-                            y={position.y}
-                            text={displayText}
-                            font={font}
-                            color={el.fill}
-                          />
+                            <SkiaText
+                              key={el.id}
+                              x={position.x}
+                              y={position.y}
+                              text={displayText}
+                              font={font}
+                              color={el.fill}
+                            />
                           );
                         }
 
                         if (el.type === 'image') {
-                          
+
                           let imgSrc = el.src;
-                          
+
                           // Handle logo case specially
                           if (el.label === 'logo' && currentUser && currentUser[0]?.logo) {
                             // Add the logo URL to image sources if not already there
@@ -824,10 +833,19 @@ const handleDownload = async () => {
                               setImageSources(prev => [...prev, currentUser[0].logo]);
                             }
                             imgSrc = currentUser[0].logo;
+                          } 
+
+                          if (el.label === 'userImage' && currentUser && currentUser[0]?.profileImage) {
+                            // Add the profile image URL to image sources if not already there
+                            if (!imageSources.includes(currentUser[0].profileImage)) {
+                              setImageSources(prev => [...prev, currentUser[0].profileImage]);
+                            }
+                            imgSrc = currentUser[0].profileImage;
+                            
                           }
-                          
+
                           const img = imgSrc ? imageMap[imgSrc] : null;
-                          
+
                           console.log(imgSrc, "Image Source URL");
                           console.log(img, "Image Source");
                           if (!img) return null;
@@ -846,6 +864,33 @@ const handleDownload = async () => {
                                 height={el.height}
                                 fit="fill"
                               />
+                            );
+                          } else if (el.label === 'userImage') {
+                            console.log(img, "User Image 🤔");
+                            const position = calculatePositionFromRatio(el.x, el.y);
+                            const width = el.width;
+                            const height = el.height;
+                            const r = width / 2; // corner radius
+
+                            // Create a rounded rectangle directly using the image position and dimensions
+                            const roundedRect = rrect(
+                              rect(position.x, position.y, width, height),
+                              r, r
+                            );
+
+                            return (
+                              <Group clip={roundedRect} key={el.id}>
+                                <SkiaImage
+                                  image={img}
+                                  x={position.x}
+                                  y={position.y}
+                                  width={width}
+                                  height={height}
+                                  fit="fill"
+                                  antiAlias
+
+                                />
+                              </Group>
                             );
                           } else {
                             // For other images, use default dimensions
@@ -869,7 +914,7 @@ const handleDownload = async () => {
                     </>
                   )}
                 </Canvas>
-                
+
                 {/* Show loading indicator over canvas when frame is loading */}
                 {isFrameLoading && (
                   <View style={styles.frameLoadingOverlay}>
@@ -879,20 +924,20 @@ const handleDownload = async () => {
                 )}
               </ScrollView>
             </View>
-            
+
             {/* Buttons Container - MOVED BELOW CANVAS */}
             <View style={styles.buttonsContainer}>
-              <TouchableOpacity 
-                style={styles.actionButton} 
+              <TouchableOpacity
+                style={styles.actionButton}
                 onPress={() => setFontSelectorVisible(true)}
                 activeOpacity={0.8}
               >
                 <Feather name="type" size={24} color="white" />
                 <Text style={styles.buttonText}>Change Font</Text>
               </TouchableOpacity>
-              
-              <TouchableOpacity 
-                style={styles.actionButton} 
+
+              <TouchableOpacity
+                style={styles.actionButton}
                 onPress={handleDownload}
                 activeOpacity={0.8}
               >
@@ -908,14 +953,14 @@ const handleDownload = async () => {
             {frames.length > 0 && (
               <View style={styles.framesSection}>
                 <Text style={styles.sectionTitle}>Available Frames</Text>
-                <ScrollView 
-                  horizontal 
-                  showsHorizontalScrollIndicator={false} 
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
                   style={styles.framesScrollView}
                   contentContainerStyle={styles.framesContentContainer}
                 >
                   {frames.map((frame, index) => (
-                    <TouchableOpacity 
+                    <TouchableOpacity
                       key={frame.$id}
                       style={[
                         styles.frameItem,
@@ -923,8 +968,8 @@ const handleDownload = async () => {
                       ]}
                       onPress={() => selectFrame(index)}
                     >
-                      <Image 
-                        source={{ uri: frame.previewImage }} 
+                      <Image
+                        source={{ uri: frame.previewImage }}
                         style={styles.frameImage}
                         resizeMode="cover"
                       />
@@ -990,7 +1035,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-  
+
   // New styles for buttons below canvas
   buttonsContainer: {
     flexDirection: 'row',
@@ -1020,7 +1065,7 @@ const styles = StyleSheet.create({
     marginLeft: 8,
     fontSize: 15,
   },
-  
+
   // Remove or comment out the old button styles
   /* 
   downloadButton: {
@@ -1036,7 +1081,7 @@ const styles = StyleSheet.create({
     // ...other styles
   },
   */
-  
+
   framesSection: {
     marginTop: 20,
   },
@@ -1111,7 +1156,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     padding: 4,
   },
-  
+
   // Bottom sheet styles
   modalOverlay: {
     flex: 1,
