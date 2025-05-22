@@ -97,8 +97,8 @@ const selectpoliticalparty = () => {
       // Store the selected party in user preferences
       await database.updateDocument(
         process.env.EXPO_PUBLIC_APPWRITE_DATABASE_ID!,
-        process.env.EXPO_PUBLIC_APPWRITE_USER_COLLECTION_ID!,
-        userId.toString(),
+        "6815e0be001731ca8b1b",
+        userId,
         {
           politicalParty: party.id,
         }
@@ -106,7 +106,7 @@ const selectpoliticalparty = () => {
 
       console.log("Selected party:", party);
       // Navigate to the next screen
-      router.replace("/auth/personal-details");
+      router.replace("/(tabs)");
     } catch (error) {
       console.error("Error selecting party:", error);
     }

@@ -48,12 +48,6 @@ const OfficialHome = () => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <TouchableOpacity onPress={() => router.push("/select-political-party")}>
-        <Text>Select Political Party</Text>
-      </TouchableOpacity>
-      <TouchableOpacity onPress={() => router.push("/no-network")}>
-        <Text>Select Political Party</Text>
-      </TouchableOpacity>
       <ScrollView showsVerticalScrollIndicator={false}>
         <LinearGradient
           colors={["#ffffff", "#DAF0FF"]}

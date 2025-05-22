@@ -67,7 +67,7 @@ const otpVerification = () => {
         userId: string;
         referralCode?: string;
       } = {
-        phone: `+91${phoneStr}`,
+        phone: phoneStr,
         userId: session.userId,
       };
 
