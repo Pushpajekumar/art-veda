@@ -710,11 +710,12 @@ const handleDownload = async () => {
           '681a1b3c0020eb66b3b1',
           ID.unique(),
           {
-            posts: currentPostId,
-            users: currentUser[0].$id,
+            posts: [currentPostId],
+            users: [currentUser[0].$id],
+            userId: currentUser[0].$id,
           }
         );
-        console.log('Download record saved to database');
+        console.log('Download record saved to database 😁😆😅🤣');
       } catch (dbError) {
         console.error('Failed to save download record:', dbError);
       }

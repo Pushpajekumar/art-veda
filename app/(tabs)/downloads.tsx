@@ -1,9 +1,16 @@
-import { StyleSheet, ScrollView, ActivityIndicator, Text, View } from "react-native";
+import {
+  StyleSheet,
+  ScrollView,
+  ActivityIndicator,
+  Text,
+  View,
+} from "react-native";
 import React, { useEffect } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import DownloadCard from "@/component/download-card";
 import { account, database } from "@/context/app-write";
 import { Query } from "react-native-appwrite";
+import { useRouter } from "expo-router";
 
 const downloads = () => {
   const [downloads, setDownloads] = React.useState<
@@ -16,10 +23,15 @@ const downloads = () => {
   >([]);
   const [loading, setLoading] = React.useState(true);
 
+  const router = useRouter();
+
   useEffect(() => {
     const fetchDownloads = async () => {
+      // router.reload();
       try {
         const currentUser = await account.get();
+
+        console.log(currentUser, "currentUser 🟢");
 
         if (currentUser) {
           const userDetails = await database.listDocuments(
@@ -35,7 +47,7 @@ const downloads = () => {
             const downloadsResult = await database.listDocuments(
               "6815de2b0004b53475ec",
               "681a1b3c0020eb66b3b1",
-              [Query.equal("users", userDoc.$id)]
+              [Query.equal("userId", userDoc.$id)]
             );
 
             console.log(downloadsResult, "downloadsResult 🔴");
@@ -132,8 +144,8 @@ export const styles = StyleSheet.create({
   },
   loadingContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   loadingText: {
     marginTop: 10,
@@ -141,11 +153,11 @@ export const styles = StyleSheet.create({
   },
   emptyContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   emptyText: {
     fontSize: 18,
-    color: '#666',
+    color: "#666",
   },
 });
