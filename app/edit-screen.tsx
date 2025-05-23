@@ -27,6 +27,8 @@ import {
   Group,
   rrect,
   rect,
+  Circle,
+  vec,
 } from "@shopify/react-native-skia";
 import { primaryColor, width } from "@/constant/contant";
 import * as MediaLibrary from 'expo-media-library';
@@ -833,7 +835,7 @@ const EditScreen = () => {
                               setImageSources(prev => [...prev, currentUser[0].logo]);
                             }
                             imgSrc = currentUser[0].logo;
-                          } 
+                          }
 
                           if (el.label === 'userImage' && currentUser && currentUser[0]?.profileImage) {
                             // Add the profile image URL to image sources if not already there
@@ -841,7 +843,7 @@ const EditScreen = () => {
                               setImageSources(prev => [...prev, currentUser[0].profileImage]);
                             }
                             imgSrc = currentUser[0].profileImage;
-                            
+
                           }
 
                           const img = imgSrc ? imageMap[imgSrc] : null;
@@ -865,30 +867,45 @@ const EditScreen = () => {
                                 fit="fill"
                               />
                             );
-                          } else if (el.label === 'userImage') {
+                            } else if (el.label === 'userImage') {
                             console.log(img, "User Image 🤔");
                             const position = calculatePositionFromRatio(el.x, el.y);
-                            const width = el.width;
-                            const height = el.height;
-                            const r = width / 2; // corner radius
-
-                            // Create a rounded rectangle directly using the image position and dimensions
-                            const roundedRect = rrect(
-                              rect(position.x, position.y, width, height),
-                              r, r
-                            );
-
+                            
+                            // Ensure equal width and height for perfect circle
+                            const size = Math.min(el.width, el.height);
+                            
+                            // Calculate center position for the circle
+                            const centerX = position.x + size/2;
+                            const centerY = position.y + size/2;
+                            
                             return (
-                              <Group clip={roundedRect} key={el.id}>
+                              <Group key={el.id}>
+                                {/* White circle border */}
+                                <Circle
+                                  cx={centerX}
+                                  cy={centerY}
+                                  r={size/2 + 4}
+                                  color="white"
+                                />
+                                
+                                {/* Circle clipped image */}
                                 <SkiaImage
                                   image={img}
                                   x={position.x}
                                   y={position.y}
-                                  width={width}
-                                  height={height}
-                                  fit="fill"
-                                  antiAlias
-
+                                  width={size}
+                                  height={size}
+                                  fit="cover"
+                                  clip={{
+                                    rect: {
+                                      x: position.x,
+                                      y: position.y,
+                                      width: size,
+                                      height: size
+                                    },
+                                    rx: size/2,
+                                    ry: size/2
+                                  }}
                                 />
                               </Group>
                             );
