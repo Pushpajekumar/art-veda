@@ -93,6 +93,7 @@ const selectpoliticalparty = () => {
   };
 
   const handlePartySelect = async (party: PoliticalParty) => {
+    setLoading(true);
     try {
       // Store the selected party in user preferences
       await database.updateDocument(
@@ -109,6 +110,8 @@ const selectpoliticalparty = () => {
       router.replace("/(tabs)");
     } catch (error) {
       console.error("Error selecting party:", error);
+    } finally {
+      setLoading(false);
     }
   };
 
