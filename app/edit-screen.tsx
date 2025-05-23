@@ -535,102 +535,208 @@ const EditScreen = () => {
   //   }
   // };
 
-  const handleDownload = async () => {
-    try {
-      // Request permissions
-      const { status, accessPrivileges } = await MediaLibrary.requestPermissionsAsync();
+  // const handleDownload = async () => {
+  //   try {
+  //     // Request permissions
+    //     const { status, accessPrivileges } = await MediaLibrary.requestPermissionsAsync();
 
-      console.log('Permission status: 🟢', status);
-      console.log('Access privileges: 🔑', accessPrivileges);
+    //     console.log('Permission status: 🟢', status);
+    //     console.log('Access privileges: 🔑', accessPrivileges);
 
-      // Ensure full access on iOS
-      if (status !== 'granted' || (Platform.OS === 'ios' && accessPrivileges !== 'all')) {
-        Alert.alert(
-          'Permission Required',
-          'To save images, this app needs full access to your media library.',
-          [
-            { text: 'Cancel', style: 'cancel' },
-            { text: 'Open Settings', onPress: () => Linking.openSettings() },
-          ]
-        );
-        return;
-      }
+  //     // Ensure full access on iOS
+  //     if (status !== 'granted' || (Platform.OS === 'ios' && accessPrivileges !== 'all')) {
+  //       Alert.alert(
+  //         'Permission Required',
+  //         'To save images, this app needs full access to your media library.',
+  //         [
+  //           { text: 'Cancel', style: 'cancel' },
+  //           { text: 'Open Settings', onPress: () => Linking.openSettings() },
+  //         ]
+  //       );
+  //       return;
+  //     }
 
-      // Ensure canvas is ready
-      if (!canvasRef.current) {
-        Alert.alert('Error', 'Canvas not ready. Please try again.');
-        return;
-      }
+  //     // Ensure canvas is ready
+  //     if (!canvasRef.current) {
+  //       Alert.alert('Error', 'Canvas not ready. Please try again.');
+  //       return;
+  //     }
 
-      // Take snapshot and encode to base64
-      const snapshot = await canvasRef.current.makeImageSnapshot();
-      if (!snapshot) {
-        Alert.alert('Error', 'Failed to take a snapshot. Please try again.');
-        return;
-      }
+  //     // Take snapshot and encode to base64
+  //     const snapshot = await canvasRef.current.makeImageSnapshot();
+  //     if (!snapshot) {
+  //       Alert.alert('Error', 'Failed to take a snapshot. Please try again.');
+  //       return;
+  //     }
 
-      const base64 = snapshot.encodeToBase64();
-      const fileUri = FileSystem.cacheDirectory + `artframe_${Date.now()}.png`;
+  //     const base64 = snapshot.encodeToBase64();
+  //     const fileUri = FileSystem.cacheDirectory + `artframe_${Date.now()}.png`;
 
-      console.log(fileUri, 'File URI');
-      await FileSystem.writeAsStringAsync(fileUri, base64, {
-        encoding: FileSystem.EncodingType.Base64,
-      });
-      console.log(fileUri, 'File URI after writing');
+  //     console.log(fileUri, 'File URI');
+  //     await FileSystem.writeAsStringAsync(fileUri, base64, {
+  //       encoding: FileSystem.EncodingType.Base64,
+  //     });
+  //     console.log(fileUri, 'File URI after writing');
 
-      // Save to media library
-      const asset = await MediaLibrary.createAssetAsync(fileUri);
-      console.log(asset, 'Asset');
+  //     // Save to media library
+  //     const asset = await MediaLibrary.createAssetAsync(fileUri);
+  //     console.log(asset, 'Asset');
 
-      // Handle album
-      const albumName = 'ArtVeda';
-      console.log('Checking for album existence');
-      let album = await MediaLibrary.getAlbumAsync(albumName);
+  //     // Handle album
+  //     const albumName = 'ArtVeda';
+  //     console.log('Checking for album existence');
+  //     let album = await MediaLibrary.getAlbumAsync(albumName);
 
-      // On Android, check for migration
-      if (Platform.OS === 'android' && album) {
-        const needsMigration = await MediaLibrary.albumNeedsMigrationAsync(album);
-        if (needsMigration) {
-          Alert.alert('Migration Needed', 'Please migrate the album in your system gallery settings.');
-          return;
-        }
-      }
+  //     // On Android, check for migration
+  //     if (Platform.OS === 'android' && album) {
+  //       const needsMigration = await MediaLibrary.albumNeedsMigrationAsync(album);
+  //       if (needsMigration) {
+  //         Alert.alert('Migration Needed', 'Please migrate the album in your system gallery settings.');
+  //         return;
+  //       }
+  //     }
 
-      if (!album) {
-        console.log("Album doesn't exist, creating a new one");
-        album = await MediaLibrary.createAlbumAsync(albumName, asset, false);
-      } else {
-        console.log('Album exists, adding asset to it');
-        await MediaLibrary.addAssetsToAlbumAsync([asset], album, false);
-      }
+  //     if (!album) {
+  //       console.log("Album doesn't exist, creating a new one");
+  //       album = await MediaLibrary.createAlbumAsync(albumName, asset, false);
+  //     } else {
+  //       console.log('Album exists, adding asset to it');
+  //       await MediaLibrary.addAssetsToAlbumAsync([asset], album, false);
+  //     }
 
-      console.log('Image saved to gallery!');
+  //     console.log('Image saved to gallery!');
 
-      // Save in DB as downloaded
-      await database.createDocument(
-        '6815de2b0004b53475ec', // DB ID
-        '681a1b3c0020eb66b3b1', // Collection ID
-        ID.unique(),
-        {
-          posts: currentPostId,
-          users: currentUser[0].$id,
-        }
+  //     // Save in DB as downloaded
+  //     await database.createDocument(
+  //       '6815de2b0004b53475ec', // DB ID
+  //       '681a1b3c0020eb66b3b1', // Collection ID
+  //       ID.unique(),
+  //       {
+  //         posts: currentPostId,
+  //         users: currentUser[0].$id,
+  //       }
+  //     );
+
+  //     // Show success toast/alert
+  //     if (Platform.OS === 'android') {
+  //       ToastAndroid.show('Image saved successfully!', ToastAndroid.SHORT);
+  //     } else {
+  //       Alert.alert('Success', 'Image saved to your Photos!');
+  //     }
+
+  //     // Clean up temporary file
+  //     await FileSystem.deleteAsync(fileUri, { idempotent: true });
+  //   } catch (error) {
+  //     console.error('Download error:', error);
+  //     Alert.alert('Error', 'Failed to save image. Check permissions and try again.');
+  //   }
+  // };
+
+const handleDownload = async () => {
+  console.log("Download button pressed");
+  setLoading(true);
+  try {
+    // Request media library permissions
+    const { status } = await MediaLibrary.requestPermissionsAsync();
+    console.log('Permission status: 🟢', status);
+
+    if (status !== 'granted') {
+      console.log("Permission not granted");
+      
+      Alert.alert(
+        'Permission Required',
+        'To save images, this app needs access to your media library.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Open Settings', onPress: () => Linking.openSettings() }
+        ]
       );
-
-      // Show success toast/alert
-      if (Platform.OS === 'android') {
-        ToastAndroid.show('Image saved successfully!', ToastAndroid.SHORT);
-      } else {
-        Alert.alert('Success', 'Image saved to your Photos!');
-      }
-
-      // Clean up temporary file
-      await FileSystem.deleteAsync(fileUri, { idempotent: true });
-    } catch (error) {
-      console.error('Download error:', error);
-      Alert.alert('Error', 'Failed to save image. Check permissions and try again.');
+      return;
     }
-  };
+
+    // Ensure canvas is ready
+    if (!canvasRef.current) {
+      Alert.alert('Error', 'Canvas not ready. Please try again.');
+      return;
+    }
+
+    // Take snapshot and encode to base64
+    const snapshot = await canvasRef.current.makeImageSnapshot();
+    if (!snapshot) {
+      Alert.alert('Error', 'Failed to take a snapshot. Please try again.');
+      return;
+    }
+
+    const base64 = snapshot.encodeToBase64();
+    const fileUri = FileSystem.cacheDirectory + `art_frame_${Date.now()}.png`;
+    console.log(fileUri, 'File URI');
+
+    await FileSystem.writeAsStringAsync(fileUri, base64, {
+      encoding: FileSystem.EncodingType.Base64,
+    });
+    console.log(fileUri, 'File URI after writing');
+
+    // Save to media library
+    const asset = await MediaLibrary.createAssetAsync(fileUri);
+    console.log(asset, 'Asset created');
+
+    // Create or add to album on Android
+    if (Platform.OS === 'android') {
+      try {
+        // Check if album exists
+        const albumName = 'ArtVeda';
+        const album = await MediaLibrary.getAlbumAsync(albumName);
+        
+        if (album) {
+          // Add to existing album
+          await MediaLibrary.addAssetsToAlbumAsync([asset], album, false);
+          console.log('Added to existing album:', albumName);
+        } else {
+          // Create new album
+          await MediaLibrary.createAlbumAsync(albumName, asset, false);
+          console.log('Created new album:', albumName);
+        }
+      } catch (albumError) {
+        console.error('Album creation error:', albumError);
+        // Continue even if album creation fails - the image is still saved
+      }
+    }
+
+    // Save download record in database
+    if (currentUser && currentUser.length > 0) {
+      try {
+        await database.createDocument(
+          '6815de2b0004b53475ec',
+          '681a1b3c0020eb66b3b1',
+          ID.unique(),
+          {
+            posts: currentPostId,
+            users: currentUser[0].$id,
+          }
+        );
+        console.log('Download record saved to database');
+      } catch (dbError) {
+        console.error('Failed to save download record:', dbError);
+      }
+    }
+
+    // Show success message
+    if (Platform.OS === 'android') {
+      ToastAndroid.show('Image saved successfully!', ToastAndroid.SHORT);
+    } else {
+      Alert.alert('Success', 'Image saved to your gallery!');
+    }
+
+    // Clean up the temporary file
+    await FileSystem.deleteAsync(fileUri, { idempotent: true });
+
+  } catch (error: any) {
+    console.error('Download error:', error);
+    Alert.alert('Error', `Failed to save image: ${error.message || 'Unknown error'}`);
+  } finally {
+    setLoading(false);
+  }
+};
 
   useEffect(() => {
     const fetchInitialData = async () => {
@@ -1082,22 +1188,6 @@ const styles = StyleSheet.create({
     marginLeft: 8,
     fontSize: 15,
   },
-
-  // Remove or comment out the old button styles
-  /* 
-  downloadButton: {
-    position: 'absolute',
-    bottom: 30,
-    right: 20,
-    // ...other styles
-  },
-  fontButton: {
-    position: 'absolute',
-    bottom: 30,
-    right: 80,
-    // ...other styles
-  },
-  */
 
   framesSection: {
     marginTop: 20,
