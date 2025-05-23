@@ -43,7 +43,7 @@ const signup = () => {
       // Check if the user already exists
       const existingUser = await database.listDocuments(
         databaseId,
-        usersCollectionId,
+        "6815e0be001731ca8b1b",
         [Query.equal("phone", `+91${phoneNumber}`)]
       );
 
