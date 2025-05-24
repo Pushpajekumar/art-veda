@@ -51,28 +51,22 @@ export async function registerForPushNotificationsAsync(): Promise<string> {
     throw new Error("Permission not granted to get push token for push notification!");
   }
 
-  // Get project ID - with improved fallback strategy
-  const projectId = 
-    Constants?.expoConfig?.extra?.eas?.projectId || 
-    Constants?.easConfig?.projectId ||
-    process.env.EXPO_PUBLIC_PROJECT_ID;
+  try {
+    // Get project ID - with improved fallback strategy
+    const projectId = 
+      Constants?.expoConfig?.extra?.eas?.projectId || 
+      Constants?.easConfig?.projectId ||
+      process.env.EXPO_PUBLIC_PROJECT_ID;
 
-  if (!projectId) {
-    console.warn("Project ID not available - are you running in development mode?");
-    // Fallback for development environment
-    try {
-      // In development, use the classic push service
+    if (!projectId) {
+      console.warn("Project ID not available - using fallback method");
+      // Fallback for development environment
       const devToken = (await Notifications.getExpoPushTokenAsync()).data;
       console.log("DEV TOKEN:", devToken);
       cachedToken = devToken;
       return devToken;
-    } catch (e) {
-      console.error("Failed to get development push token:", e);
-      throw new Error("Failed to get push token in development mode");
     }
-  }
 
-  try {
     // Get token with EAS project ID
     const pushToken = (await Notifications.getExpoPushTokenAsync({
       projectId,
@@ -93,6 +87,15 @@ export async function registerForPushNotificationsAsync(): Promise<string> {
       );
     }
     
-    throw e;
+    // Try fallback method if main method fails
+    try {
+      const fallbackToken = (await Notifications.getExpoPushTokenAsync()).data;
+      console.log("FALLBACK TOKEN:", fallbackToken);
+      cachedToken = fallbackToken;
+      return fallbackToken;
+    } catch (fallbackError) {
+      console.error("Fallback token generation also failed:", fallbackError);
+      throw e; // Throw original error
+    }
   }
 }

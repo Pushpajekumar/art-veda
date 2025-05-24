@@ -7,7 +7,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
 } from "react-native";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { FONT_WEIGHT, TYPOGRAPHY } from "@/utils/fonts";
 import Entypo from "@expo/vector-icons/Entypo";
@@ -24,20 +24,43 @@ type PoliticalParty = {
   logo: string;
 };
 
-const selectpoliticalparty = () => {
-  const params = useLocalSearchParams();
-  const userId = Array.isArray(params.userId)
-    ? params.userId[0]
-    : (params.userId as string);
+// Memoized component for political party items
+const PoliticalPartyItem = React.memo(
+  ({
+    item,
+    onPress,
+  }: {
+    item: PoliticalParty;
+    onPress: (party: PoliticalParty) => void;
+  }) => (
+    <TouchableOpacity onPress={() => onPress(item)}>
+      <PoliticalPartyCard party={item} />
+    </TouchableOpacity>
+  )
+);
 
-  console.log(userId, "🟢");
+const selectpoliticalparty = () => {
+  const { userId } = useLocalSearchParams();
 
   const [politicalParties, setPoliticalParties] = useState<PoliticalParty[]>(
     []
   );
   const [searchQuery, setSearchQuery] = useState("");
-  const [filteredParties, setFilteredParties] = useState<PoliticalParty[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Memoized filtered parties to avoid unnecessary re-calculations
+  const filteredParties = useMemo(() => {
+    if (searchQuery.trim() === "") {
+      return politicalParties;
+    }
+
+    const query = searchQuery.toLowerCase();
+    return politicalParties.filter(
+      (party) =>
+        party.name.toLowerCase().includes(query) ||
+        party.shortName.toLowerCase().includes(query)
+    );
+  }, [searchQuery, politicalParties]);
 
   useEffect(() => {
     const fetchPoliticalParties = async () => {
@@ -61,7 +84,6 @@ const selectpoliticalparty = () => {
 
         console.log("Political parties fetched successfully:", mappedData);
         setPoliticalParties(mappedData);
-        setFilteredParties(mappedData);
       } catch (error) {
         console.error("Error fetching political parties:", error);
       } finally {
@@ -72,48 +94,57 @@ const selectpoliticalparty = () => {
     fetchPoliticalParties();
   }, []);
 
-  // Update filtered parties whenever search query changes
-  useEffect(() => {
-    if (searchQuery.trim() === "") {
-      setFilteredParties(politicalParties);
-    } else {
-      const query = searchQuery.toLowerCase();
-      const filtered = politicalParties.filter(
-        (party) =>
-          party.name.toLowerCase().includes(query) ||
-          party.shortName.toLowerCase().includes(query)
-      );
-      setFilteredParties(filtered);
-    }
-  }, [searchQuery, politicalParties]);
-
-  const handleSkip = () => {
-    // Navigate to the next screen
+  // Memoized handlers to prevent unnecessary re-renders
+  const handleSkip = useCallback(() => {
     router.replace("/(tabs)");
-  };
+  }, []);
 
-  const handlePartySelect = async (party: PoliticalParty) => {
-    setLoading(true);
-    try {
-      // Store the selected party in user preferences
-      await database.updateDocument(
-        process.env.EXPO_PUBLIC_APPWRITE_DATABASE_ID!,
-        "6815e0be001731ca8b1b",
-        userId,
-        {
-          politicalParty: party.id,
-        }
-      );
+  const handlePartySelect = useCallback(
+    async (party: PoliticalParty) => {
+      try {
+        await database.updateDocument(
+          process.env.EXPO_PUBLIC_APPWRITE_DATABASE_ID!,
+          process.env.EXPO_PUBLIC_APPWRITE_USER_COLLECTION_ID!,
+          userId.toString(),
+          {
+            politicalParty: party.id,
+          }
+        );
 
-      console.log("Selected party:", party);
-      // Navigate to the next screen
-      router.replace("/(tabs)");
-    } catch (error) {
-      console.error("Error selecting party:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
+        console.log("Selected party:", party);
+        router.replace("/auth/personal-details");
+      } catch (error) {
+        console.error("Error selecting party:", error);
+      }
+    },
+    [userId]
+  );
+
+  // Memoized search handler with debouncing effect
+  const handleSearchChange = useCallback((text: string) => {
+    setSearchQuery(text);
+  }, []);
+
+  // Memoized render item function
+  const renderItem = useCallback(
+    ({ item }: { item: PoliticalParty }) => (
+      <PoliticalPartyItem item={item} onPress={handlePartySelect} />
+    ),
+    [handlePartySelect]
+  );
+
+  // Memoized key extractor
+  const keyExtractor = useCallback((item: PoliticalParty) => item.id, []);
+
+  // Memoized empty component
+  const ListEmptyComponent = useMemo(
+    () => (
+      <View style={styles.emptyContainer}>
+        <Text style={styles.emptyText}>No political parties found</Text>
+      </View>
+    ),
+    []
+  );
 
   return (
     <SafeAreaView style={styles.container}>
@@ -121,9 +152,7 @@ const selectpoliticalparty = () => {
         <View style={styles.headerTitleRow}>
           <Text style={styles.headerTitle}>Select Your Political Party</Text>
           <TouchableOpacity style={styles.skipButton} onPress={handleSkip}>
-            <Text style={styles.skipText} onPress={handleSkip}>
-              Skip
-            </Text>
+            <Text style={styles.skipText}>Skip</Text>
             <Entypo name="chevron-small-right" size={24} color="black" />
           </TouchableOpacity>
         </View>
@@ -134,7 +163,7 @@ const selectpoliticalparty = () => {
           <TextInput
             placeholder="Search political parties..."
             value={searchQuery}
-            onChangeText={setSearchQuery}
+            onChangeText={handleSearchChange}
             style={styles.search_input}
             placeholderTextColor="#aaa"
             autoCapitalize="none"
@@ -152,26 +181,27 @@ const selectpoliticalparty = () => {
       ) : (
         <FlatList
           data={filteredParties}
-          keyExtractor={(item) => item.id}
-          renderItem={({ item }) => (
-            <TouchableOpacity onPress={() => handlePartySelect(item)}>
-              <PoliticalPartyCard party={item} />
-            </TouchableOpacity>
-          )}
+          keyExtractor={keyExtractor}
+          renderItem={renderItem}
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.listContainer}
-          ListEmptyComponent={
-            <View style={styles.emptyContainer}>
-              <Text style={styles.emptyText}>No political parties found</Text>
-            </View>
-          }
+          ListEmptyComponent={ListEmptyComponent}
+          removeClippedSubviews={true}
+          maxToRenderPerBatch={10}
+          windowSize={10}
+          initialNumToRender={10}
+          getItemLayout={(data, index) => ({
+            length: 80, // Approximate height of each item
+            offset: 80 * index,
+            index,
+          })}
         />
       )}
     </SafeAreaView>
   );
 };
 
-export default selectpoliticalparty;
+export default React.memo(selectpoliticalparty);
 
 export const styles = StyleSheet.create({
   container: {

@@ -22,8 +22,8 @@ export async function updateUserToken(token: string): Promise<void> {
 
     // First find the user document to get its ID
     const userDetailsResponse = await database.listDocuments(
-      "6815de2b0004b53475ec", // Replace with your actual database ID
-      "6815e0be001731ca8b1b", // Collection name
+      "6815de2b0004b53475ec", // Database ID
+      "6815e0be001731ca8b1b", // Collection ID
       [Query.equal("userId", userId)]
     );
 
@@ -33,17 +33,19 @@ export async function updateUserToken(token: string): Promise<void> {
 
       // Update the user document in the Appwrite database
       await database.updateDocument(
-        "6815de2b0004b53475ec", // Replace with your actual database ID
-        "6815e0be001731ca8b1b", // Collection name
+        "6815de2b0004b53475ec", // Database ID
+        "6815e0be001731ca8b1b", // Collection ID
         userDocumentId, // Document ID
         {
           expoToken: token,
           tokenUpdatedAt: new Date().toISOString(),
         }
       );
-    }
 
-    console.log("User push token updated successfully in database");
+      console.log("User push token updated successfully in database");
+    } else {
+      console.log("User document not found, cannot update token");
+    }
   } catch (error) {
     console.error("Failed to update push token in database:", error);
     // Don't throw the error, as we don't want to break notification registration

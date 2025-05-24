@@ -5,19 +5,18 @@ import {
   Image,
   TouchableOpacity,
   StyleSheet,
-  Dimensions,
   Alert,
   Linking,
   Modal,
   ActivityIndicator,
   ToastAndroid,
   Platform,
+  AppState,
 } from "react-native";
-import React, { useEffect, useState, useCallback, useRef } from "react";
+import React, { useEffect, useState, useCallback, useRef, useMemo } from "react";
 import { useLocalSearchParams } from "expo-router";
 import { account, database } from "@/context/app-write";
 import { ID, Query } from "react-native-appwrite";
-import { SafeAreaView } from "react-native-safe-area-context";
 import {
   Canvas,
   Image as SkiaImage,
@@ -25,15 +24,13 @@ import {
   Text as SkiaText,
   useFont,
   Group,
-  rrect,
-  rect,
   Circle,
-  vec,
 } from "@shopify/react-native-skia";
 import { primaryColor, width } from "@/constant/contant";
 import * as MediaLibrary from 'expo-media-library';
 import * as FileSystem from 'expo-file-system';
 import { Feather } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
 
 type FabricObject = {
   type: string;
@@ -61,7 +58,7 @@ type SkiaRenderable =
   }
   | { type: 'image'; id: string; x: number; y: number; width: number; height: number; src: string; label: string; };
 
-const ImageLoader = ({ maxImages = 20 }) => {
+const useImageLoader = (maxImages = 20) => {
   const [urls, setUrls] = useState<Array<string | null>>(Array(maxImages).fill(null));
 
   const img1 = useImage(urls[0]);
@@ -103,8 +100,39 @@ const ImageLoader = ({ maxImages = 20 }) => {
   return { imageHooks, updateUrls };
 };
 
-const EditScreen = () => {
+// Memoized FrameItem component
+const FrameItem = React.memo(({ 
+  frame, 
+  index, 
+  isSelected, 
+  onSelect 
+}: { 
+  frame: any; 
+  index: number; 
+  isSelected: boolean; 
+  onSelect: (index: number) => void; 
+}) => (
+  <TouchableOpacity
+    style={[
+      styles.frameItem,
+      isSelected ? styles.selectedFrame : styles.normalFrame
+    ]}
+    onPress={() => onSelect(index)}
+  >
+    <Image
+      source={{ uri: frame.previewImage }}
+      style={styles.frameImage}
+      resizeMode="cover"
+    />
+    <View style={styles.frameDetails}>
+      <Text style={styles.frameName}>{frame.name || `Frame ${index + 1}`}</Text>
+    </View>
+  </TouchableOpacity>
+));
+
+const EditScreen = React.memo(() => {
   const { postId: initialPostId } = useLocalSearchParams();
+  const navigation = useNavigation();
   const [currentPostId, setCurrentPostId] = useState<string>(initialPostId as string);
   const [post, setPost] = React.useState<any>(null);
   const [loading, setLoading] = React.useState(true);
@@ -121,6 +149,8 @@ const EditScreen = () => {
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [fontSelectorVisible, setFontSelectorVisible] = useState(false);
   const [isFrameLoading, setIsFrameLoading] = useState(false);
+  const [isCanvasReady, setIsCanvasReady] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
 
   // Canvas reference to access makeImageSnapshot method
   const canvasRef = useRef<any>(null);
@@ -201,11 +231,44 @@ const EditScreen = () => {
     }
   };
 
-  const { imageHooks, updateUrls } = ImageLoader({ maxImages: 20 });
+  // Use the custom hook instead of the component
+  const { imageHooks, updateUrls } = useImageLoader(20);
+
+  // Memoize user data extraction
+  const userData = useMemo(() => {
+    try {
+      if (!currentUser || !currentUser[0]) return null;
+      return {
+        id: currentUser[0].$id,
+        name: currentUser[0].name,
+        email: currentUser[0].email,
+        address: currentUser[0].address,
+        phone: currentUser[0].phone,
+        logo: currentUser[0].logo,
+        profileImage: currentUser[0].profileImage
+      };
+    } catch (error) {
+      console.error('Error extracting user data:', error);
+      return null;
+    }
+  }, [currentUser]);
+
+  // Memoize image sources with deduplication
+  const uniqueImageSources = useMemo(() => {
+    const sources = new Set<string>();
+    elements.forEach(el => {
+      if (el.type === 'image' && el.src) {
+        sources.add(el.src);
+      }
+    });
+    if (userData?.logo) sources.add(userData.logo);
+    if (userData?.profileImage) sources.add(userData.profileImage);
+    return Array.from(sources);
+  }, [elements, userData]);
 
   const imageMap = React.useMemo(() => {
     const map: Record<string, ReturnType<typeof useImage> | null> = {};
-    imageSources.forEach((src, index) => {
+    uniqueImageSources.forEach((src, index) => {
       if (index < imageHooks.length) {
         map[src] = imageHooks[index];
       } else {
@@ -213,11 +276,12 @@ const EditScreen = () => {
       }
     });
     return map;
-  }, [imageSources, imageHooks]);
+  }, [uniqueImageSources, imageHooks]);
 
+  // Remove duplicate useEffect for imageSources
   useEffect(() => {
-    updateUrls(imageSources);
-  }, [imageSources, updateUrls]);
+    updateUrls(uniqueImageSources);
+  }, [uniqueImageSources, updateUrls]);
 
   useEffect(() => {
     const sources: string[] = [];
@@ -302,447 +366,429 @@ const EditScreen = () => {
     return { x: newX, y: newY };
   };
 
-  const selectFrame = (index: number) => {
+  // Define anotherImage properly - move this up before other dependencies
+  const anotherImage = useImage(post?.previewImage);
+
+  // Enhanced canvas ready state tracking
+  const checkCanvasReadiness = useCallback(() => {
+    const isReady = !isFrameLoading && 
+                   anotherImage && 
+                   canvasRef.current && 
+                   post && 
+                   elements.length >= 0; // Changed from > 0 to >= 0
+    
+    setIsCanvasReady(isReady);
+    return isReady;
+  }, [isFrameLoading, anotherImage, post, elements.length]);
+
+  // Monitor canvas readiness
+  useEffect(() => {
+    checkCanvasReadiness();
+  }, [checkCanvasReadiness]);
+
+  const selectFrame = useCallback((index: number) => {
     if (index >= 0 && index < frames.length) {
-      setIsFrameLoading(true); // Set loading to true before frame change
+      setIsFrameLoading(true);
+      setIsCanvasReady(false); // Reset canvas readiness
       setSelectedFrameIndex(index);
       const frame = frames[index];
       setSelectedFrame(frame);
 
-      // Update elements, frame width and height based on selected frame
-      if (frame?.template) {
+      // Use requestAnimationFrame for smoother transitions
+      requestAnimationFrame(() => {
+        if (frame?.template) {
+          try {
+            const parsedElements = parseFabricToSkia(frame.template);
+            setElements(parsedElements);
+            setFrameWidth(frame.width || 400);
+            setFrameHeight(frame.height || 400);
+          } catch (error) {
+            console.error("Error parsing frame template:", error);
+          } finally {
+            // Ensure loading state is cleared
+            setTimeout(() => {
+              setIsFrameLoading(false);
+              // Canvas readiness will be checked by useEffect
+            }, 150);
+          }
+        } else {
+          setIsFrameLoading(false);
+        }
+      });
+    }
+  }, [frames]);
+
+  // Enhanced download handler with better error handling
+  const handleDownload = useCallback(async () => {
+    console.log("Download button pressed");
+    
+    // First check if canvas is ready
+    if (!checkCanvasReadiness()) {
+      Alert.alert('Not Ready', 'Please wait for the image to fully load before downloading.');
+      return;
+    }
+
+    setIsDownloading(true);
+    
+    try {
+      // Request media library permissions
+      const { status } = await MediaLibrary.requestPermissionsAsync();
+      console.log('Permission status: 🟢', status);
+
+      if (status !== 'granted') {
+        console.log("Permission not granted");
+        
+        Alert.alert(
+          'Permission Required',
+          'To save images, this app needs access to your media library.',
+          [
+            { text: 'Cancel', style: 'cancel' },
+            { text: 'Open Settings', onPress: () => Linking.openSettings() }
+          ]
+        );
+        return;
+      }
+
+      // Double-check canvas availability
+      if (!canvasRef.current) {
+        Alert.alert('Error', 'Canvas not ready. Please try again in a moment.');
+        return;
+      }
+
+      // Add a small delay to ensure canvas is fully rendered
+      await new Promise(resolve => setTimeout(resolve, 100));
+
+      // Take snapshot with error handling
+      let snapshot;
+      try {
+        snapshot = await canvasRef.current.makeImageSnapshot();
+      } catch (snapshotError) {
+        console.error('Snapshot error:', snapshotError);
+        Alert.alert('Error', 'Failed to capture image. Please try again.');
+        return;
+      }
+
+      if (!snapshot) {
+        Alert.alert('Error', 'Failed to take a snapshot. Please try again.');
+        return;
+      }
+
+      const base64 = snapshot.encodeToBase64();
+      const fileUri = FileSystem.cacheDirectory + `art_frame_${Date.now()}.png`;
+      console.log(fileUri, 'File URI');
+
+      await FileSystem.writeAsStringAsync(fileUri, base64, {
+        encoding: FileSystem.EncodingType.Base64,
+      });
+      console.log(fileUri, 'File URI after writing');
+
+      // Save to media library
+      const asset = await MediaLibrary.createAssetAsync(fileUri);
+      console.log(asset, 'Asset created');
+
+      // Create or add to album on Android
+      if (Platform.OS === 'android') {
         try {
-          const parsedElements = parseFabricToSkia(frame.template);
-          setElements(parsedElements);
-          setFrameWidth(frame.width);
-          setFrameHeight(frame.height);
-        } catch (error) {
-          console.error("Error parsing frame template:", error);
-        } finally {
-          // Use a slight delay to ensure UI updates properly
+          // Check if album exists
+          const albumName = 'ArtVeda';
+          const album = await MediaLibrary.getAlbumAsync(albumName);
+          
+          if (album) {
+            // Add to existing album
+            await MediaLibrary.addAssetsToAlbumAsync([asset], album, false);
+            console.log('Added to existing album:', albumName);
+          } else {
+            // Create new album
+            await MediaLibrary.createAlbumAsync(albumName, asset, false);
+            console.log('Created new album:', albumName);
+          }
+        } catch (albumError) {
+          console.error('Album creation error:', albumError);
+          // Continue even if album creation fails - the image is still saved
+        }
+      }
+
+      // Save download record in database
+      if (currentUser && currentUser.length > 0) {
+        try {
+          await database.createDocument(
+            '6815de2b0004b53475ec',
+            '681a1b3c0020eb66b3b1',
+            ID.unique(),
+            {
+              posts: [currentPostId],
+              users: [currentUser[0].$id],
+              userId: currentUser[0].$id,
+            }
+          );
+          console.log('Download record saved to database 😁😆😅🤣');
+        } catch (dbError) {
+          console.error('Failed to save download record:', dbError);
+        }
+      }
+
+      // Show success message
+      if (Platform.OS === 'android') {
+        ToastAndroid.show('Image saved successfully!', ToastAndroid.SHORT);
+      } else {
+        Alert.alert('Success', 'Image saved to your gallery!');
+      }
+
+      // Clean up the temporary file
+      await FileSystem.deleteAsync(fileUri, { idempotent: true });
+
+    } catch (error: any) {
+      console.error('Download error:', error);
+      
+      // Provide more specific error messages
+      let errorMessage = 'Failed to save image. ';
+      if (error.message?.includes('No skia view')) {
+        errorMessage += 'Please wait for the image to load completely and try again.';
+      } else if (error.message?.includes('permission')) {
+        errorMessage += 'Please check your app permissions.';
+      } else {
+        errorMessage += error.message || 'Unknown error occurred.';
+      }
+      
+      Alert.alert('Error', errorMessage);
+    } finally {
+      setIsDownloading(false);
+    }
+  }, [currentUser, currentPostId, checkCanvasReadiness]);
+
+  // Memoized font selection handlers
+  const handleFontChange = useCallback((fontFamily: 'montserrat' | 'roboto') => {
+    setSelectedFontFamily(fontFamily);
+    setFontSelectorVisible(false);
+  }, []);
+
+  const toggleFontSelector = useCallback(() => {
+    setFontSelectorVisible(prev => !prev);
+  }, []);
+
+  // Memoize expensive calculations
+  const canvasDimensions = useMemo(() => {
+    if (!canvasWidth) return { width: width - 40, height: width - 40 };
+    return {
+      width: width - 40,
+      height: (canvasHeight / canvasWidth) * (width - 40)
+    };
+  }, [canvasWidth, canvasHeight]);
+
+  // Memoized element rendering
+  const renderedElements = useMemo(() => {
+    if (isFrameLoading) return null;
+
+    return elements.map((el) => {
+      if (el.type === 'text') {
+        const position = calculatePositionFromRatio(el.x, el.y);
+        const font = getFontWithSize(el.fontWeight, el.fontSize);
+        if (!font) return null;
+
+        // Determine text content based on label
+        let displayText = el.text;
+        if (el.label && userData) {
+          if (el.label === 'name' && userData.name) {
+            displayText = userData.name;
+          } else if (el.label === 'email' && userData.email) {
+            displayText = userData.email;
+          } else if (el.label === 'address' && userData.address) {
+            displayText = userData.address;
+          } else if (el.label === 'phone' && userData.phone) {
+            displayText = userData.phone;
+          }
+        }
+
+        return (
+          <SkiaText
+            key={el.id}
+            x={position.x}
+            y={position.y}
+            text={displayText}
+            font={font}
+            color={el.fill}
+          />
+        );
+      }
+
+      if (el.type === 'image') {
+        let imgSrc = el.src;
+
+        // Handle special image cases
+        if (el.label === 'logo' && userData?.logo) {
+          imgSrc = userData.logo;
+        } else if (el.label === 'userImage' && userData?.profileImage) {
+          imgSrc = userData.profileImage;
+        }
+
+        const img = imgSrc ? imageMap[imgSrc] : null;
+        if (!img) return null;
+
+        const position = calculatePositionFromRatio(el.x, el.y);
+
+        if (el.label === 'logo') {
+          return (
+            <SkiaImage
+              key={el.id}
+              image={img}
+              x={position.x}
+              y={position.y}
+              width={el.width}
+              height={el.height}
+              fit="fill"
+            />
+          );
+        } else if (el.label === 'userImage') {
+          const size = Math.min(el.width, el.height);
+          const centerX = position.x + size/2;
+          const centerY = position.y + size/2;
+          
+          return (
+            <Group key={el.id}>
+              <Circle
+                cx={centerX}
+                cy={centerY}
+                r={size/2 + 4}
+                color="white"
+              />
+              <SkiaImage
+                image={img}
+                x={position.x}
+                y={position.y}
+                width={size}
+                height={size}
+                fit="cover"
+                clip={{
+                  rect: {
+                    x: position.x,
+                    y: position.y,
+                    width: size,
+                    height: size
+                  },
+                  rx: size/2,
+                  ry: size/2
+                }}
+              />
+            </Group>
+          );
+        } else {
+          return (
+            <SkiaImage
+              key={el.id}
+              image={img}
+              x={position.x}
+              y={position.y}
+              width={canvasDimensions.width}
+              height={canvasDimensions.height}
+              fit="fill"
+            />
+          );
+        }
+      }
+
+      return null;
+    });
+  }, [elements, userData, imageMap, isFrameLoading, canvasDimensions]);
+
+  // Memoized font selection modal
+  const fontSelectionModal = useMemo(() => (
+    <Modal
+      visible={fontSelectorVisible}
+      transparent={true}
+      animationType="slide"
+      onRequestClose={() => setFontSelectorVisible(false)}
+    >
+      <TouchableOpacity
+        style={styles.modalOverlay}
+        activeOpacity={1}
+        onPress={() => setFontSelectorVisible(false)}
+      >
+        <View style={styles.bottomSheet}>
+          <View style={styles.bottomSheetHandle} />
+          <Text style={styles.bottomSheetTitle}>Select Font</Text>
+
+          <View style={styles.fontOptionsContainer}>
+            <TouchableOpacity
+              style={[
+                styles.fontOption,
+                selectedFontFamily === 'montserrat' && styles.selectedFontOption
+              ]}
+              onPress={() => handleFontChange('montserrat')}
+            >
+              <Text style={styles.fontLabel}>Montserrat</Text>
+              <Text style={[styles.fontPreview, { fontFamily: 'Montserrat' }]}>
+                Sample Text
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[
+                styles.fontOption,
+                selectedFontFamily === 'roboto' && styles.selectedFontOption
+              ]}
+              onPress={() => handleFontChange('roboto')}
+            >
+              <Text style={styles.fontLabel}>Roboto</Text>
+              <Text style={[styles.fontPreview, { fontFamily: 'Roboto' }]}>
+                Sample Text
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </TouchableOpacity>
+    </Modal>
+  ), [fontSelectorVisible, selectedFontFamily, handleFontChange]);
+
+  // Add app state tracking
+  const appState = useRef(AppState.currentState);
+  const [isAppActive, setIsAppActive] = useState(true);
+  const [hasBeenBackgrounded, setHasBeenBackgrounded] = useState(false);
+
+  // Prevent screen from going white on app state changes
+  useEffect(() => {
+    const handleAppStateChange = (nextAppState: string) => {
+      console.log('App state changing from', appState.current, 'to', nextAppState);
+      
+      if (
+        appState.current.match(/inactive|background/) &&
+        nextAppState === 'active'
+      ) {
+        console.log('App has come to the foreground!');
+        setIsAppActive(true);
+        
+        // Only refresh if we've been backgrounded and have data
+        if (hasBeenBackgrounded && post && frames.length > 0) {
+          console.log('Refreshing canvas after background');
+          // Force re-render with a small delay to ensure app is fully active
           setTimeout(() => {
             setIsFrameLoading(false);
-          }, 500);
+            checkCanvasReadiness();
+          }, 200);
         }
-      } else {
-        setIsFrameLoading(false);
-      }
-    }
-  };
-
-  //   const handleDownload = async () => {
-  //     try {
-
-  //       // // First check if we already have permissions
-  //       // let permissionStatus = await MediaLibrary.getPermissionsAsync();
-
-
-  //       // // If we don't have permissions, request them
-  //       // if (!permissionStatus.granted) {
-  //       //   permissionStatus = await MediaLibrary.requestPermissionsAsync();
-
-  //       //   // If the user denied permissions, show an alert with instructions
-  //       //   if (!permissionStatus.granted) {
-  //       //     Alert.alert(
-  //       //       'Permission Required',
-  //       //       'To save images, this app needs access to your media library. Please go to app settings and enable Media Library permissions.',
-  //       //       [
-  //       //         { text: 'Cancel', style: 'cancel' },
-  //       //         { 
-  //       //           text: 'Open Settings', 
-  //       //           onPress: () => Linking.openSettings() 
-  //       //         }
-  //       //       ]
-  //       //     );
-  //       //     return;
-  //       //   }
-  //       // }
-
-  //       // Check if we have permission to access the media library
-  //       console.log(mediaLibraryPermissions?.status, "Media Library Permission Status🟢🟡🔴");
-  //       if (!mediaLibraryPermissions?.granted) {
-  //         const { status } = await requestMediaLibraryPermissions();
-  //         console.log(status, "Media Library Permission Status🟢🟡🔴");
-  //         if (status !== 'granted') {
-  //           Alert.alert(
-  //             'Permission Required',
-  //             'To save images, this app needs access to your media library. Please go to app settings and enable Media Library permissions.',
-  //             [
-  //               { text: 'Cancel', style: 'cancel' },
-  //               { 
-  //                 text: 'Open Settings', 
-  //                 onPress: () => Linking.openSettings() 
-  //               }
-  //             ]
-  //           );
-  //           return;
-  //         }
-  //       }
-
-  //       // Check for canvas reference
-  //       if (!canvasRef.current) {
-  //         Alert.alert('Error', 'Canvas not ready. Please try again.');
-  //         return;
-  //       }
-
-  //       // Create a snapshot using makeImageSnapshot
-
-  //       const snapshot = await canvasRef.current.makeImageSnapshot();
-
-  //       if (!snapshot) {
-  //         Alert.alert('Error', 'Failed to capture image');
-  //         return;
-  //       }
-
-  //       // Use the correct method to encode to base64
-  //       const base64 = snapshot.encodeToBase64();
-
-  //       if (!base64) {
-  //         Alert.alert('Error', 'Failed to encode image');
-  //         return;
-  //       }
-
-  //       // Create a temporary file path with proper naming
-  //       const fileUri = `${FileSystem.cacheDirectory}artframe_${Date.now()}.png`;
-
-  //      console.log(fileUri, "File URI");
-
-  //       // Write the base64 data to the file
-  //       await FileSystem.writeAsStringAsync(fileUri, base64, {
-  //         encoding: FileSystem.EncodingType.Base64,
-  //       });
-
-  //       console.log(fileUri, "File URI after writing");
-
-  //       // Save to media library with proper error handling
-  //       try {
-  //         const asset = await MediaLibrary.createAssetAsync(fileUri);
-  //         console.log(asset, "Asset");
-  //         await MediaLibrary.createAlbumAsync("ArtVeda", asset, false);
-
-  // //save in our db as downloaded
-  // try {
-  //   await database.createDocument(
-  //     '6815de2b0004b53475ec',
-  //     '681a1b3c0020eb66b3b1',
-  //     ID.unique(),
-  //     {
-  //       posts: currentPostId,
-  //       users: currentUser[0].$id,
-  //     }
-  //   );
-
-  //   console.log('Document created successfully', { posts: currentPostId, users: currentUser[0].$id });
-  // } catch (dbError: any) {
-  //   // If there's a duplicate ID error, just log it and continue - the image is still saved
-  //   if (dbError.message && dbError.message.includes('already exists')) {
-  //     console.log('Download record already exists, continuing with save operation');
-  //   } else {
-  //     // For other database errors, log but don't block the image save
-  //     console.error('Database error when recording download:', dbError);
-  //   }
-  // }
-
-  //         Alert.alert('Success', 'Image saved to your gallery!');
-  //       } catch (mediaError) {
-  //         console.error('Media library error:', mediaError);
-  //         Alert.alert(
-  //           'Save Failed',
-  //           'Failed to save to gallery. Please check your permissions and try again.'
-  //         );
-  //       }
-
-  //       // Clean up the temporary file
-  //       await FileSystem.deleteAsync(fileUri, { idempotent: true });
-
-  //     } catch (error:any) {
-  //       console.error('Error saving image:', error);
-  //       Alert.alert('Error', `Failed to save image: ${error.message}`);
-  //     }
-  //   };
-
-  // const handleDownload = async () => {
-  //   try {
-  //     // Request permission directly before saving
-  //     const { status } = await MediaLibrary.requestPermissionsAsync();
-  //     console.log('Permission status: 🟢', status);
-
-  //     if (status !== 'granted') {
-  //       Alert.alert(
-  //         'Permission Required',
-  //         'To save images, this app needs access to your media library.',
-  //         [
-  //           { text: 'Cancel', style: 'cancel' },
-  //           { text: 'Open Settings', onPress: () => Linking.openSettings() }
-  //         ]
-  //       );
-  //       return;
-  //     }
-
-  //     if (!canvasRef.current) {
-  //       Alert.alert('Error', 'Canvas not ready. Please try again.');
-  //       return;
-  //     }
-
-  //     const snapshot = await canvasRef.current.makeImageSnapshot();
-  //     const base64 = snapshot.encodeToBase64();
-
-  //     const fileUri = FileSystem.cacheDirectory + `artframe_${Date.now()}.png`;
-  //     console.log(fileUri, "File URI");
-  //     await FileSystem.writeAsStringAsync(fileUri, base64, {
-  //       encoding: FileSystem.EncodingType.Base64,
-  //     });
-
-  //     console.log(fileUri, "File URI after writing");
-  //     // Save to media library
-
-  //     const asset = await MediaLibrary.createAssetAsync(fileUri);
-
-  //     console.log(asset, "Asset");
-
-  //     // Create album if it doesn't exist
-  //     console.log()
-  //     const album = await MediaLibrary.getAlbumAsync('ArtVeda');
-
-  //     console.log(album, "Album");
-
-  //     if (!album) {
-  //       console.log("Album doesn't exist, creating a new one");
-  //       await MediaLibrary.createAlbumAsync('ArtVeda', asset, false);
-  //     }
-  //     else {
-  //       console.log("Album exists, adding asset to it");
-  //       await MediaLibrary.addAssetsToAlbumAsync([asset], album, false);
-  //     }
-  //     console.log('Image saved to gallery!');
-  //     //save in our db as downloaded
-  //      await database.createDocument(
-  //     '6815de2b0004b53475ec',
-  //     '681a1b3c0020eb66b3b1',
-  //     ID.unique(),
-  //     {
-  //       posts: currentPostId,
-  //       users: currentUser[0].$id,
-  //     }
-  //   );
-
-  //    ToastAndroid.show('Image saved successfully!', ToastAndroid.SHORT);
-
-  //     await FileSystem.deleteAsync(fileUri, { idempotent: true });
-  //   } catch (error) {
-  //     console.error('Download error:', error);
-  //     Alert.alert('Error', 'Failed to save image. Check permissions and try again.');
-  //   }
-  // };
-
-  // const handleDownload = async () => {
-  //   try {
-  //     // Request permissions
-    //     const { status, accessPrivileges } = await MediaLibrary.requestPermissionsAsync();
-
-    //     console.log('Permission status: 🟢', status);
-    //     console.log('Access privileges: 🔑', accessPrivileges);
-
-  //     // Ensure full access on iOS
-  //     if (status !== 'granted' || (Platform.OS === 'ios' && accessPrivileges !== 'all')) {
-  //       Alert.alert(
-  //         'Permission Required',
-  //         'To save images, this app needs full access to your media library.',
-  //         [
-  //           { text: 'Cancel', style: 'cancel' },
-  //           { text: 'Open Settings', onPress: () => Linking.openSettings() },
-  //         ]
-  //       );
-  //       return;
-  //     }
-
-  //     // Ensure canvas is ready
-  //     if (!canvasRef.current) {
-  //       Alert.alert('Error', 'Canvas not ready. Please try again.');
-  //       return;
-  //     }
-
-  //     // Take snapshot and encode to base64
-  //     const snapshot = await canvasRef.current.makeImageSnapshot();
-  //     if (!snapshot) {
-  //       Alert.alert('Error', 'Failed to take a snapshot. Please try again.');
-  //       return;
-  //     }
-
-  //     const base64 = snapshot.encodeToBase64();
-  //     const fileUri = FileSystem.cacheDirectory + `artframe_${Date.now()}.png`;
-
-  //     console.log(fileUri, 'File URI');
-  //     await FileSystem.writeAsStringAsync(fileUri, base64, {
-  //       encoding: FileSystem.EncodingType.Base64,
-  //     });
-  //     console.log(fileUri, 'File URI after writing');
-
-  //     // Save to media library
-  //     const asset = await MediaLibrary.createAssetAsync(fileUri);
-  //     console.log(asset, 'Asset');
-
-  //     // Handle album
-  //     const albumName = 'ArtVeda';
-  //     console.log('Checking for album existence');
-  //     let album = await MediaLibrary.getAlbumAsync(albumName);
-
-  //     // On Android, check for migration
-  //     if (Platform.OS === 'android' && album) {
-  //       const needsMigration = await MediaLibrary.albumNeedsMigrationAsync(album);
-  //       if (needsMigration) {
-  //         Alert.alert('Migration Needed', 'Please migrate the album in your system gallery settings.');
-  //         return;
-  //       }
-  //     }
-
-  //     if (!album) {
-  //       console.log("Album doesn't exist, creating a new one");
-  //       album = await MediaLibrary.createAlbumAsync(albumName, asset, false);
-  //     } else {
-  //       console.log('Album exists, adding asset to it');
-  //       await MediaLibrary.addAssetsToAlbumAsync([asset], album, false);
-  //     }
-
-  //     console.log('Image saved to gallery!');
-
-  //     // Save in DB as downloaded
-  //     await database.createDocument(
-  //       '6815de2b0004b53475ec', // DB ID
-  //       '681a1b3c0020eb66b3b1', // Collection ID
-  //       ID.unique(),
-  //       {
-  //         posts: currentPostId,
-  //         users: currentUser[0].$id,
-  //       }
-  //     );
-
-  //     // Show success toast/alert
-  //     if (Platform.OS === 'android') {
-  //       ToastAndroid.show('Image saved successfully!', ToastAndroid.SHORT);
-  //     } else {
-  //       Alert.alert('Success', 'Image saved to your Photos!');
-  //     }
-
-  //     // Clean up temporary file
-  //     await FileSystem.deleteAsync(fileUri, { idempotent: true });
-  //   } catch (error) {
-  //     console.error('Download error:', error);
-  //     Alert.alert('Error', 'Failed to save image. Check permissions and try again.');
-  //   }
-  // };
-
-const handleDownload = async () => {
-  console.log("Download button pressed");
-  setLoading(true);
-  try {
-    // Request media library permissions
-    const { status } = await MediaLibrary.requestPermissionsAsync();
-    console.log('Permission status: 🟢', status);
-
-    if (status !== 'granted') {
-      console.log("Permission not granted");
-      
-      Alert.alert(
-        'Permission Required',
-        'To save images, this app needs access to your media library.',
-        [
-          { text: 'Cancel', style: 'cancel' },
-          { text: 'Open Settings', onPress: () => Linking.openSettings() }
-        ]
-      );
-      return;
-    }
-
-    // Ensure canvas is ready
-    if (!canvasRef.current) {
-      Alert.alert('Error', 'Canvas not ready. Please try again.');
-      return;
-    }
-
-    // Take snapshot and encode to base64
-    const snapshot = await canvasRef.current.makeImageSnapshot();
-    if (!snapshot) {
-      Alert.alert('Error', 'Failed to take a snapshot. Please try again.');
-      return;
-    }
-
-    const base64 = snapshot.encodeToBase64();
-    const fileUri = FileSystem.cacheDirectory + `art_frame_${Date.now()}.png`;
-    console.log(fileUri, 'File URI');
-
-    await FileSystem.writeAsStringAsync(fileUri, base64, {
-      encoding: FileSystem.EncodingType.Base64,
-    });
-    console.log(fileUri, 'File URI after writing');
-
-    // Save to media library
-    const asset = await MediaLibrary.createAssetAsync(fileUri);
-    console.log(asset, 'Asset created');
-
-    // Create or add to album on Android
-    if (Platform.OS === 'android') {
-      try {
-        // Check if album exists
-        const albumName = 'ArtVeda';
-        const album = await MediaLibrary.getAlbumAsync(albumName);
         
-        if (album) {
-          // Add to existing album
-          await MediaLibrary.addAssetsToAlbumAsync([asset], album, false);
-          console.log('Added to existing album:', albumName);
-        } else {
-          // Create new album
-          await MediaLibrary.createAlbumAsync(albumName, asset, false);
-          console.log('Created new album:', albumName);
-        }
-      } catch (albumError) {
-        console.error('Album creation error:', albumError);
-        // Continue even if album creation fails - the image is still saved
+        setHasBeenBackgrounded(false);
+      } else if (nextAppState.match(/inactive|background/)) {
+        console.log('App has gone to the background!');
+        setIsAppActive(false);
+        setHasBeenBackgrounded(true);
       }
-    }
 
-    // Save download record in database
-    if (currentUser && currentUser.length > 0) {
-      try {
-        await database.createDocument(
-          '6815de2b0004b53475ec',
-          '681a1b3c0020eb66b3b1',
-          ID.unique(),
-          {
-            posts: [currentPostId],
-            users: [currentUser[0].$id],
-            userId: currentUser[0].$id,
-          }
-        );
-        console.log('Download record saved to database 😁😆😅🤣');
-      } catch (dbError) {
-        console.error('Failed to save download record:', dbError);
-      }
-    }
+      appState.current = nextAppState as any;
+    };
 
-    // Show success message
-    if (Platform.OS === 'android') {
-      ToastAndroid.show('Image saved successfully!', ToastAndroid.SHORT);
-    } else {
-      Alert.alert('Success', 'Image saved to your gallery!');
-    }
+    const subscription = AppState.addEventListener('change', handleAppStateChange);
 
-    // Clean up the temporary file
-    await FileSystem.deleteAsync(fileUri, { idempotent: true });
+    return () => {
+      subscription?.remove();
+    };
+  }, [hasBeenBackgrounded, post, frames.length, checkCanvasReadiness]);
 
-  } catch (error: any) {
-    console.error('Download error:', error);
-    Alert.alert('Error', `Failed to save image: ${error.message || 'Unknown error'}`);
-  } finally {
-    setLoading(false);
-  }
-};
-
+  // Enhanced fetchInitialData with better error handling
   useEffect(() => {
     const fetchInitialData = async () => {
       try {
         setLoading(true);
+        setError(null);
 
         // Fetch current post and frames
         const [postDetails, framesResponse] = await Promise.all([
@@ -757,30 +803,71 @@ const handleDownload = async () => {
           ),
         ]);
 
-        setPost(postDetails);
-        setCanvasWidth(postDetails.width);
-        setCanvasHeight(postDetails.height);
-        setFrames(framesResponse.documents);
+        // Ensure data is valid before setting state
+        if (postDetails && framesResponse) {
+          setPost(postDetails);
+          
+          // Set header title to post name
+          navigation.setOptions({
+            title: postDetails.name || 'Edit Post',
+            headerBackTitle: "Back",
+          });
+          
+          setCanvasWidth(postDetails.width || 400);
+          setCanvasHeight(postDetails.height || 400);
+          setFrames(framesResponse.documents || []);
 
-        // Initialize with first frame
-        if (framesResponse.documents && framesResponse.documents.length > 0) {
-          selectFrame(0);
+          // Initialize with first frame - directly call the logic here instead of using selectFrame
+          if (framesResponse.documents && framesResponse.documents.length > 0) {
+            setTimeout(() => {
+              const frame = framesResponse.documents[0];
+              setIsFrameLoading(true);
+              setIsCanvasReady(false);
+              setSelectedFrameIndex(0);
+              setSelectedFrame(frame);
+
+              requestAnimationFrame(() => {
+                if (frame?.template) {
+                  try {
+                    const parsedElements = parseFabricToSkia(frame.template);
+                    setElements(parsedElements);
+                    setFrameWidth(frame.width || 400);
+                    setFrameHeight(frame.height || 400);
+                  } catch (error) {
+                    console.error("Error parsing frame template:", error);
+                  } finally {
+                    setTimeout(() => {
+                      setIsFrameLoading(false);
+                    }, 150);
+                  }
+                } else {
+                  setIsFrameLoading(false);
+                }
+              });
+            }, 100);
+          }
         }
       } catch (err) {
         console.error("Error fetching data:", err);
         setError(err);
+        
+        // Set fallback title on error
+        navigation.setOptions({
+          title: 'Edit Post',
+          headerBackTitle: "Back",
+        });
       } finally {
         setLoading(false);
       }
     };
 
-    fetchInitialData();
-  }, [currentPostId]);
+    // Only fetch if we have a postId and app is active, and we don't already have data
+    if (currentPostId && isAppActive && (!post || frames.length === 0)) {
+      fetchInitialData();
+    }
+  }, [currentPostId, isAppActive, navigation]); // Removed post and frames from dependencies
 
   console.log(post, "Post 🟢");
-
-  const anotherImage = useImage(post?.previewImage);
-
   console.log(elements, "Elements 🟣");
   console.log(canvasHeight, canvasWidth, "Canvas dimensions");
   console.log(canvasWidth
@@ -789,82 +876,38 @@ const handleDownload = async () => {
   console.log(width - 40, "Width");
   console.log(currentUser, "Current User🔴");
 
-  const renderFontSelectionBottomSheet = () => {
-    return (
-      <Modal
-        visible={fontSelectorVisible}
-        transparent={true}
-        animationType="slide"
-        onRequestClose={() => setFontSelectorVisible(false)}
-      >
-        <TouchableOpacity
-          style={styles.modalOverlay}
-          activeOpacity={1}
-          onPress={() => setFontSelectorVisible(false)}
-        >
-          <View style={styles.bottomSheet}>
-            <View style={styles.bottomSheetHandle} />
-            <Text style={styles.bottomSheetTitle}>Select Font</Text>
-
-            <View style={styles.fontOptionsContainer}>
-              <TouchableOpacity
-                style={[
-                  styles.fontOption,
-                  selectedFontFamily === 'montserrat' && styles.selectedFontOption
-                ]}
-                onPress={() => {
-                  setSelectedFontFamily('montserrat');
-                  setFontSelectorVisible(false);
-                }}
-              >
-                <Text style={styles.fontLabel}>Montserrat</Text>
-                <Text
-                  style={[
-                    styles.fontPreview,
-                    { fontFamily: 'Montserrat' }
-                  ]}
-                >
-                  Sample Text
-                </Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[
-                  styles.fontOption,
-                  selectedFontFamily === 'roboto' && styles.selectedFontOption
-                ]}
-                onPress={() => {
-                  setSelectedFontFamily('roboto');
-                  setFontSelectorVisible(false);
-                }}
-              >
-                <Text style={styles.fontLabel}>Roboto</Text>
-                <Text
-                  style={[
-                    styles.fontPreview,
-                    { fontFamily: 'Roboto' }
-                  ]}
-                >
-                  Sample Text
-                </Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </TouchableOpacity>
-      </Modal>
-    );
-  };
+  // Determine download button state
+  const isDownloadDisabled = useMemo(() => {
+    return !isCanvasReady || isDownloading || loading || isFrameLoading;
+  }, [isCanvasReady, isDownloading, loading, isFrameLoading]);
 
   return (
-    <View style={styles.safeArea}>
-      <ScrollView style={styles.scrollView}>
+    <View style={[styles.safeArea, { opacity: isAppActive ? 1 : 0 }]}>
+      <ScrollView 
+        style={styles.scrollView}
+        removeClippedSubviews={false}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        // Prevent scrollview from unmounting children
+        nestedScrollEnabled={false}
+      >
         {loading ? (
           <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color={primaryColor} />
             <Text style={styles.loadingText}>Loading...</Text>
           </View>
         ) : error ? (
           <View style={styles.errorContainer}>
             <Text style={styles.errorText}>Error loading post</Text>
+            <TouchableOpacity
+              style={styles.retryButton}
+              onPress={() => {
+                setError(null);
+                setLoading(true);
+              }}
+            >
+              <Text style={styles.retryButtonText}>Retry</Text>
+            </TouchableOpacity>
           </View>
         ) : (
           <View style={styles.container}>
@@ -873,6 +916,8 @@ const handleDownload = async () => {
                 horizontal={true}
                 maximumZoomScale={3}
                 showsHorizontalScrollIndicator={true}
+                removeClippedSubviews={false}
+                bounces={false}
                 contentContainerStyle={{
                   alignItems: "center",
                   justifyContent: "center",
@@ -881,197 +926,89 @@ const handleDownload = async () => {
                 <Canvas
                   ref={canvasRef}
                   style={{
-                    width: width - 40,
-                    height: canvasWidth
-                      ? (canvasHeight / canvasWidth) * (width - 40)
-                      : width - 40,
+                    width: canvasDimensions.width,
+                    height: canvasDimensions.height,
                     backgroundColor: "lightgrey",
                   }}
+                  onLayout={() => {
+                    // Canvas has been laid out, check readiness after a short delay
+                    setTimeout(checkCanvasReadiness, 100);
+                  }}
                 >
-                  {/* Only render content when not loading */}
-                  {!isFrameLoading && (
+                  {!isFrameLoading && anotherImage && isAppActive && (
                     <>
                       <SkiaImage
                         image={anotherImage}
                         fit="contain"
                         x={0}
                         y={0}
-                        width={width - 40}
-                        height={width - 40}
+                        width={canvasDimensions.width}
+                        height={canvasDimensions.height}
                       />
-                      {elements.map((el) => {
-                        if (el.type === 'text') {
-                          const position = calculatePositionFromRatio(el.x, el.y);
-                          const font = getFontWithSize(el.fontWeight, el.fontSize);
-                          if (!font) return null;
-
-                          // Determine text content based on label
-                          let displayText = el.text;
-                          if (el.label && currentUser && currentUser[0]) {
-                            if (el.label === 'name' && currentUser[0].name) {
-                              displayText = currentUser[0].name;
-                            } else if (el.label === 'email' && currentUser[0].email) {
-                              displayText = currentUser[0].email;
-                            } else if (el.label === 'address' && currentUser[0].address) {
-                              displayText = currentUser[0].address;
-                            } else if (el.label === 'phone' && currentUser[0].phone) {
-                              displayText = currentUser[0].phone;
-                            }
-                          }
-
-                          return (
-                            <SkiaText
-                              key={el.id}
-                              x={position.x}
-                              y={position.y}
-                              text={displayText}
-                              font={font}
-                              color={el.fill}
-                            />
-                          );
-                        }
-
-                        if (el.type === 'image') {
-
-                          let imgSrc = el.src;
-
-                          // Handle logo case specially
-                          if (el.label === 'logo' && currentUser && currentUser[0]?.logo) {
-                            // Add the logo URL to image sources if not already there
-                            if (!imageSources.includes(currentUser[0].logo)) {
-                              setImageSources(prev => [...prev, currentUser[0].logo]);
-                            }
-                            imgSrc = currentUser[0].logo;
-                          }
-
-                          if (el.label === 'userImage' && currentUser && currentUser[0]?.profileImage) {
-                            // Add the profile image URL to image sources if not already there
-                            if (!imageSources.includes(currentUser[0].profileImage)) {
-                              setImageSources(prev => [...prev, currentUser[0].profileImage]);
-                            }
-                            imgSrc = currentUser[0].profileImage;
-
-                          }
-
-                          const img = imgSrc ? imageMap[imgSrc] : null;
-
-                          console.log(imgSrc, "Image Source URL");
-                          console.log(img, "Image Source");
-                          if (!img) return null;
-
-                          const position = calculatePositionFromRatio(el.x, el.y);
-
-                          if (el.label === 'logo') {
-                            console.log(img, "Logo Image 🤔");
-                            return (
-                              <SkiaImage
-                                key={el.id}
-                                image={img}
-                                x={position.x}
-                                y={position.y}
-                                width={el.width}
-                                height={el.height}
-                                fit="fill"
-                              />
-                            );
-                            } else if (el.label === 'userImage') {
-                            console.log(img, "User Image 🤔");
-                            const position = calculatePositionFromRatio(el.x, el.y);
-                            
-                            // Ensure equal width and height for perfect circle
-                            const size = Math.min(el.width, el.height);
-                            
-                            // Calculate center position for the circle
-                            const centerX = position.x + size/2;
-                            const centerY = position.y + size/2;
-                            
-                            return (
-                              <Group key={el.id}>
-                                {/* White circle border */}
-                                <Circle
-                                  cx={centerX}
-                                  cy={centerY}
-                                  r={size/2 + 4}
-                                  color="white"
-                                />
-                                
-                                {/* Circle clipped image */}
-                                <SkiaImage
-                                  image={img}
-                                  x={position.x}
-                                  y={position.y}
-                                  width={size}
-                                  height={size}
-                                  fit="cover"
-                                  clip={{
-                                    rect: {
-                                      x: position.x,
-                                      y: position.y,
-                                      width: size,
-                                      height: size
-                                    },
-                                    rx: size/2,
-                                    ry: size/2
-                                  }}
-                                />
-                              </Group>
-                            );
-                          } else {
-                            // For other images, use default dimensions
-                            console.log(img, "Other Image 😂");
-                            return (
-                              <SkiaImage
-                                key={el.id}
-                                image={img}
-                                x={position.x}
-                                y={position.y}
-                                width={width - 40}
-                                height={width - 40}
-                                fit="fill"
-                              />
-                            );
-                          }
-                        }
-
-                        return null;
-                      })}
+                      {renderedElements}
                     </>
                   )}
                 </Canvas>
 
-                {/* Show loading indicator over canvas when frame is loading */}
-                {isFrameLoading && (
+                {(isFrameLoading || !anotherImage || !isAppActive) && (
                   <View style={styles.frameLoadingOverlay}>
                     <ActivityIndicator size="large" color={primaryColor} />
-                    <Text style={styles.loadingFrameText}>Loading frame...</Text>
+                    <Text style={styles.loadingFrameText}>
+                      {!isAppActive ? 'App Loading...' : 
+                       isFrameLoading ? 'Loading frame...' : 'Loading image...'}
+                    </Text>
                   </View>
                 )}
               </ScrollView>
             </View>
 
-            {/* Buttons Container - MOVED BELOW CANVAS */}
+            {/* Buttons Container */}
             <View style={styles.buttonsContainer}>
               <TouchableOpacity
                 style={styles.actionButton}
-                onPress={() => setFontSelectorVisible(true)}
+                onPress={toggleFontSelector}
                 activeOpacity={0.8}
+                disabled={isDownloading}
               >
                 <Feather name="type" size={24} color="white" />
                 <Text style={styles.buttonText}>Change Font</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
-                style={styles.actionButton}
+                style={[
+                  styles.actionButton,
+                  isDownloadDisabled && styles.disabledButton
+                ]}
                 onPress={handleDownload}
                 activeOpacity={0.8}
+                disabled={isDownloadDisabled}
               >
-                <Feather name="download" size={24} color="white" />
-                <Text style={styles.buttonText}>Save to Gallery</Text>
+                <Feather 
+                  name={isDownloading ? "loader" : "download"} 
+                  size={24} 
+                  color={isDownloadDisabled ? "#999" : "white"} 
+                />
+                <Text style={[
+                  styles.buttonText,
+                  isDownloadDisabled && styles.disabledButtonText
+                ]}>
+                  {isDownloading ? 'Saving...' : 
+                   !isCanvasReady ? 'Loading...' : 
+                   'Save to Gallery'}
+                </Text>
               </TouchableOpacity>
             </View>
 
-            {/* Render the font selection bottom sheet */}
-            {renderFontSelectionBottomSheet()}
+            {/* Canvas Status Indicator */}
+            {!isCanvasReady && !loading && (
+              <View style={styles.statusContainer}>
+                <Text style={styles.statusText}>
+                  Preparing image for download...
+                </Text>
+              </View>
+            )}
+
+            {fontSelectionModal}
 
             {/* Frames Selection Section */}
             {frames.length > 0 && (
@@ -1082,25 +1019,16 @@ const handleDownload = async () => {
                   showsHorizontalScrollIndicator={false}
                   style={styles.framesScrollView}
                   contentContainerStyle={styles.framesContentContainer}
+                  removeClippedSubviews={true}
                 >
                   {frames.map((frame, index) => (
-                    <TouchableOpacity
+                    <FrameItem
                       key={frame.$id}
-                      style={[
-                        styles.frameItem,
-                        selectedFrameIndex === index ? styles.selectedFrame : styles.normalFrame
-                      ]}
-                      onPress={() => selectFrame(index)}
-                    >
-                      <Image
-                        source={{ uri: frame.previewImage }}
-                        style={styles.frameImage}
-                        resizeMode="cover"
-                      />
-                      <View style={styles.frameDetails}>
-                        <Text style={styles.frameName}>{frame.name || `Frame ${index + 1}`}</Text>
-                      </View>
-                    </TouchableOpacity>
+                      frame={frame}
+                      index={index}
+                      isSelected={selectedFrameIndex === index}
+                      onSelect={selectFrame}
+                    />
                   ))}
                 </ScrollView>
               </View>
@@ -1110,7 +1038,7 @@ const handleDownload = async () => {
       </ScrollView>
     </View>
   );
-};
+});
 
 export default EditScreen;
 
@@ -1188,6 +1116,14 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginLeft: 8,
     fontSize: 15,
+  },
+  disabledButton: {
+    backgroundColor: '#ccc',
+    elevation: 0,
+    shadowOpacity: 0,
+  },
+  disabledButtonText: {
+    color: '#999',
   },
 
   framesSection: {
@@ -1339,5 +1275,25 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: primaryColor,
     fontWeight: '500',
+  },
+  retryButton: {
+    marginTop: 16,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    backgroundColor: primaryColor,
+    borderRadius: 8,
+  },
+  retryButtonText: {
+    color: 'white',
+    fontWeight: '600',
+  },
+  statusContainer: {
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  statusText: {
+    fontSize: 14,
+    color: '#666',
+    fontStyle: 'italic',
   },
 });
