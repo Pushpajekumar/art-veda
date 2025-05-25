@@ -538,14 +538,20 @@ const EditScreen = () => {
   const renderImageElement = useCallback((el: SkiaRenderable & { type: 'image' }) => {
     let imgSrc = el.src;
 
-    if (el.label === 'logo' && currentUser?.[0]?.logo) {
+    if (el.label === 'logo') {
+      if (!currentUser?.[0]?.logo) {
+        return null; // Skip rendering if user doesn't have a logo
+      }
       if (!imageSources.includes(currentUser[0].logo)) {
         setImageSources(prev => [...prev, currentUser[0].logo]);
       }
       imgSrc = currentUser[0].logo;
     }
 
-    if (el.label === 'userImage' && currentUser?.[0]?.profileImage) {
+    if (el.label === 'userImage') {
+      if (!currentUser?.[0]?.profileImage) {
+        return null; // Skip rendering if user doesn't have a profile image
+      }
       if (!imageSources.includes(currentUser[0].profileImage)) {
         setImageSources(prev => [...prev, currentUser[0].profileImage]);
       }
