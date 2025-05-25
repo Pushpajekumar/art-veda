@@ -84,11 +84,15 @@ const Login = () => {
       try {
         const fullPhoneNumber = `+91${phoneNumber}`;
 
-        const existingSession = await account.getSession("current");
-
-        if (existingSession) {
-          // If user is already logged in, log them out
-          await account.deleteSession(existingSession.$id);
+        try {
+          const existingSession = await account.getSession("current");
+          if (existingSession) {
+            // If user is already logged in, log them out
+            await account.deleteSession(existingSession.$id);
+          }
+        } catch (sessionError) {
+          // No existing session, continue with login
+          console.log("No existing session found");
         }
 
         const existingUserList = await database.listDocuments(

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useCallback, useMemo } from "react";
 import {
   View,
   Text,
@@ -8,39 +8,85 @@ import {
   FlatList,
   ActivityIndicator,
 } from "react-native";
-import { Ionicons } from "@expo/vector-icons"; // Make sure to install expo vector icons if you haven't
+import { Ionicons } from "@expo/vector-icons";
 import { database } from "@/context/app-write";
 import { Query, Models } from "react-native-appwrite";
 import { primaryColor } from "@/constant/contant";
 import { useRouter } from "expo-router";
 
+interface SearchResult extends Models.Document {
+  name: string;
+}
+
 const SearchScreen = () => {
   const [searchQuery, setSearchQuery] = useState("");
-  const [searchResults, setSearchResults] = useState<Models.Document[]>([]);
+  const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 
-  const handleSearch = async () => {
-    // Implement your search logic here
-    console.log("Searching for:", searchQuery);
+  const handleSearch = useCallback(async () => {
+    if (!searchQuery.trim()) return;
+
     setLoading(true);
     try {
       const result = await database.listDocuments(
         process.env.EXPO_PUBLIC_APPWRITE_DATABASE_ID!,
         process.env.EXPO_PUBLIC_APPWRITE_SUB_CATEGORY_COLLECTION_ID!,
-        [Query.search("name", searchQuery), Query.select(["$id", "name"])]
+        [
+          Query.search("name", searchQuery.trim()),
+          Query.select(["$id", "name"]),
+        ]
       );
 
-      console.log(result.documents);
-
-      // Cast the documents to the proper type
-      setSearchResults(result.documents);
+      setSearchResults(result.documents as SearchResult[]);
     } catch (error) {
       console.error("Error fetching search results:", error);
+      setSearchResults([]);
     } finally {
       setLoading(false);
     }
-  };
+  }, [searchQuery]);
+
+  const clearSearch = useCallback(() => {
+    setSearchQuery("");
+    setSearchResults([]);
+  }, []);
+
+  const navigateToResults = useCallback(
+    (item: SearchResult) => {
+      router.push({
+        pathname: "/view-all",
+        params: {
+          subCatId: item.$id,
+          subCatName: item.name,
+        },
+      });
+    },
+    [router]
+  );
+
+  const renderSearchResult = useCallback(
+    ({ item }: { item: SearchResult }) => (
+      <TouchableOpacity
+        style={styles.resultItem}
+        onPress={() => navigateToResults(item)}
+      >
+        <View style={styles.resultContent}>
+          <Text style={styles.resultTitle}>{item.name}</Text>
+        </View>
+        <Ionicons name="chevron-forward" size={20} color="#666" />
+      </TouchableOpacity>
+    ),
+    [navigateToResults]
+  );
+
+  const keyExtractor = useCallback((item: SearchResult) => item.$id, []);
+
+  const itemSeparator = useMemo(() => <View style={styles.separator} />, []);
+
+  const showClearButton = searchQuery.length > 0;
+  const hasResults = searchResults.length > 0;
+  const showNoResults = searchQuery && !hasResults && !loading;
 
   return (
     <View style={styles.container}>
@@ -60,56 +106,35 @@ const SearchScreen = () => {
           returnKeyType="search"
           onSubmitEditing={handleSearch}
         />
-        {searchQuery.length > 0 && (
-          <TouchableOpacity
-            onPress={() => setSearchQuery("")}
-            style={styles.clearButton}
-          >
+        {showClearButton && (
+          <TouchableOpacity onPress={clearSearch} style={styles.clearButton}>
             <Ionicons name="close-circle" size={20} color={primaryColor} />
           </TouchableOpacity>
         )}
       </View>
 
-      {/* Search results section */}
       {loading ? (
-        <View style={styles.loadingContainer}>
+        <View style={styles.centerContainer}>
           <ActivityIndicator size="large" color={primaryColor} />
-          <Text style={{ marginTop: 10 }}>Searching...</Text>
+          <Text style={styles.loadingText}>Searching...</Text>
         </View>
       ) : (
         <View style={styles.resultsContainer}>
-          {searchResults.length > 0 ? (
+          {hasResults ? (
             <>
               <Text style={styles.resultsHeader}>Search Results</Text>
               <FlatList
                 data={searchResults}
-                keyExtractor={(item: Models.Document) => item.$id}
-                renderItem={({ item }: { item: Models.Document }) => (
-                  <TouchableOpacity
-                    style={styles.resultItem}
-                    onPress={() => {
-                      router.push({
-                        pathname: "/view-all",
-                        params: {
-                          subCatId: item.$id,
-                          subCatName: item.name,
-                        },
-                      });
-                    }}
-                  >
-                    <View style={styles.resultContent}>
-                      <Text style={styles.resultTitle}>{item.name}</Text>
-                    </View>
-                    <Ionicons name="chevron-forward" size={20} color="#666" />
-                  </TouchableOpacity>
-                )}
-                ItemSeparatorComponent={() => <View style={styles.separator} />}
+                keyExtractor={keyExtractor}
+                renderItem={renderSearchResult}
+                ItemSeparatorComponent={() => itemSeparator}
                 contentContainerStyle={styles.flatListContent}
+                showsVerticalScrollIndicator={false}
               />
             </>
           ) : (
             <Text style={styles.noResultsText}>
-              {searchQuery ? "No results found" : "Start typing to search"}
+              {showNoResults ? "No results found" : "Start typing to search"}
             </Text>
           )}
         </View>
@@ -149,10 +174,13 @@ const styles = StyleSheet.create({
     flex: 1,
     width: "100%",
   },
-  loadingContainer: {
+  centerContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
+  },
+  loadingText: {
+    marginTop: 10,
   },
   resultsHeader: {
     fontSize: 18,
@@ -174,11 +202,6 @@ const styles = StyleSheet.create({
   resultTitle: {
     fontSize: 16,
     fontWeight: "500",
-  },
-  resultId: {
-    fontSize: 12,
-    color: "#777",
-    marginTop: 4,
   },
   separator: {
     height: 1,
