@@ -630,11 +630,12 @@ const EditScreen = () => {
       animationType="slide"
       onRequestClose={() => setFontSelectorVisible(false)}
     >
-      <TouchableOpacity
-        style={styles.modalOverlay}
-        activeOpacity={1}
-        onPress={() => setFontSelectorVisible(false)}
-      >
+      <View style={styles.modalOverlay}>
+        <TouchableOpacity
+          style={styles.modalBackdrop}
+          activeOpacity={1}
+          onPress={() => setFontSelectorVisible(false)}
+        />
         <View style={styles.bottomSheet}>
           <View style={styles.bottomSheetHandle} />
           <Text style={styles.bottomSheetTitle}>Select Font</Text>
@@ -649,6 +650,7 @@ const EditScreen = () => {
                 setSelectedFontFamily('montserrat');
                 setFontSelectorVisible(false);
               }}
+              activeOpacity={0.7}
             >
               <Text style={styles.fontLabel}>Montserrat</Text>
               <Text style={[styles.fontPreview, { fontFamily: 'Montserrat' }]}>
@@ -665,6 +667,7 @@ const EditScreen = () => {
                 setSelectedFontFamily('roboto');
                 setFontSelectorVisible(false);
               }}
+              activeOpacity={0.7}
             >
               <Text style={styles.fontLabel}>Roboto</Text>
               <Text style={[styles.fontPreview, { fontFamily: 'Roboto' }]}>
@@ -673,7 +676,7 @@ const EditScreen = () => {
             </TouchableOpacity>
           </View>
         </View>
-      </TouchableOpacity>
+      </View>
     </Modal>
   );
 
@@ -944,6 +947,9 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
     backgroundColor: 'rgba(0,0,0,0.4)',
   },
+  modalBackdrop: {
+    flex: 1,
+  },
   bottomSheet: {
     backgroundColor: 'white',
     borderTopLeftRadius: 20,
@@ -955,6 +961,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: -2 },
     shadowOpacity: 0.2,
     shadowRadius: 5,
+    maxHeight: '50%',
   },
   bottomSheetHandle: {
     width: 40,
@@ -978,11 +985,12 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingVertical: 15,
-    paddingHorizontal: 10,
+    paddingHorizontal: 15,
     borderRadius: 8,
     marginBottom: 10,
     borderWidth: 1,
     borderColor: '#eee',
+    minHeight: 60,
   },
   selectedFontOption: {
     borderColor: primaryColor,
