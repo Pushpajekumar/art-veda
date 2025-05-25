@@ -11,9 +11,10 @@ import {
   ActivityIndicator,
   ToastAndroid,
   Platform,
+  BackHandler,
 } from "react-native";
 import React, { useEffect, useState, useCallback, useRef, useMemo } from "react";
-import { useLocalSearchParams } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { account, database } from "@/context/app-write";
 import { ID, Query } from "react-native-appwrite";
 import {
@@ -118,6 +119,7 @@ const useFonts = () => {
 const EditScreen = () => {
   const { postId: initialPostId } = useLocalSearchParams();
   const [currentPostId] = useState<string>(initialPostId as string);
+  const router = useRouter();
   
   // State management
   const [post, setPost] = useState<any>(null);
@@ -671,6 +673,40 @@ const EditScreen = () => {
     </Modal>
   );
 
+  // Handle back button
+  useEffect(() => {
+    const backAction = () => {
+      if (isDownloading) {
+        Alert.alert(
+          'Download in Progress',
+          'Please wait for the download to complete before going back.',
+          [{ text: 'OK', style: 'default' }]
+        );
+        return true; // Prevent back action
+      }
+      
+      // Allow normal back navigation
+      router.back();
+      return true;
+    };
+
+    const backHandler = BackHandler.addEventListener('hardwareBackPress', backAction);
+
+    return () => {
+      backHandler.remove();
+    };
+  }, [isDownloading, router]);
+
+  // Cleanup function when component unmounts
+  useEffect(() => {
+    return () => {
+      // Cleanup any ongoing operations
+      setIsDownloading(false);
+      setIsFrameLoading(false);
+      setIsCanvasReady(false);
+    };
+  }, []);
+
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
@@ -684,12 +720,29 @@ const EditScreen = () => {
     return (
       <View style={styles.errorContainer}>
         <Text style={styles.errorText}>Error loading post</Text>
+        <TouchableOpacity 
+          style={styles.retryButton} 
+          onPress={() => router.back()}
+        >
+          <Text style={styles.retryButtonText}>Go Back</Text>
+        </TouchableOpacity>
       </View>
     );
   }
 
   return (
     <View style={styles.safeArea}>
+      <View style={styles.headerContainer}>
+        <TouchableOpacity 
+          style={styles.backButton} 
+          onPress={() => router.back()}
+          disabled={isDownloading}
+        >
+          <Feather name="arrow-left" size={24} color={primaryColor} />
+          <Text style={styles.backButtonText}>Back</Text>
+        </TouchableOpacity>
+      </View>
+
       <ScrollView style={styles.scrollView}>
         <View style={styles.container}>
           <View style={styles.previewContainer}>
@@ -824,6 +877,28 @@ const styles = StyleSheet.create({
   },
   scrollView: {
     flex: 1,
+  },
+  headerContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+  },
+  backButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    backgroundColor: '#f5f5f5',
+  },
+  backButtonText: {
+    marginLeft: 8,
+    fontSize: 16,
+    color: primaryColor,
+    fontWeight: '500',
   },
   loadingContainer: {
     flex: 1,
@@ -1005,6 +1080,18 @@ const styles = StyleSheet.create({
     marginTop: 10,
     fontSize: 14,
     color: primaryColor,
+    fontWeight: '500',
+  },
+  retryButton: {
+    backgroundColor: primaryColor,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 5,
+    marginTop: 20,
+  },
+  retryButtonText: {
+    color: 'white',
+    fontSize: 16,
     fontWeight: '500',
   },
 });
