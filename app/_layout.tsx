@@ -48,22 +48,22 @@ export default function RootLayout() {
   });
 
   // Add app state persistence with better handling
-  useEffect(() => {
-    const handleAppStateChange = (nextAppState: string) => {
-      console.log('Root layout - App state changed to:', nextAppState);
+  // useEffect(() => {
+  //   const handleAppStateChange = (nextAppState: string) => {
+  //     console.log('Root layout - App state changed to:', nextAppState);
       
-      // Prevent automatic reloading that might cause white screens
-      if (nextAppState === 'active') {
-        // Small delay to ensure proper rehydration
-        setTimeout(() => {
-          console.log('App fully active, ready for interactions');
-        }, 100);
-      }
-    };
+  //     // Prevent automatic reloading that might cause white screens
+  //     if (nextAppState === 'active') {
+  //       // Small delay to ensure proper rehydration
+  //       setTimeout(() => {
+  //         console.log('App fully active, ready for interactions');
+  //       }, 100);
+  //     }
+  //   };
 
-    const subscription = AppState.addEventListener('change', handleAppStateChange);
-    return () => subscription?.remove();
-  }, []);
+  //   const subscription = AppState.addEventListener('change', handleAppStateChange);
+  //   return () => subscription?.remove();
+  // }, []);
 
   useEffect(() => {
     if (error) {

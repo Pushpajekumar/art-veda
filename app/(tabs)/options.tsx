@@ -17,12 +17,13 @@ import { useRouter } from "expo-router";
 import { account, database } from "@/context/app-write";
 import { Query } from "react-native-appwrite";
 
-const shareAbleLink = 'https://play.google.com/apps/test/com.evolcrm.artveda'
+const shareAbleLink = 'https://play.google.com/store/apps/details?id=com.evolcrm.artveda'
 const privacyPolicyLink = 'https://docs.google.com/document/d/1SVfjgbdCI6ZfXyqGefDGJ6i4eUF9Nr2WlyQbN8uUfp4/edit?usp=sharing'
 const termsAndConditionLink = 'https://docs.google.com/document/d/1IekV0wKw4EJOM5lgQR8KPajbN-dUcpiDZDLT72YWoOU/edit?usp=sharing'
 const faqsLink = 'https://docs.google.com/document/d/15EKnE8FwOp2CDknEkkEvXcBM29XG1hF73fpK-jHuh_o/edit?usp=sharing'
 const contactUsLink = 'https://docs.google.com/document/d/1xpYw3TNPnYjlaekH7SvR0HyWEhf9dLWztUs4WAOUyAI/edit?usp=sharing'
-const callSupportLink = 'tel:+919999999999' // Replace with your support number
+const callSupportLink = 'tel:+918218551994' // Replace with your support number
+const chatBotLink = 'https://tawk.to/chat/683346511a9645190cc3492b/1is44lcnb' // Replace with your chatbot link
  
 
  const Options = () => {
@@ -152,8 +153,7 @@ const shareApp = async () => {
             <TouchableOpacity 
             style={styles.optionItem} 
             onPress={() => {
-              // Open the contact us link
-              Linking.openURL(contactUsLink);
+              Linking.openURL(chatBotLink);
             }}>
             <View style={styles.optionIconText}>
               <FontAwesome name="comment" size={20} color="#333" />
@@ -238,7 +238,7 @@ const shareApp = async () => {
               <TouchableOpacity onPress={() => Linking.openURL('https://youtube.com/@art_veda?si=GZtV13cMBAF91i9d')}>
               <FontAwesome name="youtube-play" size={24} color="#FF0000" />
               </TouchableOpacity>
-              <TouchableOpacity onPress={() => Linking.openURL('https://wa.me/8218551994')}>
+              <TouchableOpacity onPress={() => Linking.openURL('https://wa.me/+918218551994')}>
               <FontAwesome name="whatsapp" size={24} color="#25D366" />
               </TouchableOpacity>
             </View>
