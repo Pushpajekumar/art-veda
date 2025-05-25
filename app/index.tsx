@@ -1,8 +1,8 @@
 import { View, Text } from "../context/ThemeContext";
-import { Dimensions, Image, StyleSheet, Animated } from "react-native";
-import { TYPOGRAPHY, FONT_SIZE, FONT_WEIGHT } from "../utils/fonts";
+import { Dimensions, StyleSheet, Animated } from "react-native";
+import { TYPOGRAPHY, FONT_WEIGHT } from "../utils/fonts";
 import { useEffect, useRef, useState } from "react";
-import { Redirect, router } from "expo-router";
+import { router } from "expo-router";
 import { account } from "@/context/app-write";
 import * as Network from "expo-network";
 
@@ -11,6 +11,7 @@ export default function Index() {
   const scaleAnim = useRef(new Animated.Value(1)).current;
 
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     // Start the scale animation
@@ -19,21 +20,22 @@ export default function Index() {
       duration: 1000,
       useNativeDriver: true,
     }).start();
+  }, []);
 
-    // Set timeout to navigate after 2 second
-    const timeout = setTimeout(() => {
-      if (isAuthenticated) {
-        router.replace("/(tabs)");
-      } else {
-        router.replace("/auth/login");
-      }
-    }, 1500);
-    // Clean up function
-    return () => {
-      clearTimeout(timeout);
-      scaleAnim.stopAnimation();
-    };
-  }, [isAuthenticated]);
+  // Navigation effect - only runs after loading is complete
+  useEffect(() => {
+    if (!isLoading) {
+      const timeout = setTimeout(() => {
+        if (isAuthenticated) {
+          router.replace("/(tabs)");
+        } else {
+          router.replace("/auth/login");
+        }
+      }, 500);
+      
+      return () => clearTimeout(timeout);
+    }
+  }, [isAuthenticated, isLoading]);
 
   // Check if user is authenticated
   useEffect(() => {
@@ -46,8 +48,14 @@ export default function Index() {
           return;
         }
 
-        // Check if the user is authenticated
-        const session = await account.getSession("current");
+        // Check if the user is authenticated with longer timeout
+        const session = await Promise.race([
+          account.getSession("current"),
+          new Promise((_, reject) => 
+            setTimeout(() => reject(new Error("Timeout")), 5000)
+          )
+        ]);
+        console.log(session, "session 🟢");
         if (session) {
           setIsAuthenticated(true);
         } else {
@@ -55,6 +63,9 @@ export default function Index() {
         }
       } catch (error) {
         console.error("Error fetching user:", error);
+        setIsAuthenticated(false);
+      } finally {
+        setIsLoading(false);
       }
     };
 
