@@ -5,101 +5,81 @@ import {
   Text,
   View,
 } from "react-native";
-import React, { useEffect } from "react";
+import React, { useEffect, useState, useCallback, useMemo } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useFocusEffect } from "@react-navigation/native";
 import DownloadCard from "@/component/download-card";
 import { account, database } from "@/context/app-write";
 import { Query } from "react-native-appwrite";
-import { useRouter } from "expo-router";
 
-const downloads = () => {
-  const [downloads, setDownloads] = React.useState<
-    {
-      id: string;
-      name: any;
-      createdAt: string;
-      previewImage: any;
-    }[]
-  >([]);
-  const [loading, setLoading] = React.useState(true);
+interface Download {
+  id: string;
+  name: string;
+  createdAt: string;
+  previewImage: string;
+}
 
-  const router = useRouter();
+const Downloads = () => {
+  const [downloads, setDownloads] = useState<Download[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const fetchDownloads = async () => {
-      // router.reload();
-      try {
-        const currentUser = await account.get();
+  const fetchDownloads = useCallback(async () => {
+    try {
+      setLoading(true);
+      const currentUser = await account.get();
+      
+      if (!currentUser) return;
 
-        console.log(currentUser, "currentUser 🟢");
+      const userDetails = await database.listDocuments(
+        "6815de2b0004b53475ec",
+        "6815e0be001731ca8b1b",
+        [Query.equal("userId", currentUser.$id)]
+      );
 
-        if (currentUser) {
-          const userDetails = await database.listDocuments(
-            "6815de2b0004b53475ec",
-            "6815e0be001731ca8b1b",
-            [Query.equal("userId", currentUser.$id)]
-          );
+      if (userDetails.documents.length === 0) return;
 
-          console.log(userDetails, "userDetails 🟡");
+      const userDoc = userDetails.documents[0];
+      const downloadsResult = await database.listDocuments(
+        "6815de2b0004b53475ec",
+        "681a1b3c0020eb66b3b1",
+        [Query.equal("userId", userDoc.$id)]
+      );
 
-          if (userDetails.documents.length > 0) {
-            const userDoc = userDetails.documents[0];
-            const downloadsResult = await database.listDocuments(
-              "6815de2b0004b53475ec",
-              "681a1b3c0020eb66b3b1",
-              [Query.equal("userId", userDoc.$id)]
-            );
+      const extractedDownloads = downloadsResult.documents.flatMap((doc) => {
+        const posts = Array.isArray(doc.posts) ? doc.posts : [doc.posts];
+        
+        return posts
+          .filter(post => post && typeof post === "object")
+          .map(post => ({
+            id: post.id || doc.$id,
+            name: post.name || "",
+            createdAt: doc.$createdAt,
+            previewImage: post.previewImage || "",
+          }));
+      });
 
-            console.log(downloadsResult, "downloadsResult 🔴");
-
-            if (downloadsResult.documents.length > 0) {
-              const extractedDownloads = downloadsResult.documents.flatMap(
-                (doc) => {
-                  // Check if posts is an array
-                  if (Array.isArray(doc.posts)) {
-                    return doc.posts.map((post) => ({
-                      id: post.id || doc.$id,
-                      name: post.name,
-                      createdAt: doc.$createdAt, // Use document's createdAt
-                      previewImage: post.previewImage,
-                    }));
-                  }
-                  // If posts is a single object
-                  else if (doc.posts && typeof doc.posts === "object") {
-                    return [
-                      {
-                        id: doc.posts.id || doc.$id,
-                        name: doc.posts.name,
-                        createdAt: doc.$createdAt, // Use document's createdAt
-                        previewImage: doc.posts.previewImage,
-                      },
-                    ];
-                  }
-                  return [];
-                }
-              );
-              setDownloads(extractedDownloads);
-            }
-          }
-          console.log(userDetails.documents, "userDetails.documents 🟡");
-        }
-      } catch (error) {
-        console.error("Error fetching downloads:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchDownloads();
-    console.log("Downloads screen mounted");
+      setDownloads(extractedDownloads);
+    } catch (error) {
+      console.error("Error fetching downloads:", error);
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
-  console.log(downloads, "downloads 🟢");
+  useEffect(() => {
+    fetchDownloads();
+  }, [fetchDownloads]);
 
-  const renderContent = () => {
+  useFocusEffect(
+    useCallback(() => {
+      fetchDownloads();
+    }, [fetchDownloads])
+  );
+
+  const renderContent = useMemo(() => {
     if (loading) {
       return (
-        <View style={styles.loadingContainer}>
+        <View style={styles.centeredContainer}>
           <ActivityIndicator size="large" color="#0000ff" />
           <Text style={styles.loadingText}>Loading downloads...</Text>
         </View>
@@ -108,14 +88,14 @@ const downloads = () => {
 
     if (downloads.length === 0) {
       return (
-        <View style={styles.emptyContainer}>
+        <View style={styles.centeredContainer}>
           <Text style={styles.emptyText}>No downloads available</Text>
         </View>
       );
     }
 
     return (
-      <ScrollView>
+      <ScrollView showsVerticalScrollIndicator={false}>
         {downloads.map((download) => (
           <DownloadCard
             key={download.id}
@@ -126,23 +106,23 @@ const downloads = () => {
         ))}
       </ScrollView>
     );
-  };
+  }, [loading, downloads]);
 
   return (
     <SafeAreaView style={styles.container} edges={["left", "right", "bottom"]}>
-      {renderContent()}
+      {renderContent}
     </SafeAreaView>
   );
 };
 
-export default downloads;
+export default Downloads;
 
-export const styles = StyleSheet.create({
+const styles = StyleSheet.create({
   container: {
     flex: 1,
     paddingHorizontal: 10,
   },
-  loadingContainer: {
+  centeredContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
@@ -150,11 +130,6 @@ export const styles = StyleSheet.create({
   loadingText: {
     marginTop: 10,
     fontSize: 16,
-  },
-  emptyContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
   },
   emptyText: {
     fontSize: 18,

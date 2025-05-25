@@ -8,7 +8,7 @@ import {
   ActivityIndicator,
   Alert,
 } from "react-native";
-import React from "react";
+import React, { useState, useCallback, useMemo } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import { primary_textColor, primaryColor } from "@/constant/contant";
@@ -19,77 +19,121 @@ import { Query } from "react-native-appwrite";
 
 const Login = () => {
   const { width, height } = Dimensions.get("window");
-  const [phoneNumber, setPhoneNumber] = React.useState("");
-  const [otp, setOtp] = React.useState("");
-  const [showOtpField, setShowOtpField] = React.useState(false);
-  const [userId, setUserId] = React.useState("");
-  const [isLoading, setIsLoading] = React.useState(false);
-  const [error, setError] = React.useState("");
+  const [phoneNumber, setPhoneNumber] = useState("");
+  const [otp, setOtp] = useState("");
+  const [showOtpField, setShowOtpField] = useState(false);
+  const [userId, setUserId] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState("");
 
   const router = useRouter();
 
+  // Memoized styles that depend on window dimensions
+  const dynamicStyles = useMemo(
+    () => ({
+      gradientContainer: {
+        borderRadius: width * 0.11,
+        width: width * 0.22,
+        height: height * 0.1,
+        overflow: "hidden" as const,
+        position: "absolute" as const,
+        top: 0,
+        right: 0,
+      },
+      contentContainer: {
+        padding: 20,
+        marginTop: (height - 600) / 2,
+      },
+    }),
+    [width, height]
+  );
+
+  // Validate phone number
+  const isValidPhoneNumber = useCallback(() => {
+    return phoneNumber && phoneNumber.length === 10;
+  }, [phoneNumber]);
+
+  // Handle phone number input
+  const handlePhoneChange = useCallback(
+    (e: { nativeEvent: { text: string } }) => {
+      setPhoneNumber(e.nativeEvent.text);
+    },
+    []
+  );
+
+  // Handle OTP input
+  const handleOtpChange = useCallback(
+    (e: { nativeEvent: { text: string } }) => {
+      setOtp(e.nativeEvent.text);
+    },
+    []
+  );
+
   // Shared OTP request function
-  const requestOTP = async (isResend = false) => {
-    setIsLoading(true);
-    setError("");
+  const requestOTP = useCallback(
+    async (isResend = false) => {
+      setIsLoading(true);
+      setError("");
 
-    if (!phoneNumber || phoneNumber.length !== 10) {
-      setError("Please enter a valid 10-digit phone number");
-      setIsLoading(false);
-      return;
-    }
-
-    try {
-      const existingUserList = await database.listDocuments(
-        "6815de2b0004b53475ec",
-        "6815e0be001731ca8b1b",
-        [Query.equal("phone", `+91${phoneNumber}`)]
-      );
-
-      const existingUser =
-        existingUserList.documents.length > 0
-          ? existingUserList.documents[0]
-          : null;
-
-      console.log(existingUser, "existingUser 🟢");
-
-      if (!existingUser) {
-        setError("User does not exist. Please register first.");
+      if (!isValidPhoneNumber()) {
+        setError("Please enter a valid 10-digit phone number");
         setIsLoading(false);
         return;
       }
 
-      const token = await account.createPhoneToken(
-        ID.unique(),
-        `+91${phoneNumber}`
-      );
-      setUserId(token.userId);
-      setShowOtpField(true);
-      Alert.alert(
-        isResend ? "OTP Resent" : "OTP Sent",
-        `An OTP has been ${isResend ? "resent" : "sent"} to your phone number`
-      );
-    } catch (error) {
-      console.error(
-        `Error ${isResend ? "resending" : "requesting"} OTP:`,
-        error
-      );
-      setError(
-        `Failed to ${isResend ? "resend" : "send"} OTP. Please try again.`
-      );
-    } finally {
-      setIsLoading(false);
-    }
-  };
+      try {
+        const fullPhoneNumber = `+91${phoneNumber}`;
 
-  // Step 1: Request OTP
-  const handleRequestOTP = () => requestOTP(false);
+        try {
+          const existingSession = await account.getSession("current");
+          if (existingSession) {
+            // If user is already logged in, log them out
+            await account.deleteSession(existingSession.$id);
+          }
+        } catch (sessionError) {
+          // No existing session, continue with login
+          console.log("No existing session found");
+        }
 
-  // Handle resend OTP
-  const handleResendOTP = () => requestOTP(true);
+        const existingUserList = await database.listDocuments(
+          "6815de2b0004b53475ec",
+          "6815e0be001731ca8b1b",
+          [Query.equal("phone", fullPhoneNumber)]
+        );
 
-  // Step 2: Verify OTP and Login
-  const handleLogin = async () => {
+        if (!existingUserList.documents.length) {
+          setError("User does not exist. Please register first.");
+          setIsLoading(false);
+          return;
+        }
+
+        const token = await account.createPhoneToken(
+          ID.unique(),
+          fullPhoneNumber
+        );
+        setUserId(token.userId);
+        setShowOtpField(true);
+        Alert.alert(
+          isResend ? "OTP Resent" : "OTP Sent",
+          `An OTP has been ${isResend ? "resent" : "sent"} to your phone number`
+        );
+      } catch (error) {
+        console.error(
+          `Error ${isResend ? "resending" : "requesting"} OTP:`,
+          error
+        );
+        setError(
+          `Failed to ${isResend ? "resend" : "send"} OTP. Please try again.`
+        );
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [phoneNumber, isValidPhoneNumber]
+  );
+
+  // Handle login with OTP
+  const handleLogin = useCallback(async () => {
     setIsLoading(true);
     setError("");
 
@@ -100,47 +144,31 @@ const Login = () => {
     }
 
     try {
-      // Create session with the userId and OTP
-      const session = await account.createSession(userId, otp);
-      console.log("Login successful:", session);
-      setIsLoading(false);
+      await account.createSession(userId, otp);
       router.push("/(tabs)");
     } catch (error) {
       console.error("Login error:", error);
       setError("Invalid OTP. Please try again.");
+    } finally {
       setIsLoading(false);
     }
-  };
+  }, [otp, userId, router]);
+
+  const navigateToSignup = useCallback(() => {
+    router.push("/auth/signup");
+  }, [router]);
 
   return (
     <SafeAreaView style={styles.container}>
       <View style={[styles.header_container, { position: "relative" }]}>
         <LinearGradient
           colors={["#bedbff", "#0099FF"]}
-          style={{
-            borderRadius: width * 0.11,
-            width: width * 0.22,
-            height: height * 0.1,
-            overflow: "hidden",
-            position: "absolute",
-            top: 0,
-            right: 0,
-          }}
+          style={dynamicStyles.gradientContainer}
           start={{ x: 1, y: 0 }}
           end={{ x: 1, y: 0.7 }}
           locations={[0, 0.9, 1]}
         >
-          <View
-            style={{
-              ...StyleSheet.absoluteFillObject,
-              backgroundColor: "rgba(255, 255, 255, 0.5)",
-              borderRadius: width * 0.11,
-              shadowColor: "#000",
-              shadowOffset: { width: 0, height: 0 },
-              shadowOpacity: 0.5,
-              shadowRadius: 10,
-            }}
-          />
+          <View style={styles.gradientOverlay} />
         </LinearGradient>
         <View>
           <Text style={styles.text}>Login to your Account</Text>
@@ -149,23 +177,21 @@ const Login = () => {
         </View>
       </View>
 
-      <View
-        style={{
-          padding: 20,
-          marginTop: (height - 600) / 2,
-        }}
-      >
+      <View style={dynamicStyles.contentContainer}>
         <View>
           <Text style={styles.inputLabel}>Enter your mobile number</Text>
-          <TextInput
-            onChange={(e) => setPhoneNumber(e.nativeEvent.text)}
-            value={phoneNumber}
-            placeholder="Enter your mobile number"
-            keyboardType="phone-pad"
-            maxLength={10}
-            style={styles.input}
-            editable={!showOtpField || !isLoading}
-          />
+          <View style={styles.phoneInputContainer}>
+            <Text style={styles.countryCode}>+91</Text>
+            <TextInput
+              onChange={handlePhoneChange}
+              value={phoneNumber}
+              placeholder="Enter your mobile number"
+              keyboardType="phone-pad"
+              maxLength={10}
+              style={[styles.input, styles.phoneInput]}
+              editable={!showOtpField || !isLoading}
+            />
+          </View>
           {error ? <Text style={styles.errorText}>{error}</Text> : null}
         </View>
 
@@ -173,7 +199,7 @@ const Login = () => {
           <View style={styles.requestOtpContainer}>
             <TouchableOpacity
               style={styles.requestOtpButton}
-              onPress={handleRequestOTP}
+              onPress={() => requestOTP(false)}
               disabled={isLoading}
             >
               {isLoading ? (
@@ -185,26 +211,26 @@ const Login = () => {
           </View>
         ) : (
           <>
-            <View style={{ marginTop: 20 }}>
+            <View style={styles.otpContainer}>
               <Text style={styles.inputLabel}>
                 Enter OTP received on your phone
               </Text>
               <TextInput
                 placeholder="Enter OTP"
                 value={otp}
-                onChange={(e) => setOtp(e.nativeEvent.text)}
+                onChange={handleOtpChange}
                 secureTextEntry={false}
                 maxLength={6}
                 keyboardType="numeric"
-                style={[styles.input, { marginBottom: 10, letterSpacing: 5 }]}
+                style={[styles.input, styles.otpInput]}
               />
             </View>
 
-            <Text style={styles.resendOtp} onPress={handleResendOTP}>
+            <Text style={styles.resendOtp} onPress={() => requestOTP(true)}>
               Didn't receive OTP? Resend
             </Text>
 
-            <View style={{ alignItems: "center" }}>
+            <View style={styles.loginButtonContainer}>
               <TouchableOpacity
                 style={styles.loginButton}
                 onPress={handleLogin}
@@ -222,10 +248,7 @@ const Login = () => {
 
         <Text style={styles.newUserText}>
           New User?
-          <Text
-            style={styles.signupText}
-            onPress={() => router.push("/auth/signup")}
-          >
+          <Text style={styles.signupText} onPress={navigateToSignup}>
             {" "}
             Sign Up
           </Text>
@@ -237,7 +260,7 @@ const Login = () => {
 
 export default Login;
 
-export const styles = StyleSheet.create({
+const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#fff",
@@ -249,6 +272,15 @@ export const styles = StyleSheet.create({
     justifyContent: "center",
     backgroundColor: "rgba(217, 217, 217, 0.4)",
     paddingLeft: 20,
+  },
+  gradientOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(255, 255, 255, 0.5)",
+    borderRadius: 11,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.5,
+    shadowRadius: 10,
   },
   text: {
     ...TYPOGRAPHY.body,
@@ -278,9 +310,19 @@ export const styles = StyleSheet.create({
     padding: 15,
     marginBottom: 10,
   },
+  otpContainer: {
+    marginTop: 20,
+  },
+  otpInput: {
+    marginBottom: 10,
+    letterSpacing: 5,
+  },
   requestOtpContainer: {
     alignItems: "center",
     marginTop: 20,
+  },
+  loginButtonContainer: {
+    alignItems: "center",
   },
   requestOtpButton: {
     backgroundColor: primaryColor,
@@ -319,5 +361,24 @@ export const styles = StyleSheet.create({
   signupText: {
     fontFamily: FONT_WEIGHT.semiBold,
     color: primaryColor,
+  },
+  phoneInputContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "rgba(217, 217, 217, 0.4)",
+    borderRadius: 5,
+    marginBottom: 10,
+  },
+  countryCode: {
+    paddingLeft: 15,
+    paddingRight: 10,
+    ...TYPOGRAPHY.caption,
+    fontFamily: FONT_WEIGHT.medium,
+    color: "grey",
+  },
+  phoneInput: {
+    flex: 1,
+    backgroundColor: "transparent",
+    marginBottom: 0,
   },
 });

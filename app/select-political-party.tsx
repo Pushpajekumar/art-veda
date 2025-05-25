@@ -7,7 +7,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
 } from "react-native";
-import React, { useState, useEffect, useCallback, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { FONT_WEIGHT, TYPOGRAPHY } from "@/utils/fonts";
 import Entypo from "@expo/vector-icons/Entypo";
@@ -16,7 +16,6 @@ import PoliticalPartyCard from "@/component/political-party-card";
 import { router, useLocalSearchParams } from "expo-router";
 import { database } from "@/context/app-write";
 
-// Define the structure we need for our UI components
 type PoliticalParty = {
   id: string;
   name: string;
@@ -39,21 +38,18 @@ const PoliticalPartyItem = React.memo(
   )
 );
 
-const selectpoliticalparty = () => {
-  const { userId } = useLocalSearchParams();
+const SelectPoliticalParty = () => {
+  const params = useLocalSearchParams();
+  const userId = Array.isArray(params.userId) ? params.userId[0] : params.userId as string;
 
-  const [politicalParties, setPoliticalParties] = useState<PoliticalParty[]>(
-    []
-  );
+  const [politicalParties, setPoliticalParties] = useState<PoliticalParty[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(true);
 
-  // Memoized filtered parties to avoid unnecessary re-calculations
+  // Memoized filtered parties for better performance
   const filteredParties = useMemo(() => {
-    if (searchQuery.trim() === "") {
-      return politicalParties;
-    }
-
+    if (searchQuery.trim() === "") return politicalParties;
+    
     const query = searchQuery.toLowerCase();
     return politicalParties.filter(
       (party) =>
@@ -64,7 +60,6 @@ const selectpoliticalparty = () => {
 
   useEffect(() => {
     const fetchPoliticalParties = async () => {
-      setLoading(true);
       try {
         const response = await database.getDocument(
           process.env.EXPO_PUBLIC_APPWRITE_DATABASE_ID!,
@@ -72,17 +67,13 @@ const selectpoliticalparty = () => {
           "682da2c7003407a61553"
         );
 
-        // Map the response data to the format our UI expects
-        const mappedData: PoliticalParty[] = response.subCategory.map(
-          (party: any) => ({
-            id: party.$id,
-            name: party.name,
-            shortName: party.name, // Use the full name if shortName doesn't exist
-            logo: party.logoUrl,
-          })
-        );
+        const mappedData: PoliticalParty[] = response.subCategory.map((party: any) => ({
+          id: party.$id,
+          name: party.name,
+          shortName: party.name,
+          logo: party.logoUrl,
+        }));
 
-        console.log("Political parties fetched successfully:", mappedData);
         setPoliticalParties(mappedData);
       } catch (error) {
         console.error("Error fetching political parties:", error);
@@ -94,64 +85,58 @@ const selectpoliticalparty = () => {
     fetchPoliticalParties();
   }, []);
 
-  // Memoized handlers to prevent unnecessary re-renders
-  const handleSkip = useCallback(() => {
+  const navigateToTabs = useCallback(() => {
     router.replace("/(tabs)");
   }, []);
 
-  const handlePartySelect = useCallback(
-    async (party: PoliticalParty) => {
-      try {
-        await database.updateDocument(
-          process.env.EXPO_PUBLIC_APPWRITE_DATABASE_ID!,
-          process.env.EXPO_PUBLIC_APPWRITE_USER_COLLECTION_ID!,
-          userId.toString(),
-          {
-            politicalParty: party.id,
-          }
-        );
+  const handlePartySelect = useCallback(async (party: PoliticalParty) => {
+    setLoading(true);
+    try {
+      await database.updateDocument(
+        process.env.EXPO_PUBLIC_APPWRITE_DATABASE_ID!,
+        "6815e0be001731ca8b1b",
+        userId,
+        { politicalParty: party.id }
+      );
+      navigateToTabs();
+    } catch (error) {
+      console.error("Error selecting party:", error);
+    } finally {
+      setLoading(false);
+    }
+  }, [userId, navigateToTabs]);
 
-        console.log("Selected party:", party);
-        router.replace("/auth/personal-details");
-      } catch (error) {
-        console.error("Error selecting party:", error);
-      }
-    },
-    [userId]
-  );
+  const renderPartyItem = useCallback(({ item }: { item: PoliticalParty }) => (
+    <TouchableOpacity onPress={() => handlePartySelect(item)}>
+      <PoliticalPartyCard party={item} />
+    </TouchableOpacity>
+  ), [handlePartySelect]);
 
-  // Memoized search handler with debouncing effect
-  const handleSearchChange = useCallback((text: string) => {
-    setSearchQuery(text);
-  }, []);
-
-  // Memoized render item function
-  const renderItem = useCallback(
-    ({ item }: { item: PoliticalParty }) => (
-      <PoliticalPartyItem item={item} onPress={handlePartySelect} />
-    ),
-    [handlePartySelect]
-  );
-
-  // Memoized key extractor
   const keyExtractor = useCallback((item: PoliticalParty) => item.id, []);
 
-  // Memoized empty component
-  const ListEmptyComponent = useMemo(
-    () => (
-      <View style={styles.emptyContainer}>
-        <Text style={styles.emptyText}>No political parties found</Text>
-      </View>
-    ),
-    []
-  );
+  const EmptyListComponent = useMemo(() => (
+    <View style={styles.emptyContainer}>
+      <Text style={styles.emptyText}>No political parties found</Text>
+    </View>
+  ), []);
+
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#4A6572" />
+          <Text style={styles.loadingText}>Loading political parties...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.header_container}>
+      <View style={styles.headerContainer}>
         <View style={styles.headerTitleRow}>
           <Text style={styles.headerTitle}>Select Your Political Party</Text>
-          <TouchableOpacity style={styles.skipButton} onPress={handleSkip}>
+          <TouchableOpacity style={styles.skipButton} onPress={navigateToTabs}>
             <Text style={styles.skipText}>Skip</Text>
             <Entypo name="chevron-small-right" size={24} color="black" />
           </TouchableOpacity>
@@ -163,8 +148,8 @@ const selectpoliticalparty = () => {
           <TextInput
             placeholder="Search political parties..."
             value={searchQuery}
-            onChangeText={handleSearchChange}
-            style={styles.search_input}
+            onChangeText={setSearchQuery}
+            style={styles.searchInput}
             placeholderTextColor="#aaa"
             autoCapitalize="none"
             autoCorrect={false}
@@ -173,42 +158,26 @@ const selectpoliticalparty = () => {
         </View>
       </View>
 
-      {loading ? (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#4A6572" />
-          <Text style={styles.loadingText}>Loading political parties...</Text>
-        </View>
-      ) : (
-        <FlatList
-          data={filteredParties}
-          keyExtractor={keyExtractor}
-          renderItem={renderItem}
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.listContainer}
-          ListEmptyComponent={ListEmptyComponent}
-          removeClippedSubviews={true}
-          maxToRenderPerBatch={10}
-          windowSize={10}
-          initialNumToRender={10}
-          getItemLayout={(data, index) => ({
-            length: 80, // Approximate height of each item
-            offset: 80 * index,
-            index,
-          })}
-        />
-      )}
+      <FlatList
+        data={filteredParties}
+        keyExtractor={keyExtractor}
+        renderItem={renderPartyItem}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.listContainer}
+        ListEmptyComponent={EmptyListComponent}
+      />
     </SafeAreaView>
   );
 };
 
-export default React.memo(selectpoliticalparty);
+export default SelectPoliticalParty;
 
-export const styles = StyleSheet.create({
+const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#fff",
   },
-  header_container: {
+  headerContainer: {
     width: "100%",
     backgroundColor: "rgba(217, 217, 217, 0.4)",
     paddingHorizontal: 20,
@@ -243,7 +212,7 @@ export const styles = StyleSheet.create({
     left: 10,
     zIndex: 1,
   },
-  search_input: {
+  searchInput: {
     borderWidth: 1,
     borderColor: "#ccc",
     borderRadius: 8,

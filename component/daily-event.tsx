@@ -3,11 +3,10 @@ import {
   Text,
   ScrollView,
   StyleSheet,
-  Alert,
   Animated,
   TouchableOpacity,
 } from "react-native";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import { TYPOGRAPHY } from "@/utils/fonts";
 import { database } from "@/context/app-write";
 import { Query, Models } from "react-native-appwrite";
@@ -15,13 +14,26 @@ import CarouselComp from "./carousel-comp";
 import { primaryColor } from "@/constant/contant";
 
 const DailyEvent = () => {
-  const [events, setEvents] = React.useState<Models.Document[]>([]);
-  const [loading, setLoading] = React.useState(true);
+  const [events, setEvents] = useState<Models.Document[]>([]);
+  const [loading, setLoading] = useState(true);
   const fadeAnim = useRef(new Animated.Value(0.5)).current;
   const [selectedDateIndex, setSelectedDateIndex] = useState(0);
 
+  // Memoized date array to avoid recreating on every render
+  const dateArray = useMemo(() => {
+    return Array.from({ length: 7 }, (_, i) => {
+      const date = new Date();
+      date.setDate(date.getDate() + i);
+      return {
+        date,
+        day: date.getDate().toString().padStart(2, "0"),
+        month: date.toLocaleString("default", { month: "short" }),
+      };
+    });
+  }, []);
+
   useEffect(() => {
-    Animated.loop(
+    const animation = Animated.loop(
       Animated.sequence([
         Animated.timing(fadeAnim, {
           toValue: 1,
@@ -34,42 +46,96 @@ const DailyEvent = () => {
           useNativeDriver: true,
         }),
       ])
-    ).start();
+    );
+    animation.start();
+
+    return () => animation.stop();
   }, [fadeAnim]);
 
-  const fetchEventByDate = async (date: Date) => {
+  const fetchEventByDate = useCallback(async (date: Date) => {
     setLoading(true);
     try {
-      const formattedDate =
-        date.toISOString().split("T")[0] + "T12:00:00.000+00:00";
+      const formattedDate = date.toISOString().split("T")[0] + "T12:00:00.000+00:00";
 
-      const events = await database.listDocuments(
+      const response = await database.listDocuments(
         process.env.EXPO_PUBLIC_APPWRITE_DATABASE_ID!,
         process.env.EXPO_PUBLIC_APPWRITE_DAILY_EVENT_ID!,
         [Query.equal("date", formattedDate)]
       );
 
-      setEvents(events.documents);
-      console.log("events 🟡", events.documents);
-      console.log(events, "events for date:", formattedDate);
+      setEvents(response.documents);
     } catch (error) {
       console.error("Error fetching event:", error);
+      setEvents([]);
     } finally {
       setLoading(false);
     }
-  };
-
-  useEffect(() => {
-    const today = new Date();
-    fetchEventByDate(today);
   }, []);
 
-  const handleDatePress = (index: number) => {
+  useEffect(() => {
+    fetchEventByDate(new Date());
+  }, [fetchEventByDate]);
+
+  const handleDatePress = useCallback((index: number) => {
     setSelectedDateIndex(index);
-    const date = new Date();
-    date.setDate(date.getDate() + index);
-    fetchEventByDate(date);
-  };
+    fetchEventByDate(dateArray[index].date);
+  }, [dateArray, fetchEventByDate]);
+
+  // Memoized carousel images
+  const carouselImages = useMemo(() => 
+    events.flatMap((event) =>
+      event.posts?.map((post: { previewImage: string; $id: string }) => ({
+        previewImage: post.previewImage,
+        id: post.$id,
+      })) || []
+    ), [events]
+  );
+
+  const renderDateCard = useCallback(({ item, index }: { item: typeof dateArray[0], index: number }) => {
+    const isSelected = index === selectedDateIndex;
+    
+    return (
+      <TouchableOpacity
+        key={index}
+        onPress={() => handleDatePress(index)}
+        activeOpacity={0.7}
+      >
+        <View style={[styles.dateCard, isSelected && styles.selectedDateCard]}>
+          <Text style={[styles.dateDay, isSelected && styles.selectedText]}>
+            {item.day}
+          </Text>
+          <Text style={[styles.dateMonth, isSelected && styles.selectedText]}>
+            {item.month}
+          </Text>
+        </View>
+      </TouchableOpacity>
+    );
+  }, [selectedDateIndex, handleDatePress]);
+
+  const renderContent = useMemo(() => {
+    if (loading) {
+      return (
+        <Animated.View style={[styles.skeletonImage, { opacity: fadeAnim }]} />
+      );
+    }
+
+    if (events.length === 0) {
+      return (
+        <View style={styles.noEventsContainer}>
+          <Text style={TYPOGRAPHY.body}>No events for this date</Text>
+        </View>
+      );
+    }
+
+    return (
+      <CarouselComp
+        images={carouselImages}
+        title="Daily Event"
+        subCatId={events[0].$id}
+        showViewAll={false}
+      />
+    );
+  }, [loading, events, carouselImages, fadeAnim]);
 
   return (
     <View>
@@ -78,106 +144,20 @@ const DailyEvent = () => {
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.dateScrollContainer}
       >
-        {Array.from({ length: 7 }, (_, i) => {
-          const date = new Date();
-          date.setDate(date.getDate() + i);
-          const day = date
-            .getDate()
-            .toString()
-            .padStart(2, "0");
-          const month = date.toLocaleString("default", { month: "short" });
-
-          return (
-            <TouchableOpacity
-              key={i}
-              onPress={() => handleDatePress(i)}
-              activeOpacity={0.7}
-            >
-              <View
-                style={[
-                  styles.dateCard,
-                  i === selectedDateIndex
-                    ? {
-                        backgroundColor: "#e6f2ff",
-                        borderColor: primaryColor,
-                        borderWidth: 1,
-                      }
-                    : {},
-                ]}
-              >
-                <View>
-                  <Text
-                    style={[
-                      styles.dateDay,
-                      i === selectedDateIndex ? { color: primaryColor } : {},
-                    ]}
-                  >
-                    {day}
-                  </Text>
-                  <Text
-                    style={[
-                      styles.dateMonth,
-                      i === selectedDateIndex ? { color: primaryColor } : {},
-                    ]}
-                  >
-                    {month}
-                  </Text>
-                </View>
-              </View>
-            </TouchableOpacity>
-          );
-        })}
+        {dateArray.map((item, index) => renderDateCard({ item, index }))}
       </ScrollView>
-      <View>
-        {loading ? (
-          <View>
-            <Animated.View
-              style={[
-                styles.skeletonImage,
-                {
-                  opacity: fadeAnim,
-                  borderRadius: 8,
-                  marginVertical: 10,
-                  height: 150,
-                  width: "100%",
-                },
-              ]}
-            />
-          </View>
-        ) : events.length > 0 ? (
-          <CarouselComp
-            images={events.flatMap((event) =>
-              event.posts
-                ? event.posts.map(
-                    (posts: { previewImage: string; $id: string }) => ({
-                      previewImage: posts.previewImage,
-                      id: posts.$id,
-                    })
-                  )
-                : []
-            )}
-            title="Daily Event"
-            subCatId={events[0].$id}
-            showViewAll={false}
-          />
-        ) : (
-          <View style={{ padding: 20, alignItems: "center" }}>
-            <Text style={TYPOGRAPHY.body}>No events for this date</Text>
-          </View>
-        )}
-      </View>
+      {renderContent}
     </View>
   );
 };
 
 export default DailyEvent;
 
-export const styles = StyleSheet.create({
+const styles = StyleSheet.create({
   dateScrollContainer: {
     paddingVertical: 10,
     marginTop: 10,
   },
-
   dateCard: {
     alignItems: "center",
     justifyContent: "center",
@@ -187,48 +167,31 @@ export const styles = StyleSheet.create({
     borderRadius: 8,
     minWidth: 60,
   },
-
+  selectedDateCard: {
+    backgroundColor: "#e6f2ff",
+    borderColor: primaryColor,
+    borderWidth: 1,
+  },
   dateDay: {
     ...TYPOGRAPHY.body,
     fontWeight: "600",
   },
-
   dateMonth: {
     ...TYPOGRAPHY.caption,
     color: "#666",
   },
-
-  skeletonContainer: {
-    flexDirection: "row",
-    backgroundColor: "#f5f5f5",
-    borderRadius: 8,
-    overflow: "hidden",
+  selectedText: {
+    color: primaryColor,
   },
-
   skeletonImage: {
-    width: 100,
-    height: 100,
+    height: 150,
+    width: "100%",
     backgroundColor: "#e0e0e0",
+    borderRadius: 8,
+    marginVertical: 10,
   },
-
-  skeletonTextContainer: {
-    flex: 1,
-    padding: 10,
-    justifyContent: "center",
-  },
-
-  skeletonTitle: {
-    height: 20,
-    width: "80%",
-    backgroundColor: "#e0e0e0",
-    marginBottom: 8,
-    borderRadius: 4,
-  },
-
-  skeletonText: {
-    height: 15,
-    width: "60%",
-    backgroundColor: "#e0e0e0",
-    borderRadius: 4,
+  noEventsContainer: {
+    padding: 20,
+    alignItems: "center",
   },
 });

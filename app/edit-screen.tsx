@@ -11,10 +11,10 @@ import {
   ActivityIndicator,
   ToastAndroid,
   Platform,
-  AppState,
+  BackHandler,
 } from "react-native";
 import React, { useEffect, useState, useCallback, useRef, useMemo } from "react";
-import { useLocalSearchParams } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { account, database } from "@/context/app-write";
 import { ID, Query } from "react-native-appwrite";
 import {
@@ -56,36 +56,24 @@ type SkiaRenderable =
     fill: string;
     label: string;
   }
-  | { type: 'image'; id: string; x: number; y: number; width: number; height: number; src: string; label: string; };
+  | { 
+    type: 'image'; 
+    id: string; 
+    x: number; 
+    y: number; 
+    width: number; 
+    height: number; 
+    src: string; 
+    label: string; 
+  };
 
+// Optimized ImageLoader with dynamic loading
 const useImageLoader = (maxImages = 20) => {
   const [urls, setUrls] = useState<Array<string | null>>(Array(maxImages).fill(null));
-
-  const img1 = useImage(urls[0]);
-  const img2 = useImage(urls[1]);
-  const img3 = useImage(urls[2]);
-  const img4 = useImage(urls[3]);
-  const img5 = useImage(urls[4]);
-  const img6 = useImage(urls[5]);
-  const img7 = useImage(urls[6]);
-  const img8 = useImage(urls[7]);
-  const img9 = useImage(urls[8]);
-  const img10 = useImage(urls[9]);
-  const img11 = useImage(urls[10]);
-  const img12 = useImage(urls[11]);
-  const img13 = useImage(urls[12]);
-  const img14 = useImage(urls[13]);
-  const img15 = useImage(urls[14]);
-  const img16 = useImage(urls[15]);
-  const img17 = useImage(urls[16]);
-  const img18 = useImage(urls[17]);
-  const img19 = useImage(urls[18]);
-  const img20 = useImage(urls[19]);
-
-  const imageHooks = [
-    img1, img2, img3, img4, img5, img6, img7, img8, img9, img10,
-    img11, img12, img13, img14, img15, img16, img17, img18, img19, img20
-  ];
+  
+  const imageHooks = Array.from({ length: maxImages }, (_, i) => 
+    useImage(urls[i])
+  );
 
   const updateUrls = useCallback((newUrls: string[]) => {
     const updatedUrls = Array(maxImages).fill(null);
@@ -100,79 +88,13 @@ const useImageLoader = (maxImages = 20) => {
   return { imageHooks, updateUrls };
 };
 
-// Memoized FrameItem component
-const FrameItem = React.memo(({ 
-  frame, 
-  index, 
-  isSelected, 
-  onSelect 
-}: { 
-  frame: any; 
-  index: number; 
-  isSelected: boolean; 
-  onSelect: (index: number) => void; 
-}) => (
-  <TouchableOpacity
-    style={[
-      styles.frameItem,
-      isSelected ? styles.selectedFrame : styles.normalFrame
-    ]}
-    onPress={() => onSelect(index)}
-  >
-    <Image
-      source={{ uri: frame.previewImage }}
-      style={styles.frameImage}
-      resizeMode="cover"
-    />
-    <View style={styles.frameDetails}>
-      <Text style={styles.frameName}>{frame.name || `Frame ${index + 1}`}</Text>
-    </View>
-  </TouchableOpacity>
-));
+// Optimized font loading
+const useFonts = () => {
+  const fontSizes = useMemo(() => 
+    Array.from({ length: 43 }, (_, i) => i + 8), 
+    []
+  );
 
-const EditScreen = React.memo(() => {
-  const { postId: initialPostId } = useLocalSearchParams();
-  const navigation = useNavigation();
-  const [currentPostId, setCurrentPostId] = useState<string>(initialPostId as string);
-  const [post, setPost] = React.useState<any>(null);
-  const [loading, setLoading] = React.useState(true);
-  const [error, setError] = React.useState<unknown | null>(null);
-  const [frames, setFrames] = React.useState<any[]>([]);
-  const [selectedFrame, setSelectedFrame] = React.useState<any>(null);
-  const [canvasWidth, setCanvasWidth] = React.useState(0);
-  const [canvasHeight, setCanvasHeight] = React.useState(0);
-  const [elements, setElements] = React.useState<SkiaRenderable[]>([]);
-  const [imageSources, setImageSources] = useState<string[]>([]);
-  const [frameWidth, setFrameWidth] = useState(0);
-  const [frameHeight, setFrameHeight] = useState(0);
-  const [selectedFrameIndex, setSelectedFrameIndex] = useState(0);
-  const [currentUser, setCurrentUser] = useState<any>(null);
-  const [fontSelectorVisible, setFontSelectorVisible] = useState(false);
-  const [isFrameLoading, setIsFrameLoading] = useState(false);
-  const [isCanvasReady, setIsCanvasReady] = useState(false);
-  const [isDownloading, setIsDownloading] = useState(false);
-
-  // Canvas reference to access makeImageSnapshot method
-  const canvasRef = useRef<any>(null);
-
-  useEffect(() => {
-    const fetchUserData = async () => {
-      const accountDetails = await account.get(); // Await the account.get() call
-      const userId = accountDetails?.$id;
-
-      const userDetails = await database.listDocuments(
-        "6815de2b0004b53475ec",
-        "6815e0be001731ca8b1b",
-        [Query.equal("userId", userId)]
-      );
-      setCurrentUser(userDetails.documents);
-    };
-
-    fetchUserData();
-  }, [])
-
-  const fontSizes = [8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50];
-  // Font loading
   const regularFonts = fontSizes.map(size =>
     useFont(require("../assets/fonts/Montserrat-Medium.ttf"), size)
   );
@@ -186,89 +108,48 @@ const EditScreen = React.memo(() => {
     useFont(require("../assets/fonts/Roboto-Bold.ttf"), size)
   );
 
-  // Font selection state
+  return {
+    fontSizes,
+    regularFonts,
+    boldFonts,
+    robotoRegularFonts,
+    robotoBoldFonts,
+  };
+};
+
+const EditScreen = () => {
+  const { postId: initialPostId } = useLocalSearchParams();
+  const [currentPostId] = useState<string>(initialPostId as string);
+  const router = useRouter();
+  
+  // State management
+  const [post, setPost] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<unknown | null>(null);
+  const [frames, setFrames] = useState<any[]>([]);
+  const [selectedFrame, setSelectedFrame] = useState<any>(null);
+  const [canvasWidth, setCanvasWidth] = useState(0);
+  const [canvasHeight, setCanvasHeight] = useState(0);
+  const [elements, setElements] = useState<SkiaRenderable[]>([]);
+  const [imageSources, setImageSources] = useState<string[]>([]);
+  const [frameWidth, setFrameWidth] = useState(0);
+  const [frameHeight, setFrameHeight] = useState(0);
+  const [selectedFrameIndex, setSelectedFrameIndex] = useState(0);
+  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [fontSelectorVisible, setFontSelectorVisible] = useState(false);
+  const [isFrameLoading, setIsFrameLoading] = useState(false);
   const [selectedFontFamily, setSelectedFontFamily] = useState<'montserrat' | 'roboto'>('montserrat');
+  const [isCanvasReady, setIsCanvasReady] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
 
-  const getClosestFontSize = (size: number) => {
-    return fontSizes.reduce((prev, curr) =>
-      Math.abs(curr - size) < Math.abs(prev - size) ? curr : prev
-      , fontSizes[0]);
-  };
-
-  const getFontWithSize = (weight: string, fontSize: number) => {
-    if (!frameWidth || !frameHeight) {
-      const index = fontSizes.indexOf(12); // Default font size
-      return weight === 'bold' ? boldFonts[index] : regularFonts[index];
-    }
-
-    const screenWidth = width - 40;
-    const screenHeight = screenWidth * (frameHeight / frameWidth);
-
-    // Scale ratio from original frame to screen size
-    const scaleX = screenWidth / (frameWidth / 2);;
-    const scaleY = screenHeight / (frameHeight / 2);
-
-    // Use minimum of both scales for proportional scaling
-    const scale = Math.min(scaleX, scaleY);
-
-    console.log(scaleX, scaleY, scale, "Scale X and Y");
-
-    // Scale the font size
-    const scaledSize = fontSize * scale;
-
-    console.log(scaledSize, "Scaled Size");
-
-    // Find closest available font size
-    const closestSize = getClosestFontSize(scaledSize);
-    console.log(closestSize, "Closest Size");
-    const index = fontSizes.indexOf(closestSize - 5);
-
-    if (index === -1) return null;
-    if (selectedFontFamily === 'montserrat') {
-      return weight === 'bold' ? boldFonts[index] : regularFonts[index];
-    } else {
-      return weight === 'bold' ? robotoBoldFonts[index] : robotoRegularFonts[index];
-    }
-  };
-
-  // Use the custom hook instead of the component
+  const canvasRef = useRef<any>(null);
   const { imageHooks, updateUrls } = useImageLoader(20);
+  const { fontSizes, regularFonts, boldFonts, robotoRegularFonts, robotoBoldFonts } = useFonts();
 
-  // Memoize user data extraction
-  const userData = useMemo(() => {
-    try {
-      if (!currentUser || !currentUser[0]) return null;
-      return {
-        id: currentUser[0].$id,
-        name: currentUser[0].name,
-        email: currentUser[0].email,
-        address: currentUser[0].address,
-        phone: currentUser[0].phone,
-        logo: currentUser[0].logo,
-        profileImage: currentUser[0].profileImage
-      };
-    } catch (error) {
-      console.error('Error extracting user data:', error);
-      return null;
-    }
-  }, [currentUser]);
-
-  // Memoize image sources with deduplication
-  const uniqueImageSources = useMemo(() => {
-    const sources = new Set<string>();
-    elements.forEach(el => {
-      if (el.type === 'image' && el.src) {
-        sources.add(el.src);
-      }
-    });
-    if (userData?.logo) sources.add(userData.logo);
-    if (userData?.profileImage) sources.add(userData.profileImage);
-    return Array.from(sources);
-  }, [elements, userData]);
-
-  const imageMap = React.useMemo(() => {
+  // Memoized calculations
+  const imageMap = useMemo(() => {
     const map: Record<string, ReturnType<typeof useImage> | null> = {};
-    uniqueImageSources.forEach((src, index) => {
+    imageSources.forEach((src, index) => {
       if (index < imageHooks.length) {
         map[src] = imageHooks[index];
       } else {
@@ -276,24 +157,60 @@ const EditScreen = React.memo(() => {
       }
     });
     return map;
-  }, [uniqueImageSources, imageHooks]);
+  }, [imageSources, imageHooks]);
 
-  // Remove duplicate useEffect for imageSources
-  useEffect(() => {
-    updateUrls(uniqueImageSources);
-  }, [uniqueImageSources, updateUrls]);
+  const canvasDisplayHeight = useMemo(() => 
+    canvasWidth ? (canvasHeight / canvasWidth) * (width - 40) : width - 40,
+    [canvasWidth, canvasHeight]
+  );
 
-  useEffect(() => {
-    const sources: string[] = [];
-    elements.forEach(el => {
-      if (el.type === 'image' && el.src) {
-        sources.push(el.src);
-      }
-    });
-    setImageSources(sources);
-  }, [elements]);
+  const postImage = useImage(post?.previewImage);
 
-  const parseFabricToSkia = (fabricJson: any): SkiaRenderable[] => {
+  // Utility functions
+  const getClosestFontSize = useCallback((size: number) => {
+    return fontSizes.reduce((prev, curr) =>
+      Math.abs(curr - size) < Math.abs(prev - size) ? curr : prev
+    );
+  }, [fontSizes]);
+
+  const getFontWithSize = useCallback((weight: string, fontSize: number) => {
+    if (!frameWidth || !frameHeight) {
+      const index = fontSizes.indexOf(12);
+      return weight === 'bold' ? boldFonts[index] : regularFonts[index];
+    }
+
+    const screenWidth = width - 40;
+    const screenHeight = screenWidth * (frameHeight / frameWidth);
+    const scaleX = screenWidth / (frameWidth / 2);
+    const scaleY = screenHeight / (frameHeight / 2);
+    const scale = Math.min(scaleX, scaleY);
+    const scaledSize = fontSize * scale;
+    const closestSize = getClosestFontSize(scaledSize);
+    const index = fontSizes.indexOf(closestSize - 5);
+
+    if (index === -1) return null;
+    
+    if (selectedFontFamily === 'montserrat') {
+      return weight === 'bold' ? boldFonts[index] : regularFonts[index];
+    } else {
+      return weight === 'bold' ? robotoBoldFonts[index] : robotoRegularFonts[index];
+    }
+  }, [frameWidth, frameHeight, selectedFontFamily, fontSizes, boldFonts, regularFonts, robotoBoldFonts, robotoRegularFonts, getClosestFontSize]);
+
+  const calculatePositionFromRatio = useCallback((x: number, y: number) => {
+    if (!frameWidth || !frameHeight) return { x, y };
+
+    const screenWidth = width - 40;
+    const screenHeight = screenWidth * (frameHeight / frameWidth);
+    const scaleX = screenWidth / (frameWidth / 2);
+    const scaleY = screenHeight / (frameHeight / 2);
+    const newX = x * scaleX;
+    const newY = y * scaleY;
+
+    return { x: newX, y: newY };
+  }, [frameWidth, frameHeight]);
+
+  const parseFabricToSkia = useCallback((fabricJson: any): SkiaRenderable[] => {
     let fabricObjects;
     if (typeof fabricJson === 'string') {
       try {
@@ -307,7 +224,6 @@ const EditScreen = React.memo(() => {
     }
 
     const objects = fabricObjects?.objects || [];
-    console.log(fabricObjects, "Fabric Json 🟡");
 
     return objects.map((obj: FabricObject) => {
       if (obj.type === 'IText') {
@@ -343,101 +259,46 @@ const EditScreen = React.memo(() => {
       }
       return null;
     }).filter(Boolean) as SkiaRenderable[];
-  };
-
-  const calculatePositionFromRatio = (x: number, y: number) => {
-    if (!frameWidth || !frameHeight) return { x, y };
-
-    const screenWidth = width - 40;
-    const screenHeight = screenWidth * (frameHeight / frameWidth);
-
-    // Scale ratio from original frame to screen size
-    const scaleX = screenWidth / (frameWidth / 2);
-    const scaleY = screenHeight / (frameHeight / 2);
-
-    // Apply the scale to position elements correctly
-    const newX = x * scaleX;
-    const newY = y * scaleY;
-
-
-
-    console.log(`Original (${x},${y}) -> Scaled (${newX},${newY}), Scale: ${scaleX.toFixed(2)}x${scaleY.toFixed(2)}`);
-
-    return { x: newX, y: newY };
-  };
-
-  // Define anotherImage properly - move this up before other dependencies
-  const anotherImage = useImage(post?.previewImage);
-
-  // Enhanced canvas ready state tracking
-  const checkCanvasReadiness = useCallback(() => {
-    const isReady = !isFrameLoading && 
-                   anotherImage && 
-                   canvasRef.current && 
-                   post && 
-                   elements.length >= 0; // Changed from > 0 to >= 0
-    
-    setIsCanvasReady(isReady);
-    return isReady;
-  }, [isFrameLoading, anotherImage, post, elements.length]);
-
-  // Monitor canvas readiness
-  useEffect(() => {
-    checkCanvasReadiness();
-  }, [checkCanvasReadiness]);
+  }, []);
 
   const selectFrame = useCallback((index: number) => {
     if (index >= 0 && index < frames.length) {
       setIsFrameLoading(true);
-      setIsCanvasReady(false); // Reset canvas readiness
       setSelectedFrameIndex(index);
       const frame = frames[index];
       setSelectedFrame(frame);
 
-      // Use requestAnimationFrame for smoother transitions
-      requestAnimationFrame(() => {
-        if (frame?.template) {
-          try {
-            const parsedElements = parseFabricToSkia(frame.template);
-            setElements(parsedElements);
-            setFrameWidth(frame.width || 400);
-            setFrameHeight(frame.height || 400);
-          } catch (error) {
-            console.error("Error parsing frame template:", error);
-          } finally {
-            // Ensure loading state is cleared
-            setTimeout(() => {
-              setIsFrameLoading(false);
-              // Canvas readiness will be checked by useEffect
-            }, 150);
-          }
-        } else {
-          setIsFrameLoading(false);
+      if (frame?.template) {
+        try {
+          const parsedElements = parseFabricToSkia(frame.template);
+          setElements(parsedElements);
+          setFrameWidth(frame.width);
+          setFrameHeight(frame.height);
+        } catch (error) {
+          console.error("Error parsing frame template:", error);
+        } finally {
+          setTimeout(() => setIsFrameLoading(false), 500);
         }
-      });
+      } else {
+        setIsFrameLoading(false);
+      }
     }
-  }, [frames]);
+  }, [frames, parseFabricToSkia]);
 
-  // Enhanced download handler with better error handling
   const handleDownload = useCallback(async () => {
-    console.log("Download button pressed");
-    
-    // First check if canvas is ready
-    if (!checkCanvasReadiness()) {
-      Alert.alert('Not Ready', 'Please wait for the image to fully load before downloading.');
+    if (!isCanvasReady || !canvasRef.current || isDownloading) {
+      if (isDownloading) {
+        return; // Prevent multiple download attempts
+      }
+      Alert.alert('Error', 'Canvas is not ready yet. Please wait.');
       return;
     }
 
     setIsDownloading(true);
-    
     try {
-      // Request media library permissions
       const { status } = await MediaLibrary.requestPermissionsAsync();
-      console.log('Permission status: 🟢', status);
-
+      
       if (status !== 'granted') {
-        console.log("Permission not granted");
-        
         Alert.alert(
           'Permission Required',
           'To save images, this app needs access to your media library.',
@@ -449,25 +310,13 @@ const EditScreen = React.memo(() => {
         return;
       }
 
-      // Double-check canvas availability
+      // Double check canvas is still available
       if (!canvasRef.current) {
-        Alert.alert('Error', 'Canvas not ready. Please try again in a moment.');
+        Alert.alert('Error', 'Canvas not ready. Please try again.');
         return;
       }
 
-      // Add a small delay to ensure canvas is fully rendered
-      await new Promise(resolve => setTimeout(resolve, 100));
-
-      // Take snapshot with error handling
-      let snapshot;
-      try {
-        snapshot = await canvasRef.current.makeImageSnapshot();
-      } catch (snapshotError) {
-        console.error('Snapshot error:', snapshotError);
-        Alert.alert('Error', 'Failed to capture image. Please try again.');
-        return;
-      }
-
+      const snapshot = await canvasRef.current.makeImageSnapshot();
       if (!snapshot) {
         Alert.alert('Error', 'Failed to take a snapshot. Please try again.');
         return;
@@ -475,40 +324,28 @@ const EditScreen = React.memo(() => {
 
       const base64 = snapshot.encodeToBase64();
       const fileUri = FileSystem.cacheDirectory + `art_frame_${Date.now()}.png`;
-      console.log(fileUri, 'File URI');
 
       await FileSystem.writeAsStringAsync(fileUri, base64, {
         encoding: FileSystem.EncodingType.Base64,
       });
-      console.log(fileUri, 'File URI after writing');
 
-      // Save to media library
       const asset = await MediaLibrary.createAssetAsync(fileUri);
-      console.log(asset, 'Asset created');
 
-      // Create or add to album on Android
       if (Platform.OS === 'android') {
         try {
-          // Check if album exists
           const albumName = 'ArtVeda';
           const album = await MediaLibrary.getAlbumAsync(albumName);
           
           if (album) {
-            // Add to existing album
             await MediaLibrary.addAssetsToAlbumAsync([asset], album, false);
-            console.log('Added to existing album:', albumName);
           } else {
-            // Create new album
             await MediaLibrary.createAlbumAsync(albumName, asset, false);
-            console.log('Created new album:', albumName);
           }
         } catch (albumError) {
           console.error('Album creation error:', albumError);
-          // Continue even if album creation fails - the image is still saved
         }
       }
 
-      // Save download record in database
       if (currentUser && currentUser.length > 0) {
         try {
           await database.createDocument(
@@ -521,177 +358,269 @@ const EditScreen = React.memo(() => {
               userId: currentUser[0].$id,
             }
           );
-          console.log('Download record saved to database 😁😆😅🤣');
         } catch (dbError) {
           console.error('Failed to save download record:', dbError);
         }
       }
 
-      // Show success message
       if (Platform.OS === 'android') {
         ToastAndroid.show('Image saved successfully!', ToastAndroid.SHORT);
       } else {
         Alert.alert('Success', 'Image saved to your gallery!');
       }
 
-      // Clean up the temporary file
       await FileSystem.deleteAsync(fileUri, { idempotent: true });
 
     } catch (error: any) {
       console.error('Download error:', error);
-      
-      // Provide more specific error messages
-      let errorMessage = 'Failed to save image. ';
-      if (error.message?.includes('No skia view')) {
-        errorMessage += 'Please wait for the image to load completely and try again.';
-      } else if (error.message?.includes('permission')) {
-        errorMessage += 'Please check your app permissions.';
-      } else {
-        errorMessage += error.message || 'Unknown error occurred.';
-      }
-      
-      Alert.alert('Error', errorMessage);
+      Alert.alert('Error', `Failed to save image: ${error.message || 'Unknown error'}`);
     } finally {
       setIsDownloading(false);
     }
-  }, [currentUser, currentPostId, checkCanvasReadiness]);
+  }, [currentPostId, currentUser, isCanvasReady, isDownloading]);
 
-  // Memoized font selection handlers
-  const handleFontChange = useCallback((fontFamily: 'montserrat' | 'roboto') => {
-    setSelectedFontFamily(fontFamily);
-    setFontSelectorVisible(false);
-  }, []);
+  // Effects
+  useEffect(() => {
+    const fetchUserData = async () => {
+      try {
+        const accountDetails = await account.get();
+        const userId = accountDetails?.$id;
 
-  const toggleFontSelector = useCallback(() => {
-    setFontSelectorVisible(prev => !prev);
-  }, []);
-
-  // Memoize expensive calculations
-  const canvasDimensions = useMemo(() => {
-    if (!canvasWidth) return { width: width - 40, height: width - 40 };
-    return {
-      width: width - 40,
-      height: (canvasHeight / canvasWidth) * (width - 40)
+        const userDetails = await database.listDocuments(
+          "6815de2b0004b53475ec",
+          "6815e0be001731ca8b1b",
+          [Query.equal("userId", userId)]
+        );
+        setCurrentUser(userDetails.documents);
+      } catch (error) {
+        console.error('Error fetching user data:', error);
+      }
     };
-  }, [canvasWidth, canvasHeight]);
 
-  // Memoized element rendering
-  const renderedElements = useMemo(() => {
-    if (isFrameLoading) return null;
+    fetchUserData();
+  }, []);
 
-    return elements.map((el) => {
-      if (el.type === 'text') {
-        const position = calculatePositionFromRatio(el.x, el.y);
-        const font = getFontWithSize(el.fontWeight, el.fontSize);
-        if (!font) return null;
+  useEffect(() => {
+    updateUrls(imageSources);
+  }, [imageSources, updateUrls]);
 
-        // Determine text content based on label
-        let displayText = el.text;
-        if (el.label && userData) {
-          if (el.label === 'name' && userData.name) {
-            displayText = userData.name;
-          } else if (el.label === 'email' && userData.email) {
-            displayText = userData.email;
-          } else if (el.label === 'address' && userData.address) {
-            displayText = userData.address;
-          } else if (el.label === 'phone' && userData.phone) {
-            displayText = userData.phone;
+  useEffect(() => {
+    const sources: string[] = [];
+    elements.forEach(el => {
+      if (el.type === 'image' && el.src) {
+        sources.push(el.src);
+      }
+    });
+    setImageSources(sources);
+  }, [elements]);
+
+  useEffect(() => {
+    const fetchInitialData = async () => {
+      try {
+        setLoading(true);
+
+        const [postDetails, framesResponse] = await Promise.all([
+          database.getDocument(
+            "6815de2b0004b53475ec",
+            "6815de8d00124a0a9572",
+            currentPostId
+          ),
+          database.listDocuments(
+            "6815de2b0004b53475ec",
+            "6815de5300077ef22735"
+          ),
+        ]);
+
+        setPost(postDetails);
+        setCanvasWidth(postDetails.width);
+        setCanvasHeight(postDetails.height);
+        setFrames(framesResponse.documents);
+
+        // Select first frame without dependency on selectFrame
+        if (framesResponse.documents && framesResponse.documents.length > 0) {
+          const firstFrame = framesResponse.documents[0];
+          setSelectedFrameIndex(0);
+          setSelectedFrame(firstFrame);
+          
+          if (firstFrame?.template) {
+            try {
+              const parsedElements = parseFabricToSkia(firstFrame.template);
+              setElements(parsedElements);
+              setFrameWidth(firstFrame.width);
+              setFrameHeight(firstFrame.height);
+            } catch (error) {
+              console.error("Error parsing frame template:", error);
+            }
           }
         }
+      } catch (err) {
+        console.error("Error fetching data:", err);
+        setError(err);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-        return (
-          <SkiaText
-            key={el.id}
+    if (currentPostId) {
+      fetchInitialData();
+    }
+  }, [currentPostId, parseFabricToSkia]);
+
+  // Check canvas readiness based on multiple conditions
+  useEffect(() => {
+    if (post && postImage && !isFrameLoading && elements.length >= 0 && !loading) {
+      const timer = setTimeout(() => {
+        if (canvasRef.current) {
+          setIsCanvasReady(true);
+        }
+      }, 2500); // Reduced delay for better responsiveness
+      
+      return () => clearTimeout(timer);
+    } else {
+      setIsCanvasReady(false);
+    }
+  }, [post, postImage, isFrameLoading, elements, loading]);
+
+  // Reset canvas ready state when frame changes
+  useEffect(() => {
+    if (isFrameLoading) {
+      setIsCanvasReady(false);
+    }
+  }, [isFrameLoading]);
+
+  // Additional effect to check canvas readiness after frame loading completes
+  useEffect(() => {
+    if (!isFrameLoading && post && postImage && elements.length >= 0 && !loading) {
+      const timer = setTimeout(() => {
+        if (canvasRef.current) {
+          setIsCanvasReady(true);
+        }
+      }, 1500);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [isFrameLoading, post, postImage, elements, loading]);
+
+  // Render functions
+  const renderTextElement = useCallback((el: SkiaRenderable & { type: 'text' }) => {
+    const position = calculatePositionFromRatio(el.x, el.y);
+    const font = getFontWithSize(el.fontWeight, el.fontSize);
+    if (!font) return null;
+
+    let displayText = el.text;
+    if (el.label && currentUser && currentUser[0]) {
+      const userData = currentUser[0];
+      switch (el.label) {
+        case 'name':
+          displayText = userData.name || el.text;
+          break;
+        case 'email':
+          displayText = userData.email || el.text;
+          break;
+        case 'address':
+          displayText = userData.address || el.text;
+          break;
+        case 'phone':
+          displayText = userData.phone || el.text;
+          break;
+      }
+    }
+
+    return (
+      <SkiaText
+        key={el.id}
+        x={position.x}
+        y={position.y}
+        text={displayText}
+        font={font}
+        color={el.fill}
+      />
+    );
+  }, [calculatePositionFromRatio, getFontWithSize, currentUser]);
+
+  const renderImageElement = useCallback((el: SkiaRenderable & { type: 'image' }) => {
+    let imgSrc = el.src;
+
+    if (el.label === 'logo' && currentUser?.[0]?.logo) {
+      if (!imageSources.includes(currentUser[0].logo)) {
+        setImageSources(prev => [...prev, currentUser[0].logo]);
+      }
+      imgSrc = currentUser[0].logo;
+    }
+
+    if (el.label === 'userImage' && currentUser?.[0]?.profileImage) {
+      if (!imageSources.includes(currentUser[0].profileImage)) {
+        setImageSources(prev => [...prev, currentUser[0].profileImage]);
+      }
+      imgSrc = currentUser[0].profileImage;
+    }
+
+    const img = imgSrc ? imageMap[imgSrc] : null;
+    if (!img) return null;
+
+    const position = calculatePositionFromRatio(el.x, el.y);
+
+    if (el.label === 'logo') {
+      return (
+        <SkiaImage
+          key={el.id}
+          image={img}
+          x={position.x}
+          y={position.y}
+          width={el.width}
+          height={el.height}
+          fit="fill"
+        />
+      );
+    } else if (el.label === 'userImage') {
+      const size = Math.min(el.width, el.height);
+      const centerX = position.x + size/2;
+      const centerY = position.y + size/2;
+      
+      return (
+        <Group key={el.id}>
+          <Circle
+            cx={centerX}
+            cy={centerY}
+            r={size/2 + 4}
+            color="white"
+          />
+          <SkiaImage
+            image={img}
             x={position.x}
             y={position.y}
-            text={displayText}
-            font={font}
-            color={el.fill}
+            width={size}
+            height={size}
+            fit="cover"
+            clip={{
+              rect: {
+                x: position.x,
+                y: position.y,
+                width: size,
+                height: size
+              },
+              rx: size/2,
+              ry: size/2
+            }}
           />
-        );
-      }
+        </Group>
+      );
+    } else {
+      return (
+        <SkiaImage
+          key={el.id}
+          image={img}
+          x={position.x}
+          y={position.y}
+          width={width - 40}
+          height={width - 40}
+          fit="fill"
+        />
+      );
+    }
+  }, [calculatePositionFromRatio, currentUser, imageSources, imageMap]);
 
-      if (el.type === 'image') {
-        let imgSrc = el.src;
-
-        // Handle special image cases
-        if (el.label === 'logo' && userData?.logo) {
-          imgSrc = userData.logo;
-        } else if (el.label === 'userImage' && userData?.profileImage) {
-          imgSrc = userData.profileImage;
-        }
-
-        const img = imgSrc ? imageMap[imgSrc] : null;
-        if (!img) return null;
-
-        const position = calculatePositionFromRatio(el.x, el.y);
-
-        if (el.label === 'logo') {
-          return (
-            <SkiaImage
-              key={el.id}
-              image={img}
-              x={position.x}
-              y={position.y}
-              width={el.width}
-              height={el.height}
-              fit="fill"
-            />
-          );
-        } else if (el.label === 'userImage') {
-          const size = Math.min(el.width, el.height);
-          const centerX = position.x + size/2;
-          const centerY = position.y + size/2;
-          
-          return (
-            <Group key={el.id}>
-              <Circle
-                cx={centerX}
-                cy={centerY}
-                r={size/2 + 4}
-                color="white"
-              />
-              <SkiaImage
-                image={img}
-                x={position.x}
-                y={position.y}
-                width={size}
-                height={size}
-                fit="cover"
-                clip={{
-                  rect: {
-                    x: position.x,
-                    y: position.y,
-                    width: size,
-                    height: size
-                  },
-                  rx: size/2,
-                  ry: size/2
-                }}
-              />
-            </Group>
-          );
-        } else {
-          return (
-            <SkiaImage
-              key={el.id}
-              image={img}
-              x={position.x}
-              y={position.y}
-              width={canvasDimensions.width}
-              height={canvasDimensions.height}
-              fit="fill"
-            />
-          );
-        }
-      }
-
-      return null;
-    });
-  }, [elements, userData, imageMap, isFrameLoading, canvasDimensions]);
-
-  // Memoized font selection modal
-  const fontSelectionModal = useMemo(() => (
+  const renderFontSelectionBottomSheet = () => (
     <Modal
       visible={fontSelectorVisible}
       transparent={true}
@@ -713,7 +642,10 @@ const EditScreen = React.memo(() => {
                 styles.fontOption,
                 selectedFontFamily === 'montserrat' && styles.selectedFontOption
               ]}
-              onPress={() => handleFontChange('montserrat')}
+              onPress={() => {
+                setSelectedFontFamily('montserrat');
+                setFontSelectorVisible(false);
+              }}
             >
               <Text style={styles.fontLabel}>Montserrat</Text>
               <Text style={[styles.fontPreview, { fontFamily: 'Montserrat' }]}>
@@ -726,7 +658,10 @@ const EditScreen = React.memo(() => {
                 styles.fontOption,
                 selectedFontFamily === 'roboto' && styles.selectedFontOption
               ]}
-              onPress={() => handleFontChange('roboto')}
+              onPress={() => {
+                setSelectedFontFamily('roboto');
+                setFontSelectorVisible(false);
+              }}
             >
               <Text style={styles.fontLabel}>Roboto</Text>
               <Text style={[styles.fontPreview, { fontFamily: 'Roboto' }]}>
@@ -737,304 +672,198 @@ const EditScreen = React.memo(() => {
         </View>
       </TouchableOpacity>
     </Modal>
-  ), [fontSelectorVisible, selectedFontFamily, handleFontChange]);
+  );
 
-  // Add app state tracking
-  const appState = useRef(AppState.currentState);
-  const [isAppActive, setIsAppActive] = useState(true);
-  const [hasBeenBackgrounded, setHasBeenBackgrounded] = useState(false);
-
-  // Prevent screen from going white on app state changes
+  // Handle back button
   useEffect(() => {
-    const handleAppStateChange = (nextAppState: string) => {
-      console.log('App state changing from', appState.current, 'to', nextAppState);
-      
-      if (
-        appState.current.match(/inactive|background/) &&
-        nextAppState === 'active'
-      ) {
-        console.log('App has come to the foreground!');
-        setIsAppActive(true);
-        
-        // Only refresh if we've been backgrounded and have data
-        if (hasBeenBackgrounded && post && frames.length > 0) {
-          console.log('Refreshing canvas after background');
-          // Force re-render with a small delay to ensure app is fully active
-          setTimeout(() => {
-            setIsFrameLoading(false);
-            checkCanvasReadiness();
-          }, 200);
-        }
-        
-        setHasBeenBackgrounded(false);
-      } else if (nextAppState.match(/inactive|background/)) {
-        console.log('App has gone to the background!');
-        setIsAppActive(false);
-        setHasBeenBackgrounded(true);
+    const backAction = () => {
+      if (isDownloading) {
+        Alert.alert(
+          'Download in Progress',
+          'Please wait for the download to complete before going back.',
+          [{ text: 'OK', style: 'default' }]
+        );
+        return true; // Prevent back action
       }
-
-      appState.current = nextAppState as any;
+      
+      // Allow normal back navigation
+      router.back();
+      return true;
     };
 
-    const subscription = AppState.addEventListener('change', handleAppStateChange);
+    const backHandler = BackHandler.addEventListener('hardwareBackPress', backAction);
 
     return () => {
-      subscription?.remove();
+      backHandler.remove();
     };
-  }, [hasBeenBackgrounded, post, frames.length, checkCanvasReadiness]);
+  }, [isDownloading, router]);
 
-  // Enhanced fetchInitialData with better error handling
+  // Cleanup function when component unmounts
   useEffect(() => {
-    const fetchInitialData = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-
-        // Fetch current post and frames
-        const [postDetails, framesResponse] = await Promise.all([
-          database.getDocument(
-            "6815de2b0004b53475ec",
-            "6815de8d00124a0a9572",
-            currentPostId
-          ),
-          database.listDocuments(
-            "6815de2b0004b53475ec",
-            "6815de5300077ef22735"
-          ),
-        ]);
-
-        // Ensure data is valid before setting state
-        if (postDetails && framesResponse) {
-          setPost(postDetails);
-          
-          // Set header title to post name
-          navigation.setOptions({
-            title: postDetails.name || 'Edit Post',
-            headerBackTitle: "Back",
-          });
-          
-          setCanvasWidth(postDetails.width || 400);
-          setCanvasHeight(postDetails.height || 400);
-          setFrames(framesResponse.documents || []);
-
-          // Initialize with first frame - directly call the logic here instead of using selectFrame
-          if (framesResponse.documents && framesResponse.documents.length > 0) {
-            setTimeout(() => {
-              const frame = framesResponse.documents[0];
-              setIsFrameLoading(true);
-              setIsCanvasReady(false);
-              setSelectedFrameIndex(0);
-              setSelectedFrame(frame);
-
-              requestAnimationFrame(() => {
-                if (frame?.template) {
-                  try {
-                    const parsedElements = parseFabricToSkia(frame.template);
-                    setElements(parsedElements);
-                    setFrameWidth(frame.width || 400);
-                    setFrameHeight(frame.height || 400);
-                  } catch (error) {
-                    console.error("Error parsing frame template:", error);
-                  } finally {
-                    setTimeout(() => {
-                      setIsFrameLoading(false);
-                    }, 150);
-                  }
-                } else {
-                  setIsFrameLoading(false);
-                }
-              });
-            }, 100);
-          }
-        }
-      } catch (err) {
-        console.error("Error fetching data:", err);
-        setError(err);
-        
-        // Set fallback title on error
-        navigation.setOptions({
-          title: 'Edit Post',
-          headerBackTitle: "Back",
-        });
-      } finally {
-        setLoading(false);
-      }
+    return () => {
+      // Cleanup any ongoing operations
+      setIsDownloading(false);
+      setIsFrameLoading(false);
+      setIsCanvasReady(false);
     };
+  }, []);
 
-    // Only fetch if we have a postId and app is active, and we don't already have data
-    if (currentPostId && isAppActive && (!post || frames.length === 0)) {
-      fetchInitialData();
-    }
-  }, [currentPostId, isAppActive, navigation]); // Removed post and frames from dependencies
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color={primaryColor} />
+        <Text style={styles.loadingText}>Loading...</Text>
+      </View>
+    );
+  }
 
-  console.log(post, "Post 🟢");
-  console.log(elements, "Elements 🟣");
-  console.log(canvasHeight, canvasWidth, "Canvas dimensions");
-  console.log(canvasWidth
-    ? (canvasHeight / canvasWidth) * (width - 40)
-    : width - 40, "Calculated height");
-  console.log(width - 40, "Width");
-  console.log(currentUser, "Current User🔴");
-
-  // Determine download button state
-  const isDownloadDisabled = useMemo(() => {
-    return !isCanvasReady || isDownloading || loading || isFrameLoading;
-  }, [isCanvasReady, isDownloading, loading, isFrameLoading]);
+  if (error) {
+    return (
+      <View style={styles.errorContainer}>
+        <Text style={styles.errorText}>Error loading post</Text>
+        <TouchableOpacity 
+          style={styles.retryButton} 
+          onPress={() => router.back()}
+        >
+          <Text style={styles.retryButtonText}>Go Back</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
 
   return (
-    <View style={[styles.safeArea, { opacity: isAppActive ? 1 : 0 }]}>
-      <ScrollView 
-        style={styles.scrollView}
-        removeClippedSubviews={false}
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
-        // Prevent scrollview from unmounting children
-        nestedScrollEnabled={false}
-      >
-        {loading ? (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color={primaryColor} />
-            <Text style={styles.loadingText}>Loading...</Text>
-          </View>
-        ) : error ? (
-          <View style={styles.errorContainer}>
-            <Text style={styles.errorText}>Error loading post</Text>
-            <TouchableOpacity
-              style={styles.retryButton}
-              onPress={() => {
-                setError(null);
-                setLoading(true);
-              }}
+    <View style={styles.safeArea}>
+      <View style={styles.headerContainer}>
+        <TouchableOpacity 
+          style={styles.backButton} 
+          onPress={() => router.back()}
+          disabled={isDownloading}
+        >
+          <Feather name="arrow-left" size={24} color={primaryColor} />
+          <Text style={styles.backButtonText}>Back</Text>
+        </TouchableOpacity>
+      </View>
+
+      <ScrollView style={styles.scrollView}>
+        <View style={styles.container}>
+          <View style={styles.previewContainer}>
+            <ScrollView
+              horizontal={true}
+              maximumZoomScale={3}
+              showsHorizontalScrollIndicator={true}
+              contentContainerStyle={styles.canvasScrollContent}
             >
-              <Text style={styles.retryButtonText}>Retry</Text>
-            </TouchableOpacity>
-          </View>
-        ) : (
-          <View style={styles.container}>
-            <View style={styles.previewContainer}>
-              <ScrollView
-                horizontal={true}
-                maximumZoomScale={3}
-                showsHorizontalScrollIndicator={true}
-                removeClippedSubviews={false}
-                bounces={false}
-                contentContainerStyle={{
-                  alignItems: "center",
-                  justifyContent: "center",
+              <Canvas
+                ref={canvasRef}
+                style={[
+                  styles.canvas,
+                  {
+                    width: width - 40,
+                    height: canvasDisplayHeight,
+                  }
+                ]}
+                onLayout={() => {
+                  // Additional check when canvas layout is complete
+                  setTimeout(() => {
+                    if (canvasRef.current && !isFrameLoading && post && postImage) {
+                      setIsCanvasReady(true);
+                    }
+                  }, 1000);
                 }}
               >
-                <Canvas
-                  ref={canvasRef}
-                  style={{
-                    width: canvasDimensions.width,
-                    height: canvasDimensions.height,
-                    backgroundColor: "lightgrey",
-                  }}
-                  onLayout={() => {
-                    // Canvas has been laid out, check readiness after a short delay
-                    setTimeout(checkCanvasReadiness, 100);
-                  }}
-                >
-                  {!isFrameLoading && anotherImage && isAppActive && (
-                    <>
-                      <SkiaImage
-                        image={anotherImage}
-                        fit="contain"
-                        x={0}
-                        y={0}
-                        width={canvasDimensions.width}
-                        height={canvasDimensions.height}
-                      />
-                      {renderedElements}
-                    </>
-                  )}
-                </Canvas>
-
-                {(isFrameLoading || !anotherImage || !isAppActive) && (
-                  <View style={styles.frameLoadingOverlay}>
-                    <ActivityIndicator size="large" color={primaryColor} />
-                    <Text style={styles.loadingFrameText}>
-                      {!isAppActive ? 'App Loading...' : 
-                       isFrameLoading ? 'Loading frame...' : 'Loading image...'}
-                    </Text>
-                  </View>
+                {!isFrameLoading && (
+                  <>
+                    <SkiaImage
+                      image={postImage}
+                      fit="contain"
+                      x={0}
+                      y={0}
+                      width={width - 40}
+                      height={width - 40}
+                    />
+                    {elements.map((el) => {
+                      if (el.type === 'text') {
+                        return renderTextElement(el);
+                      }
+                      if (el.type === 'image') {
+                        return renderImageElement(el);
+                      }
+                      return null;
+                    })}
+                  </>
                 )}
+              </Canvas>
+
+              {isFrameLoading && (
+                <View style={styles.frameLoadingOverlay}>
+                  <ActivityIndicator size="large" color={primaryColor} />
+                  <Text style={styles.loadingFrameText}>Loading frame...</Text>
+                </View>
+              )}
+            </ScrollView>
+          </View>
+
+          <View style={styles.buttonsContainer}>
+            <TouchableOpacity
+              style={styles.actionButton}
+              onPress={() => setFontSelectorVisible(true)}
+              activeOpacity={0.8}
+            >
+              <Feather name="type" size={24} color="white" />
+              <Text style={styles.buttonText}>Change Font</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[
+                styles.actionButton,
+                (!isCanvasReady || isFrameLoading || loading || isDownloading) && styles.disabledButton
+              ]}
+              onPress={handleDownload}
+              activeOpacity={0.8}
+              disabled={!isCanvasReady || isFrameLoading || loading || isDownloading}
+            >
+              <Feather name="download" size={24} color="white" />
+              <Text style={styles.buttonText}>
+                {isDownloading ? 'Saving...' : 
+                 (!isCanvasReady || isFrameLoading || loading) ? 'Preparing...' : 'Save to Gallery'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          {renderFontSelectionBottomSheet()}
+
+          {frames.length > 0 && (
+            <View style={styles.framesSection}>
+              <Text style={styles.sectionTitle}>Available Frames</Text>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                style={styles.framesScrollView}
+                contentContainerStyle={styles.framesContentContainer}
+              >
+                {frames.map((frame, index) => (
+                  <TouchableOpacity
+                    key={frame.$id}
+                    style={[
+                      styles.frameItem,
+                      selectedFrameIndex === index ? styles.selectedFrame : styles.normalFrame
+                    ]}
+                    onPress={() => selectFrame(index)}
+                  >
+                    <Image
+                      source={{ uri: frame.previewImage }}
+                      style={styles.frameImage}
+                      resizeMode="cover"
+                    />
+                    <View style={styles.frameDetails}>
+                      <Text style={styles.frameName}>{frame.name || `Frame ${index + 1}`}</Text>
+                    </View>
+                  </TouchableOpacity>
+                ))}
               </ScrollView>
             </View>
-
-            {/* Buttons Container */}
-            <View style={styles.buttonsContainer}>
-              <TouchableOpacity
-                style={styles.actionButton}
-                onPress={toggleFontSelector}
-                activeOpacity={0.8}
-                disabled={isDownloading}
-              >
-                <Feather name="type" size={24} color="white" />
-                <Text style={styles.buttonText}>Change Font</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[
-                  styles.actionButton,
-                  isDownloadDisabled && styles.disabledButton
-                ]}
-                onPress={handleDownload}
-                activeOpacity={0.8}
-                disabled={isDownloadDisabled}
-              >
-                <Feather 
-                  name={isDownloading ? "loader" : "download"} 
-                  size={24} 
-                  color={isDownloadDisabled ? "#999" : "white"} 
-                />
-                <Text style={[
-                  styles.buttonText,
-                  isDownloadDisabled && styles.disabledButtonText
-                ]}>
-                  {isDownloading ? 'Saving...' : 
-                   !isCanvasReady ? 'Loading...' : 
-                   'Save to Gallery'}
-                </Text>
-              </TouchableOpacity>
-            </View>
-
-            {/* Canvas Status Indicator */}
-            {!isCanvasReady && !loading && (
-              <View style={styles.statusContainer}>
-                <Text style={styles.statusText}>
-                  Preparing image for download...
-                </Text>
-              </View>
-            )}
-
-            {fontSelectionModal}
-
-            {/* Frames Selection Section */}
-            {frames.length > 0 && (
-              <View style={styles.framesSection}>
-                <Text style={styles.sectionTitle}>Available Frames</Text>
-                <ScrollView
-                  horizontal
-                  showsHorizontalScrollIndicator={false}
-                  style={styles.framesScrollView}
-                  contentContainerStyle={styles.framesContentContainer}
-                  removeClippedSubviews={true}
-                >
-                  {frames.map((frame, index) => (
-                    <FrameItem
-                      key={frame.$id}
-                      frame={frame}
-                      index={index}
-                      isSelected={selectedFrameIndex === index}
-                      onSelect={selectFrame}
-                    />
-                  ))}
-                </ScrollView>
-              </View>
-            )}
-          </View>
-        )}
+          )}
+        </View>
       </ScrollView>
     </View>
   );
@@ -1050,6 +879,28 @@ const styles = StyleSheet.create({
   scrollView: {
     flex: 1,
   },
+  headerContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+  },
+  backButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    backgroundColor: '#f5f5f5',
+  },
+  backButtonText: {
+    marginLeft: 8,
+    fontSize: 16,
+    color: primaryColor,
+    fontWeight: '500',
+  },
   loadingContainer: {
     flex: 1,
     justifyContent: "center",
@@ -1058,6 +909,7 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     fontSize: 18,
+    marginTop: 10,
   },
   errorContainer: {
     flex: 1,
@@ -1074,12 +926,6 @@ const styles = StyleSheet.create({
     padding: 16,
     paddingTop: 0,
   },
-  title: {
-    fontSize: 24,
-    fontWeight: "bold",
-    marginBottom: 16,
-    marginTop: 0,
-  },
   previewContainer: {
     width: "100%",
     aspectRatio: 1,
@@ -1087,8 +933,13 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-
-  // New styles for buttons below canvas
+  canvasScrollContent: {
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  canvas: {
+    backgroundColor: "lightgrey",
+  },
   buttonsContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -1111,21 +962,15 @@ const styles = StyleSheet.create({
     shadowRadius: 3,
     elevation: 4,
   },
+  disabledButton: {
+    backgroundColor: '#cccccc',
+  },
   buttonText: {
     color: 'white',
     fontWeight: '600',
     marginLeft: 8,
     fontSize: 15,
   },
-  disabledButton: {
-    backgroundColor: '#ccc',
-    elevation: 0,
-    shadowOpacity: 0,
-  },
-  disabledButtonText: {
-    color: '#999',
-  },
-
   framesSection: {
     marginTop: 20,
   },
@@ -1164,44 +1009,6 @@ const styles = StyleSheet.create({
   frameName: {
     fontWeight: "500",
   },
-  frameDimensions: {
-    fontSize: 12,
-    color: "#666",
-  },
-  postsSection: {
-    marginBottom: 20,
-  },
-  postsScrollView: {
-    flexGrow: 0,
-  },
-  postsContentContainer: {
-    paddingVertical: 10,
-  },
-  postItem: {
-    width: 100,
-    marginRight: 10,
-    borderRadius: 8,
-    overflow: 'hidden',
-  },
-  selectedPost: {
-    borderWidth: 2,
-    borderColor: '#007bff',
-  },
-  normalPost: {
-    borderWidth: 1,
-    borderColor: '#eeeeee',
-  },
-  postImage: {
-    width: '100%',
-    height: 70,
-  },
-  postName: {
-    fontSize: 12,
-    textAlign: 'center',
-    padding: 4,
-  },
-
-  // Bottom sheet styles
   modalOverlay: {
     flex: 1,
     justifyContent: 'flex-end',
@@ -1249,7 +1056,7 @@ const styles = StyleSheet.create({
   },
   selectedFontOption: {
     borderColor: primaryColor,
-    backgroundColor: `${primaryColor}10`, // 10% opacity of primary color
+    backgroundColor: `${primaryColor}10`,
   },
   fontLabel: {
     fontSize: 16,
@@ -1277,23 +1084,15 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   retryButton: {
-    marginTop: 16,
+    backgroundColor: primaryColor,
     paddingHorizontal: 20,
     paddingVertical: 10,
-    backgroundColor: primaryColor,
-    borderRadius: 8,
+    borderRadius: 5,
+    marginTop: 20,
   },
   retryButtonText: {
     color: 'white',
-    fontWeight: '600',
-  },
-  statusContainer: {
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  statusText: {
-    fontSize: 14,
-    color: '#666',
-    fontStyle: 'italic',
+    fontSize: 16,
+    fontWeight: '500',
   },
 });

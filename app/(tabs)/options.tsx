@@ -25,7 +25,7 @@ const contactUsLink = 'https://docs.google.com/document/d/1xpYw3TNPnYjlaekH7SvR0
 const callSupportLink = 'tel:+919999999999' // Replace with your support number
  
 
-const Options = () => {
+ const Options = () => {
   const router = useRouter();
   const [user, setUser] = useState<any>(null);
   const [userId, setUserId] = useState<string | null>(null);
@@ -108,32 +108,41 @@ const shareApp = async () => {
                 </Text>
             </View>
           </View>
-          <TouchableOpacity onPress={() => router.push("/edit-profile")}>
+          {/* <TouchableOpacity onPress={() => router.push("/edit-profile")}>
             <Text style={styles.editButton}>Edit</Text>
-          </TouchableOpacity>
+          </TouchableOpacity> */}
         </View>
 
         {/* Referral Card */}
         <View style={styles.referralCard}>
-          <View style={styles.referralLeft}>
-            <View style={styles.referralCode}>
-                <Text style={styles.referralCodeText}>{userId ? userId.slice(-5) : ''}</Text>
-              <TouchableOpacity>
-                <Ionicons name="copy-outline" size={20} color="white" />
+          <View style={styles.referralContent}>
+            <View style={styles.referralHeader}>
+          <FontAwesome name="gift" size={24} color="#FFD700" />
+              <View style={styles.headerText}>
+          <Text style={styles.referralTitle}>Refer & Earn</Text>
+          <Text style={styles.referralSubtitle}>Get rewards for every friend you invite</Text>
+              </View>
+            </View>
+            
+            <View style={styles.codeSection}>
+              <Text style={styles.codeLabel}>Your Referral Code</Text>
+              <View style={styles.referralCode}>
+          <Text style={styles.referralCodeText}>{userId ? userId.slice(-6).toUpperCase() : 'LOADING'}</Text>
+          <TouchableOpacity style={styles.copyButton}>
+            <Ionicons name="copy-outline" size={18} color="#0099ff" />
+          </TouchableOpacity>
+              </View>
+            </View>
+            
+            <View style={styles.actionButtons}>
+              {/* <TouchableOpacity style={styles.primaryButton}>
+          <Text style={styles.primaryButtonText}>Invite Friends</Text>
+              </TouchableOpacity> */}
+              <TouchableOpacity style={styles.secondaryButton} onPress={shareApp}>
+          <Ionicons name="share-outline" size={18} color="#0099ff" />
+          <Text style={styles.secondaryButtonText}>Share</Text>
               </TouchableOpacity>
             </View>
-            <View style={styles.referralActions}>
-              <TouchableOpacity style={styles.referNowButton}>
-                <Text style={styles.referNowText}>Refer Now</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.shareButton} onPress={shareApp}>
-                <Text style={styles.shareText}>Share</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-          <View style={styles.referralRight}>
-            <FontAwesome name="gift" size={40} color="white" style={styles.giftIcon} />
-            <Text style={styles.referralTitle}>Refer & Earn Wallet coin</Text>
           </View>
         </View>
 
@@ -432,6 +441,65 @@ const styles = StyleSheet.create({
   bottomSpace: {
     height: 100,
   },
+  referralContent: {
+    flex: 1,
+  },
+  referralHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 16,
+  },
+  headerText: {
+    marginLeft: 12,
+  },
+  referralSubtitle: {
+    color: "rgba(255,255,255,0.8)",
+    fontSize: 14,
+    marginTop: 4,
+  },
+  codeSection: {
+    marginBottom: 16,
+  },
+  codeLabel: {
+    color: "rgba(255,255,255,0.8)",
+    fontSize: 12,
+    marginBottom: 8,
+  },
+  copyButton: {
+    padding: 4,
+  },
+  actionButtons: {
+    flexDirection: "row",
+    gap: 12,
+  },
+  primaryButton: {
+    backgroundColor: "#0099ff",
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    flex: 1,
+  },
+  primaryButtonText: {
+    color: "white",
+    fontWeight: "600",
+    textAlign: "center",
+  },
+  secondaryButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#0099ff",
+  },
+  secondaryButtonText: {
+    color: "#0099ff",
+    fontWeight: "600",
+    marginLeft: 4,
+  },
 });
+
 
 export default Options;

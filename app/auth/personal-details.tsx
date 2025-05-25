@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useCallback, useMemo } from "react";
 import {
   View,
   Text,
@@ -6,8 +6,8 @@ import {
   TextInput,
   TouchableOpacity,
   Image,
-  Platform,
   ActivityIndicator,
+  Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router, useLocalSearchParams } from "expo-router";
@@ -17,33 +17,47 @@ import { Ionicons } from "@expo/vector-icons";
 import { database, storage } from "@/context/app-write";
 import { ID } from "react-native-appwrite";
 
+// Constants
+const BUCKET_ID = process.env.EXPO_PUBLIC_BUCKET_ID!;
+const DATABASE_ID = "6815de2b0004b53475ec";
+const COLLECTION_ID = "6815e0be001731ca8b1b";
+const PROJECT_ID = "6815dda60027ce5089d8";
+
+interface FormData {
+  fullName: string;
+  address: string;
+  image: string | null;
+}
+
 const PersonalDetails = () => {
   const params = useLocalSearchParams();
-  const documentId = Array.isArray(params.documentId)
-    ? params.documentId[0]
-    : (params.documentId as string);
-  console.log(documentId, "🟢");
+  const documentId = useMemo(() => 
+    Array.isArray(params.documentId) ? params.documentId[0] : params.documentId as string,
+    [params.documentId]
+  );
 
-  const [fullName, setFullName] = useState("");
-  const [image, setImage] = useState<string | null>(null);
+  const [formData, setFormData] = useState<FormData>({
+    fullName: "",
+    address: "",
+    image: null,
+  });
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState("");
-  const [address, setAddress] = useState("");
 
-  // Pick an image from gallery
-  const pickImage = async () => {
+  const updateFormData = useCallback((field: keyof FormData, value: string | null) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+    if (error) setError("");
+  }, [error]);
+
+  const pickImage = useCallback(async () => {
     try {
-      // Request media library permissions
-      const {
-        status,
-      } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      
       if (status !== "granted") {
-        alert("Sorry, we need storage permissions to make this work!");
+        Alert.alert("Permission needed", "We need storage permissions to select photos.");
         return;
       }
 
-      // Launch image picker
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,
@@ -51,56 +65,62 @@ const PersonalDetails = () => {
         quality: 0.7,
       });
 
-      if (!result.canceled && result.assets && result.assets[0]) {
-        setImage(result.assets[0].uri);
+      if (!result.canceled && result.assets?.[0]) {
+        updateFormData("image", result.assets[0].uri);
       }
     } catch (err) {
       console.error("Error picking image:", err);
       setError("Failed to select image");
     }
-  };
+  }, [updateFormData]);
 
-  // Handle continue button
-  const handleContinue = async () => {
-    if (!fullName.trim() || !address.trim()) {
+  const uploadImage = useCallback(async (imageUri: string) => {
+    const filename = imageUri.split("/").pop() || "profile.jpg";
+    const fileData = {
+      name: filename,
+      type: "image/jpeg",
+      size: 0,
+      uri: imageUri,
+    };
+
+    return await storage.createFile(BUCKET_ID, ID.unique(), fileData);
+  }, []);
+
+  const updateUserDocument = useCallback(async (profileImageData?: { url: string; id: string }) => {
+    const updateData: any = {
+      name: formData.fullName,
+      address: formData.address,
+    };
+
+    if (profileImageData) {
+      updateData.profileImage = profileImageData.url;
+      updateData.profileImageId = profileImageData.id;
+    }
+
+    return await database.updateDocument(DATABASE_ID, COLLECTION_ID, documentId, updateData);
+  }, [formData.fullName, formData.address, documentId]);
+
+  const handleContinue = useCallback(async () => {
+    if (!formData.fullName.trim() || !formData.address.trim()) {
       setError("Please enter your full name and address");
       return;
     }
+
     setUploading(true);
     setError("");
 
     try {
-      // Upload profile image if selected
-      if (image) {
-        const imageUri: string = image;
-        const filename = imageUri.split("/").pop();
-
-        // Android only implementation
-        const fileData = {
-          name: filename || "profile.jpg",
-          type: "image/jpeg",
-          size: 0, // This will be determined by the backend for Android
-          uri: imageUri,
+      let profileImageData;
+      
+      if (formData.image) {
+        const file = await uploadImage(formData.image);
+        profileImageData = {
+          url: `https://cloud.appwrite.io/v1/storage/buckets/${BUCKET_ID}/files/${file.$id}/view?project=${PROJECT_ID}`,
+          id: file.$id,
         };
-
-        const bucketId = process.env.EXPO_PUBLIC_BUCKET_ID!;
-        const file = await storage.createFile(bucketId, ID.unique(), fileData);
-
-        //update user data in our database
-        await database.updateDocument(
-          "6815de2b0004b53475ec",
-          "6815e0be001731ca8b1b",
-          documentId,
-          {
-            name: fullName,
-            profileImage: `https://cloud.appwrite.io/v1/storage/buckets/${
-              process.env.EXPO_PUBLIC_BUCKET_ID
-            }/files/${file.$id}/view?project=6815dda60027ce5089d8`,
-            profileImageId: file.$id,
-            address: address,
-          }
-        );
       }
+
+      await updateUserDocument(profileImageData);
 
       router.replace({
         pathname: "/select-political-party",
@@ -112,7 +132,12 @@ const PersonalDetails = () => {
     } finally {
       setUploading(false);
     }
-  };
+  }, [formData, uploadImage, updateUserDocument, documentId]);
+
+  const isFormValid = useMemo(() => 
+    formData.fullName.trim() && formData.address.trim(),
+    [formData.fullName, formData.address]
+  );
 
   return (
     <SafeAreaView style={styles.container}>
@@ -122,8 +147,8 @@ const PersonalDetails = () => {
         {/* Profile Image Section */}
         <View style={styles.photoContainer}>
           <View style={styles.profileImageContainer}>
-            {image ? (
-              <Image source={{ uri: image }} style={styles.profileImage} />
+            {formData.image ? (
+              <Image source={{ uri: formData.image }} style={styles.profileImage} />
             ) : (
               <View style={styles.profilePlaceholder}>
                 <Ionicons name="person" size={80} color="#fff" />
@@ -141,22 +166,21 @@ const PersonalDetails = () => {
           <Text style={styles.addPhotoText}>Add Your Photo</Text>
         </View>
 
-        {/* Name Input */}
+        {/* Form Inputs */}
         <TextInput
           style={styles.input}
           placeholder="Full Name"
-          value={fullName}
-          onChangeText={setFullName}
+          value={formData.fullName}
+          onChangeText={(value) => updateFormData("fullName", value)}
           placeholderTextColor="#888"
           editable={!uploading}
         />
 
-        {/* Name Input */}
         <TextInput
           style={styles.input}
           placeholder="Address"
-          value={address}
-          onChangeText={setAddress}
+          value={formData.address}
+          onChangeText={(value) => updateFormData("address", value)}
           placeholderTextColor="#888"
           editable={!uploading}
         />
@@ -166,9 +190,9 @@ const PersonalDetails = () => {
 
         {/* Continue Button */}
         <TouchableOpacity
-          style={styles.continueButton}
+          style={[styles.continueButton, !isFormValid && styles.disabledButton]}
           onPress={handleContinue}
-          disabled={uploading}
+          disabled={uploading || !isFormValid}
         >
           {uploading ? (
             <ActivityIndicator color="#fff" />
@@ -257,12 +281,10 @@ const styles = StyleSheet.create({
   },
   input: {
     height: 56,
-    borderWidth: 1,
-    borderColor: "#ccc",
-    borderRadius: 8,
+    borderRadius: 5,
     paddingHorizontal: 16,
     fontSize: 16,
-    backgroundColor: "#E6F0FF",
+    backgroundColor: "rgba(217, 217, 217, 0.4)",
     marginBottom: 20,
   },
   errorText: {
@@ -277,6 +299,9 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     marginTop: 20,
+  },
+  disabledButton: {
+    opacity: 0.6,
   },
   continueButtonText: {
     color: "#fff",
