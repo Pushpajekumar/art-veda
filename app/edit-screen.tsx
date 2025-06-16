@@ -512,16 +512,16 @@ const EditScreen = () => {
       const userData = currentUser[0];
       switch (el.label) {
         case 'name':
-          displayText = userData.name || el.text;
+          displayText = userData.name || " ";
           break;
         case 'email':
-          displayText = userData.email || el.text;
+          displayText = userData.email || " ";
           break;
         case 'address':
-          displayText = userData.address || el.text;
+          displayText = userData.address || " ";
           break;
         case 'phone':
-          displayText = userData.phone || el.text;
+          displayText = userData.phone || " ";
           break;
       }
     }
