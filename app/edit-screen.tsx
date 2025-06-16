@@ -24,6 +24,7 @@ import {
   useFont,
   Group,
   Circle,
+  Rect,
 } from "@shopify/react-native-skia";
 import { primaryColor, width } from "@/constant/contant";
 import * as MediaLibrary from 'expo-media-library';
@@ -134,6 +135,8 @@ const EditScreen = () => {
   const [selectedFrameIndex, setSelectedFrameIndex] = useState(0);
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [fontSelectorVisible, setFontSelectorVisible] = useState(false);
+  const [imageShapeVisible, setImageShapeVisible] = useState(false);
+  const [selectedImageShape, setSelectedImageShape] = useState<'square' | 'rectangle' | 'circle'>('square');
   const [isFrameLoading, setIsFrameLoading] = useState(false);
   const [selectedFontFamily, setSelectedFontFamily] = useState<'montserrat' | 'roboto'>('montserrat');
   const [isCanvasReady, setIsCanvasReady] = useState(false);
@@ -580,8 +583,9 @@ const EditScreen = () => {
       const centerX = position.x + size/2;
       const centerY = position.y + size/2;
       
-      return (
-        <Group key={el.id}>
+      if (selectedImageShape === 'circle') {
+        return (
+             <Group key={el.id}>
           <Circle
             cx={centerX}
             cy={centerY}
@@ -607,7 +611,40 @@ const EditScreen = () => {
             }}
           />
         </Group>
-      );
+        );
+      } else if (selectedImageShape === 'square') {
+        return (
+          <Group key={el.id}>
+            <Rect
+              x={position.x - 2}
+              y={position.y - 2}
+              width={size + 4}
+              height={size + 4}
+              color="white"
+            />
+            <SkiaImage
+              image={img}
+              x={position.x}
+              y={position.y}
+              width={size}
+              height={size}
+              fit="cover"
+            />
+          </Group>
+        );
+      } else { // rectangle
+        return (
+          <SkiaImage
+            key={el.id}
+            image={img}
+            x={position.x}
+            y={position.y}
+            width={el.width}
+            height={el.height}
+            fit="cover"
+          />
+        );
+      }
     } else {
       return (
         <SkiaImage
@@ -621,7 +658,7 @@ const EditScreen = () => {
         />
       );
     }
-  }, [calculatePositionFromRatio, currentUser, imageSources, imageMap]);
+  }, [calculatePositionFromRatio, currentUser, imageSources, imageMap, selectedImageShape]);
 
   const renderFontSelectionBottomSheet = () => (
     <Modal
@@ -653,9 +690,7 @@ const EditScreen = () => {
               activeOpacity={0.7}
             >
               <Text style={styles.fontLabel}>Montserrat</Text>
-              <Text style={[styles.fontPreview, { fontFamily: 'Montserrat' }]}>
-                Sample Text
-              </Text>
+              <Text style={styles.fontPreview}>Sample Text</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -670,9 +705,75 @@ const EditScreen = () => {
               activeOpacity={0.7}
             >
               <Text style={styles.fontLabel}>Roboto</Text>
-              <Text style={[styles.fontPreview, { fontFamily: 'Roboto' }]}>
-                Sample Text
-              </Text>
+              <Text style={styles.fontPreview}>Sample Text</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+    </Modal>
+  );
+
+  const renderImageShapeSelectionBottomSheet = () => (
+    <Modal
+      visible={imageShapeVisible}
+      transparent={true}
+      animationType="slide"
+      onRequestClose={() => setImageShapeVisible(false)}
+    >
+      <View style={styles.modalOverlay}>
+        <TouchableOpacity
+          style={styles.modalBackdrop}
+          activeOpacity={1}
+          onPress={() => setImageShapeVisible(false)}
+        />
+        <View style={styles.bottomSheet}>
+          <View style={styles.bottomSheetHandle} />
+          <Text style={styles.bottomSheetTitle}>Select Image Shape</Text>
+
+          <View style={styles.shapeOptionsContainer}>
+            <TouchableOpacity
+              style={[
+                styles.shapeOption,
+                selectedImageShape === 'square' && styles.selectedShapeOption
+              ]}
+              onPress={() => {
+                setSelectedImageShape('square');
+                setImageShapeVisible(false);
+              }}
+              activeOpacity={0.7}
+            >
+              <Feather name="square" size={32} color={selectedImageShape === 'square' ? primaryColor : '#666'} />
+              <Text style={styles.shapeLabel}>Square</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[
+                styles.shapeOption,
+                selectedImageShape === 'rectangle' && styles.selectedShapeOption
+              ]}
+              onPress={() => {
+                setSelectedImageShape('rectangle');
+                setImageShapeVisible(false);
+              }}
+              activeOpacity={0.7}
+            >
+              <Feather name="square" size={32} color={selectedImageShape === 'rectangle' ? primaryColor : '#666'} />
+              <Text style={styles.shapeLabel}>Rectangle</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[
+                styles.shapeOption,
+                selectedImageShape === 'circle' && styles.selectedShapeOption
+              ]}
+              onPress={() => {
+                setSelectedImageShape('circle');
+                setImageShapeVisible(false);
+              }}
+              activeOpacity={0.7}
+            >
+              <Feather name="circle" size={32} color={selectedImageShape === 'circle' ? primaryColor : '#666'} />
+              <Text style={styles.shapeLabel}>Circle</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -757,7 +858,6 @@ const EditScreen = () => {
               )}
             </ScrollView>
           </View>
-
           <View style={styles.buttonsContainer}>
             <TouchableOpacity
               style={styles.actionButton}
@@ -765,7 +865,14 @@ const EditScreen = () => {
               activeOpacity={0.8}
             >
               <Feather name="type" size={24} color="white" />
-              <Text style={styles.buttonText}>Change Font</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.actionButton}
+              onPress={() => setImageShapeVisible(true)}
+              activeOpacity={0.8}
+            >
+              <Feather name="square" size={24} color="white" />
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -778,14 +885,11 @@ const EditScreen = () => {
               disabled={!isCanvasReady || isFrameLoading || loading || isDownloading}
             >
               <Feather name="download" size={24} color="white" />
-              <Text style={styles.buttonText}>
-                {isDownloading ? 'Saving...' : 
-                 (!isCanvasReady || isFrameLoading || loading) ? 'Preparing...' : 'Save to Gallery'}
-              </Text>
             </TouchableOpacity>
           </View>
 
           {renderFontSelectionBottomSheet()}
+          {renderImageShapeSelectionBottomSheet()}
 
           {frames.length > 0 && (
             <View style={styles.framesSection}>
@@ -878,14 +982,14 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginBottom: 24,
     paddingHorizontal: 4,
+    flexWrap: 'wrap',
   },
   actionButton: {
     flex: 1,
     backgroundColor: primaryColor,
-    paddingVertical: 12,
+    paddingVertical: 16,
     paddingHorizontal: 16,
-    borderRadius: 8,
-    flexDirection: 'row',
+    borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
     marginHorizontal: 6,
@@ -894,6 +998,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.2,
     shadowRadius: 3,
     elevation: 4,
+    minHeight: 56,
   },
   disabledButton: {
     backgroundColor: '#cccccc',
@@ -1020,5 +1125,29 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: primaryColor,
     fontWeight: '500',
+  },
+  shapeOptionsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    marginBottom: 20,
+  },
+  shapeOption: {
+    alignItems: 'center',
+    paddingVertical: 20,
+    paddingHorizontal: 15,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: 'transparent',
+    minWidth: 80,
+  },
+  selectedShapeOption: {
+    borderColor: primaryColor,
+    backgroundColor: `${primaryColor}10`,
+  },
+  shapeLabel: {
+    fontSize: 14,
+    fontWeight: '500',
+    marginTop: 8,
+    textAlign: 'center',
   },
 });
