@@ -136,7 +136,7 @@ const EditScreen = () => {
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [fontSelectorVisible, setFontSelectorVisible] = useState(false);
   const [imageShapeVisible, setImageShapeVisible] = useState(false);
-  const [selectedImageShape, setSelectedImageShape] = useState<'square' | 'rectangle' | 'circle'>('square');
+  const [selectedImageShape, setSelectedImageShape] = useState<'square' | 'circle'>('square');
   const [isFrameLoading, setIsFrameLoading] = useState(false);
   const [selectedFontFamily, setSelectedFontFamily] = useState<'montserrat' | 'roboto'>('montserrat');
   const [isCanvasReady, setIsCanvasReady] = useState(false);
@@ -744,21 +744,6 @@ const EditScreen = () => {
             >
               <Feather name="square" size={32} color={selectedImageShape === 'square' ? primaryColor : '#666'} />
               <Text style={styles.shapeLabel}>Square</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[
-                styles.shapeOption,
-                selectedImageShape === 'rectangle' && styles.selectedShapeOption
-              ]}
-              onPress={() => {
-                setSelectedImageShape('rectangle');
-                setImageShapeVisible(false);
-              }}
-              activeOpacity={0.7}
-            >
-              <Feather name="square" size={32} color={selectedImageShape === 'rectangle' ? primaryColor : '#666'} />
-              <Text style={styles.shapeLabel}>Rectangle</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
