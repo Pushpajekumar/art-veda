@@ -316,7 +316,7 @@ const EditScreen = () => {
         return;
       }
 
-      const snapshot = await canvasRef.current.makeImageSnapshot();
+      const snapshot = await canvasRef.current.makeImageSnapshot(undefined, 3);
       if (!snapshot) {
         Alert.alert('Error', 'Failed to take a snapshot. Please try again.');
         return;
