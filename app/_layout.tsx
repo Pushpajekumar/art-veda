@@ -6,7 +6,6 @@ import { ThemeProvider } from "../context/ThemeContext";
 import { NotificationProvider } from "@/context/notificationContext";
 import * as Notifications from "expo-notifications";
 import * as TaskManager from "expo-task-manager";
-import { AppState } from "react-native";
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -47,24 +46,6 @@ export default function RootLayout() {
     // Add any other weights you have in your assets/fonts directory
   });
 
-  // Add app state persistence with better handling
-  // useEffect(() => {
-  //   const handleAppStateChange = (nextAppState: string) => {
-  //     console.log('Root layout - App state changed to:', nextAppState);
-      
-  //     // Prevent automatic reloading that might cause white screens
-  //     if (nextAppState === 'active') {
-  //       // Small delay to ensure proper rehydration
-  //       setTimeout(() => {
-  //         console.log('App fully active, ready for interactions');
-  //       }, 100);
-  //     }
-  //   };
-
-  //   const subscription = AppState.addEventListener('change', handleAppStateChange);
-  //   return () => subscription?.remove();
-  // }, []);
-
   useEffect(() => {
     if (error) {
       console.error("Failed to load font:", error);
@@ -102,7 +83,7 @@ export default function RootLayout() {
             // Enhanced options to prevent white screens
             freezeOnBlur: false,
             animationDuration: 150,
-            gestureDirection: 'horizontal',
+            gestureDirection: "horizontal",
           }}
         >
           <Stack.Screen name="index" options={{ headerShown: false }} />
