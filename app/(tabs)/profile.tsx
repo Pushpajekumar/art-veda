@@ -23,6 +23,7 @@ const profile = () => {
   const [profileImage, setProfileImage] = React.useState("");
   const [loading, setLoading] = React.useState(true);
   const [userId, setUserId] = React.useState("");
+  const [userFrames, setUserFrames] = React.useState([]);
 
   useEffect(() => {
     const fetchUserDetails = async () => {
@@ -57,7 +58,12 @@ const profile = () => {
         setPhone(userDetails.phone || "");
         setProfileImage(userDetails.profileImage || "");
         setUserId(userDetails.$id || "");
-        console.log(userDetails);
+        // Extract only name and previewImage from each frame
+        const frames = (userDetails.frames || []).map((frame: any) => ({
+          name: frame.name,
+          previewImage: frame.previewImage,
+        }));
+        setUserFrames(frames);
       } catch (error) {
         console.error("Error fetching user details:", error);
         ToastAndroid.show("Failed to load profile", ToastAndroid.SHORT);
@@ -163,23 +169,51 @@ const profile = () => {
                 showsHorizontalScrollIndicator={false}
                 contentContainerStyle={{ paddingHorizontal: 20 }}
               >
-                {Array.from({ length: 10 }, (_, index) => (
+                {userFrames.length > 0 ? (
+                  userFrames.map((frame: any, index: number) => (
+                    <View
+                      key={index}
+                      style={{
+                        width: width * 0.25,
+                        height: width * 0.25,
+                        backgroundColor: "#e5e7eb",
+                        borderRadius: 10,
+                        marginRight: 12,
+                        shadowColor: "#000",
+                        shadowOffset: { width: 0, height: 1 },
+                        shadowOpacity: 0.2,
+                        shadowRadius: 2,
+                        elevation: 2,
+                        overflow: "hidden",
+                      }}
+                    >
+                      <Image
+                        source={{ uri: frame.previewImage }}
+                        style={{
+                          width: "100%",
+                          height: "100%",
+                        }}
+                        resizeMode="cover"
+                        onError={() => console.log("Error loading frame image")}
+                      />
+                    </View>
+                  ))
+                ) : (
                   <View
-                    key={index}
                     style={{
-                      width: width * 0.25,
+                      width: width * 0.8,
                       height: width * 0.25,
                       backgroundColor: "#e5e7eb",
                       borderRadius: 10,
-                      marginRight: 12,
-                      shadowColor: "#000",
-                      shadowOffset: { width: 0, height: 1 },
-                      shadowOpacity: 0.2,
-                      shadowRadius: 2,
-                      elevation: 2,
+                      justifyContent: "center",
+                      alignItems: "center",
                     }}
-                  />
-                ))}
+                  >
+                    <Text style={{ color: "gray", fontSize: 16 }}>
+                      No frames available
+                    </Text>
+                  </View>
+                )}
               </ScrollView>
             </View>
 
