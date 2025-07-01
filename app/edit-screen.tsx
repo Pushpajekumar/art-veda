@@ -172,6 +172,19 @@ const EditScreen = () => {
 
 
   console.log(canvasOrientation, "Canvas Orientation 🔴");
+  console.log( deviceWidth, deviceHeight, "Device Dimensions 📱");
+  
+   //Canvas width and height based post height and width and device width and height
+
+   const widthRatio =  (deviceWidth - 40) / canvasWidth;
+   const heightRatio = (deviceHeight - 40) / canvasHeight;
+
+  console.log(widthRatio, heightRatio, "Width and Height Ratio 📏");
+
+  const postWidthTesting = canvasWidth * widthRatio
+  const postHeightTesting = canvasHeight * widthRatio;
+
+  console.log(postWidthTesting, postHeightTesting, "Post Width and Height Testing 📏");
 
   const canvasDisplayHeight = useMemo(() => 
     canvasWidth ? (canvasHeight / canvasWidth) * (width - 40) : width - 40,
@@ -804,33 +817,27 @@ const EditScreen = () => {
       <ScrollView style={styles.scrollView}>
         <View style={styles.container}>
           <View style={styles.previewContainer}>
-            <ScrollView
-              horizontal={true}
-              maximumZoomScale={3}
-              showsHorizontalScrollIndicator={true}
-              contentContainerStyle={styles.canvasScrollContent}
+            <View
+              style={[
+                styles.canvas,
+                canvasOrientation === 'square'
+                  ? { width: postWidthTesting, height: postHeightTesting }
+                  : canvasOrientation === 'portrait'
+                    ? { width: postWidthTesting/1.5, height: postHeightTesting/1.5 }
+                    : { width: deviceWidth - 40, height: (deviceWidth - 40) * 0.7 }
+              ]}
             >
-              <View
-                style={[
-                  styles.canvas,
-                  canvasOrientation === 'square'
-                    ? { width: deviceWidth - 40, height: deviceWidth - 40 }
-                    : canvasOrientation === 'portrait'
-                      ? { width: deviceWidth - 40, height: (deviceWidth - 40) * 1.4 }
-                      : { width: deviceWidth - 40, height: (deviceWidth - 40) * 0.7 }
-                ]}
+              <Canvas
+                ref={canvasRef}
+                style={StyleSheet.absoluteFill}
+                onLayout={() => {
+                  setTimeout(() => {
+                    if (canvasRef.current && !isFrameLoading && post && postImage) {
+                      setIsCanvasReady(true);
+                    }
+                  }, 1000);
+                }}
               >
-                <Canvas
-                  ref={canvasRef}
-                  style={StyleSheet.absoluteFill}
-                  onLayout={() => {
-                    setTimeout(() => {
-                      if (canvasRef.current && !isFrameLoading && post && postImage) {
-                        setIsCanvasReady(true);
-                      }
-                    }, 1000);
-                  }}
-                >
                 {!isFrameLoading && (
                   <>
                     <SkiaImage
@@ -841,12 +848,12 @@ const EditScreen = () => {
                       width={canvasOrientation === 'square'
                         ? deviceWidth - 40
                         : canvasOrientation === 'portrait'
-                          ? deviceWidth - 40
+                          ? postWidthTesting/1.5
                           : width - 40}
                       height={canvasOrientation === 'square'
                         ? deviceWidth - 40
                         : canvasOrientation === 'portrait'
-                          ? (deviceWidth - 40) * 1.4
+                          ? postHeightTesting/1.5
                           : width - 40}
                     />
                     {elements.map((el) => {
@@ -868,8 +875,7 @@ const EditScreen = () => {
                   <Text style={styles.loadingFrameText}>Loading frame...</Text>
                 </View>
               )}
-              </View>
-            </ScrollView>
+            </View>
           </View>
           <View style={styles.buttonsContainer}>
             <TouchableOpacity
@@ -977,8 +983,6 @@ const styles = StyleSheet.create({
     paddingTop: 0,
   },
   previewContainer: {
-    width: "100%",
-    aspectRatio: 1,
     marginBottom: 16,
     justifyContent: "center",
     alignItems: "center",
