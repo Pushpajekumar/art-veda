@@ -11,6 +11,7 @@ import {
   ActivityIndicator,
   ToastAndroid,
   Platform,
+  Dimensions
 } from "react-native";
 import React, { useEffect, useState, useCallback, useRef, useMemo } from "react";
 import { useLocalSearchParams } from "expo-router";
@@ -119,7 +120,8 @@ const useFonts = () => {
 const EditScreen = () => {
   const { postId: initialPostId } = useLocalSearchParams();
   const [currentPostId] = useState<string>(initialPostId as string);
-  
+  const { width : deviceWidth, height: deviceHeight } = Dimensions.get('window');
+
   // State management
   const [post, setPost] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -158,6 +160,18 @@ const EditScreen = () => {
     });
     return map;
   }, [imageSources, imageHooks]);
+
+
+  // Determine if the canvas is portrait, landscape, or square
+  const canvasOrientation = useMemo(() => {
+    if (!canvasWidth || !canvasHeight) return null;
+    if (canvasWidth === canvasHeight) return 'square';
+    if (canvasWidth > canvasHeight) return 'landscape';
+    return 'portrait';
+  }, [canvasWidth, canvasHeight]);
+
+
+  console.log(canvasOrientation, "Canvas Orientation 🔴");
 
   const canvasDisplayHeight = useMemo(() => 
     canvasWidth ? (canvasHeight / canvasWidth) * (width - 40) : width - 40,
@@ -796,24 +810,27 @@ const EditScreen = () => {
               showsHorizontalScrollIndicator={true}
               contentContainerStyle={styles.canvasScrollContent}
             >
-              <Canvas
-                ref={canvasRef}
+              <View
                 style={[
                   styles.canvas,
-                  {
-                    width: width - 40,
-                    height: canvasDisplayHeight,
-                  }
+                  canvasOrientation === 'square'
+                    ? { width: deviceWidth - 40, height: deviceWidth - 40 }
+                    : canvasOrientation === 'portrait'
+                      ? { width: deviceWidth - 40, height: (deviceWidth - 40) * 1.4 }
+                      : { width: deviceWidth - 40, height: (deviceWidth - 40) * 0.7 }
                 ]}
-                onLayout={() => {
-                  // Additional check when canvas layout is complete
-                  setTimeout(() => {
-                    if (canvasRef.current && !isFrameLoading && post && postImage) {
-                      setIsCanvasReady(true);
-                    }
-                  }, 1000);
-                }}
               >
+                <Canvas
+                  ref={canvasRef}
+                  style={StyleSheet.absoluteFill}
+                  onLayout={() => {
+                    setTimeout(() => {
+                      if (canvasRef.current && !isFrameLoading && post && postImage) {
+                        setIsCanvasReady(true);
+                      }
+                    }, 1000);
+                  }}
+                >
                 {!isFrameLoading && (
                   <>
                     <SkiaImage
@@ -821,8 +838,16 @@ const EditScreen = () => {
                       fit="contain"
                       x={0}
                       y={0}
-                      width={width - 40}
-                      height={width - 40}
+                      width={canvasOrientation === 'square'
+                        ? deviceWidth - 40
+                        : canvasOrientation === 'portrait'
+                          ? deviceWidth - 40
+                          : width - 40}
+                      height={canvasOrientation === 'square'
+                        ? deviceWidth - 40
+                        : canvasOrientation === 'portrait'
+                          ? (deviceWidth - 40) * 1.4
+                          : width - 40}
                     />
                     {elements.map((el) => {
                       if (el.type === 'text') {
@@ -843,6 +868,7 @@ const EditScreen = () => {
                   <Text style={styles.loadingFrameText}>Loading frame...</Text>
                 </View>
               )}
+              </View>
             </ScrollView>
           </View>
           <View style={styles.buttonsContainer}>
@@ -962,7 +988,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   canvas: {
-    backgroundColor: "lightgrey",
+    backgroundColor: "red",
   },
   buttonsContainer: {
     flexDirection: 'row',
