@@ -121,6 +121,8 @@ const EditScreen = () => {
   const { postId: initialPostId } = useLocalSearchParams();
   const [currentPostId] = useState<string>(initialPostId as string);
   const { width : deviceWidth, height: deviceHeight } = Dimensions.get('window');
+    const anotherFont =  useFont(require("../assets/fonts/Roboto-Medium.ttf"), 16)
+
 
   // State management
   const [post, setPost] = useState<any>(null);
@@ -186,56 +188,42 @@ const EditScreen = () => {
 
   console.log(postWidthTesting, postHeightTesting, "Post Width and Height Testing 📏");
 
-  const canvasDisplayHeight = useMemo(() => 
-    canvasWidth ? (canvasHeight / canvasWidth) * (width - 40) : width - 40,
-    [canvasWidth, canvasHeight]
-  );
-
   const postImage = useImage(post?.previewImage);
 
-  // Utility functions
-  const getClosestFontSize = useCallback((size: number) => {
-    return fontSizes.reduce((prev, curr) =>
-      Math.abs(curr - size) < Math.abs(prev - size) ? curr : prev
-    );
-  }, [fontSizes]);
 
+  // Function to get font with size and weight
   const getFontWithSize = useCallback((weight: string, fontSize: number) => {
-    if (!frameWidth || !frameHeight) {
-      const index = fontSizes.indexOf(12);
-      return weight === 'bold' ? boldFonts[index] : regularFonts[index];
-    }
+    console.info("Font Size and Weight 🔵:", fontSize, weight);
+    const scaledFontSize = fontSize * widthRatio * 1.2;
+    console.info(scaledFontSize, "Scaled Font Size 🟢");
 
-    const screenWidth = width - 40;
-    const screenHeight = screenWidth * (frameHeight / frameWidth);
-    const scaleX = screenWidth / (frameWidth / 2);
-    const scaleY = screenHeight / (frameHeight / 2);
-    const scale = Math.min(scaleX, scaleY);
-    const scaledSize = fontSize * scale;
-    const closestSize = getClosestFontSize(scaledSize);
-    const index = fontSizes.indexOf(closestSize - 5);
+    // Find the closest available font size
+    const closestSize = fontSizes.reduce((prev, curr) =>
+      Math.abs(curr - scaledFontSize) < Math.abs(prev - scaledFontSize) ? curr : prev
+    );
+
+    console.info(closestSize, "Closest Font Size 🟡");
+
+    const index = fontSizes.indexOf(closestSize);
 
     if (index === -1) return null;
-    
+
     if (selectedFontFamily === 'montserrat') {
       return weight === 'bold' ? boldFonts[index] : regularFonts[index];
     } else {
       return weight === 'bold' ? robotoBoldFonts[index] : robotoRegularFonts[index];
     }
-  }, [frameWidth, frameHeight, selectedFontFamily, fontSizes, boldFonts, regularFonts, robotoBoldFonts, robotoRegularFonts, getClosestFontSize]);
+  }, [widthRatio, selectedFontFamily, fontSizes, boldFonts, regularFonts, robotoBoldFonts, robotoRegularFonts]);
 
+
+  // New calculatePositionFromRatio function (based on testingAnotherCalculatePositionFromRatio)
   const calculatePositionFromRatio = useCallback((x: number, y: number) => {
     if (!frameWidth || !frameHeight) return { x, y };
-
-    const screenWidth = width - 40;
-    const screenHeight = screenWidth * (frameHeight / frameWidth);
-    const scaleX = screenWidth / (frameWidth / 2);
-    const scaleY = screenHeight / (frameHeight / 2);
-    const newX = x * scaleX;
-    const newY = y * scaleY;
-
+    const newX = x * widthRatio * 2;
+    const newY = y * widthRatio * 2;
+    console.info("Calculated Position (New):", newX, newY, "Original Position:", x, y);
     return { x: newX, y: newY };
-  }, [frameWidth, frameHeight]);
+  }, [frameWidth, frameHeight, widthRatio]);
 
   const parseFabricToSkia = useCallback((fabricJson: any): SkiaRenderable[] => {
     let fabricObjects;
@@ -406,7 +394,7 @@ const EditScreen = () => {
     }
   }, [currentPostId, currentUser, isCanvasReady, isDownloading]);
 
-  // Effects
+  // Fetching User Data
   useEffect(() => {
     const fetchUserData = async () => {
       try {
@@ -427,9 +415,11 @@ const EditScreen = () => {
     fetchUserData();
   }, []);
 
+
   useEffect(() => {
     updateUrls(imageSources);
   }, [imageSources, updateUrls]);
+
 
   useEffect(() => {
     const sources: string[] = [];
@@ -441,6 +431,7 @@ const EditScreen = () => {
     setImageSources(sources);
   }, [elements]);
 
+  // Fetch post and frames data
   useEffect(() => {
     const fetchInitialData = async () => {
       try {
@@ -530,8 +521,14 @@ const EditScreen = () => {
 
   // Render functions
   const renderTextElement = useCallback((el: SkiaRenderable & { type: 'text' }) => {
+
+
+    console.warn(el, "Rendering Text Element 📝");
+
+
     const position = calculatePositionFromRatio(el.x, el.y);
     const font = getFontWithSize(el.fontWeight, el.fontSize);
+
     if (!font) return null;
 
     let displayText = el.text;
@@ -552,6 +549,8 @@ const EditScreen = () => {
           break;
       }
     }
+
+    // Create another font just for testing
 
     return (
       <SkiaText
@@ -858,6 +857,7 @@ const EditScreen = () => {
                     />
                     {elements.map((el) => {
                       if (el.type === 'text') {
+                        console.warn(el, "Rendering Text Element 📝🔵");
                         return renderTextElement(el);
                       }
                       if (el.type === 'image') {
