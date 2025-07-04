@@ -26,6 +26,7 @@ import {
   Group,
   Circle,
   Rect,
+  scale,
 } from "@shopify/react-native-skia";
 import { primaryColor, width } from "@/constant/contant";
 import * as MediaLibrary from 'expo-media-library';
@@ -65,6 +66,8 @@ type SkiaRenderable =
     height: number; 
     src: string; 
     label: string; 
+    scaleX?: number;
+    scaleY?: number;
   };
 
 // Optimized ImageLoader with dynamic loading
@@ -118,18 +121,16 @@ const useFonts = () => {
 };
 
 const EditScreen = () => {
+
   const { postId: initialPostId } = useLocalSearchParams();
   const [currentPostId] = useState<string>(initialPostId as string);
   const { width : deviceWidth, height: deviceHeight } = Dimensions.get('window');
-    const anotherFont =  useFont(require("../assets/fonts/Roboto-Medium.ttf"), 16)
-
 
   // State management
   const [post, setPost] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<unknown | null>(null);
   const [frames, setFrames] = useState<any[]>([]);
-  const [selectedFrame, setSelectedFrame] = useState<any>(null);
   const [canvasWidth, setCanvasWidth] = useState(0);
   const [canvasHeight, setCanvasHeight] = useState(0);
   const [elements, setElements] = useState<SkiaRenderable[]>([]);
@@ -194,7 +195,11 @@ const EditScreen = () => {
   // Function to get font with size and weight
   const getFontWithSize = useCallback((weight: string, fontSize: number) => {
     console.info("Font Size and Weight 🔵:", fontSize, weight);
-    const scaledFontSize = fontSize * widthRatio * 1.2;
+    let scaledFontSize = fontSize * widthRatio * 1.2;
+    if (canvasOrientation === 'portrait') {
+      scaledFontSize = scaledFontSize / 1.5;
+    }
+    // For 'square' or other, keep as is
     console.info(scaledFontSize, "Scaled Font Size 🟢");
 
     // Find the closest available font size
@@ -219,8 +224,17 @@ const EditScreen = () => {
   // New calculatePositionFromRatio function (based on testingAnotherCalculatePositionFromRatio)
   const calculatePositionFromRatio = useCallback((x: number, y: number) => {
     if (!frameWidth || !frameHeight) return { x, y };
-    const newX = x * widthRatio * 2;
-    const newY = y * widthRatio * 2;
+    let newX: number, newY: number;
+    if (canvasOrientation === 'square') {
+      newX = x * widthRatio * 2;
+      newY = y * widthRatio * 2 ;
+    } else if (canvasOrientation === 'portrait') {
+      newX = (x * widthRatio * 2 ) / 1.5  ;
+      newY = (y * widthRatio * 2 ) / 1.5 ;
+    } else {
+      newX = (x * widthRatio * 2) / 1.5;
+      newY = (y * widthRatio * 2) / 1.5;
+    }
     console.info("Calculated Position (New):", newX, newY, "Original Position:", x, y);
     return { x: newX, y: newY };
   }, [frameWidth, frameHeight, widthRatio]);
@@ -270,25 +284,39 @@ const EditScreen = () => {
             : (obj.height ?? 50) * (obj.scaleY ?? 1),
           src: obj.src ?? '',
           label: obj.label ?? '',
+          scaleX: obj.scaleX ?? 1,
+          scaleY: obj.scaleY ?? 1,
         };
       }
       return null;
     }).filter(Boolean) as SkiaRenderable[];
   }, []);
 
-  const selectFrame = useCallback((index: number) => {
+   const selectFrame = (index: number) => {
+
     if (index >= 0 && index < frames.length) {
       setIsFrameLoading(true);
       setSelectedFrameIndex(index);
       const frame = frames[index];
-      setSelectedFrame(frame);
-
+   
+      
       if (frame?.template) {
         try {
           const parsedElements = parseFabricToSkia(frame.template);
           setElements(parsedElements);
-          setFrameWidth(frame.width);
-          setFrameHeight(frame.height);
+            if (canvasOrientation === 'portrait') {
+            setFrameWidth((frame.width * widthRatio) / 1.5);
+            setFrameHeight((frame.height * widthRatio) / 1.5);
+            } else if (canvasOrientation === 'square') {
+            setFrameWidth(frame.width * widthRatio);
+            setFrameHeight(frame.height * widthRatio);
+            } else {
+            setFrameWidth((frame.width * widthRatio) / 1.5);
+            setFrameHeight((frame.height * widthRatio) / 1.5);
+            }
+
+          console.info("Parsed Elements:", parsedElements, "Frame Width:", (frame.width * widthRatio)/1.5, "Frame Height:", (frame.height * widthRatio)/1.5, "🟢🔴🟡🔵");
+
         } catch (error) {
           console.error("Error parsing frame template:", error);
         } finally {
@@ -298,7 +326,37 @@ const EditScreen = () => {
         setIsFrameLoading(false);
       }
     }
-  }, [frames, parseFabricToSkia]);
+  };
+
+  // const selectFrame = useCallback((index: number) => {
+
+  //   console.info(index, "🟢🔴🟡🔵")
+
+  //   if (index >= 0 && index < frames.length) {
+  //     setIsFrameLoading(true);
+  //     setSelectedFrameIndex(index);
+  //     const frame = frames[index];
+   
+
+  //     if (frame?.template) {
+  //       try {
+  //         const parsedElements = parseFabricToSkia(frame.template);
+  //         setElements(parsedElements);
+  //         setFrameWidth(frame.width/1.5);
+  //         setFrameHeight(frame.height/1.5);
+
+  //         console.info("Parsed Elements:", parsedElements, "Frame Width:", frame.width/1.5, "Frame Height:", frame.height/1.5, "🟢🔴🟡🔵");
+
+  //       } catch (error) {
+  //         console.error("Error parsing frame template:", error);
+  //       } finally {
+  //         setTimeout(() => setIsFrameLoading(false), 500);
+  //       }
+  //     } else {
+  //       setIsFrameLoading(false);
+  //     }
+  //   }
+  // }, [frames, parseFabricToSkia]);
 
   const handleDownload = useCallback(async () => {
     if (!isCanvasReady || !canvasRef.current || isDownloading) {
@@ -458,14 +516,14 @@ const EditScreen = () => {
         if (framesResponse.documents && framesResponse.documents.length > 0) {
           const firstFrame = framesResponse.documents[0];
           setSelectedFrameIndex(0);
-          setSelectedFrame(firstFrame);
+   
           
           if (firstFrame?.template) {
             try {
               const parsedElements = parseFabricToSkia(firstFrame.template);
               setElements(parsedElements);
-              setFrameWidth(firstFrame.width);
-              setFrameHeight(firstFrame.height);
+              setFrameWidth(1080);
+              setFrameHeight(1920);
             } catch (error) {
               console.error("Error parsing frame template:", error);
             }
@@ -565,6 +623,9 @@ const EditScreen = () => {
   }, [calculatePositionFromRatio, getFontWithSize, currentUser]);
 
   const renderImageElement = useCallback((el: SkiaRenderable & { type: 'image' }) => {
+
+    console.log(el, "Rendering Image Element 🟢🔴🟡🔵");
+
     let imgSrc = el.src;
 
     if (el.label === 'logo') {
@@ -667,21 +728,60 @@ const EditScreen = () => {
         image={img}
         x={position.x}
         y={position.y}
-        width={el.width}
+        width={el.width }
         height={el.height}
         fit="cover"
         />
       );
       }
     } else {
+      console.log(el, "Rendering image element 🟢🔴🟡🔵");
+      console.log((el.width * widthRatio / 1.5) * 2, (el.height * heightRatio / 1.5) * 2, "Image Width and Height 📏");
+      console.log(el.x, el.y, "Image new x and y position 📏");
+      console.log((el.width * widthRatio / 1.5) * 2 * (el?.scaleX ?? 1) , (el.height * widthRatio / 1.5) * 2 * (el?.scaleY ?? 1), "Image new Width and Height 📏");
+      console.log(((el.x * widthRatio * 2 * 2) / 1.5)   , ((el.y * heightRatio * 2 * 2) / 1.5)  , "Image new x and y position 📏");
+      console.log(el.scaleX, el.scaleY, "Image scaleX and scaleY 📏");
+    
+      // In portrait, only multiply by scaleX/scaleY if scale < 1, otherwise don't multiply
+      const scaleX = el?.scaleX ?? 1;
+      const scaleY = el?.scaleY ?? 1;
+      const portraitX =
+        ((el.x * widthRatio * 2) / 1.5);
+      const portraitY =
+        ((el.y * widthRatio * 2) / 1.5);
+      const portraitWidth =
+        ((el.width * widthRatio) * 2  ) / 1.5;
+      const portraitHeight =
+        ((el.height * widthRatio) * 2 ) / 1.5;
+
       return (
         <SkiaImage
           key={el.id}
           image={img}
-          x={position.x}
-          y={position.y}
-          width={width - 40}
-          height={width - 40}
+          x={
+        canvasOrientation === 'portrait'
+          ? portraitX
+          : ((el.x * widthRatio * 2) / 1.5)
+          }
+          y={
+        canvasOrientation === 'portrait'
+          ? portraitY
+          : ((el.y * heightRatio * 2) / 1.5) 
+          }
+          width={
+        canvasOrientation === 'square'
+          ? (el.width * widthRatio * 2) / 1.5
+          : canvasOrientation === 'portrait'
+            ? portraitWidth
+            : (el.width * widthRatio * 2) / 1.5 * scaleX
+          }
+          height={
+        canvasOrientation === 'square'
+          ? (el.height * widthRatio / 1.5) * 2
+          : canvasOrientation === 'portrait'
+            ? portraitHeight
+            : (el.height * widthRatio / 1.5) * 2 * scaleY
+          }
           fit="fill"
         />
       );
@@ -822,7 +922,7 @@ const EditScreen = () => {
                 canvasOrientation === 'square'
                   ? { width: postWidthTesting, height: postHeightTesting }
                   : canvasOrientation === 'portrait'
-                    ? { width: postWidthTesting/1.5, height: postHeightTesting/1.5 }
+                    ? { width: postWidthTesting/1.5, height: postHeightTesting / 1.5 }
                     : { width: deviceWidth - 40, height: (deviceWidth - 40) * 0.7 }
               ]}
             >
