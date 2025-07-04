@@ -738,13 +738,11 @@ const EditScreen = () => {
       console.log(el, "Rendering image element 🟢🔴🟡🔵");
       console.log((el.width * widthRatio / 1.5) * 2, (el.height * heightRatio / 1.5) * 2, "Image Width and Height 📏");
       console.log(el.x, el.y, "Image new x and y position 📏");
-      console.log((el.width * widthRatio / 1.5) * 2 * (el?.scaleX ?? 1) , (el.height * widthRatio / 1.5) * 2 * (el?.scaleY ?? 1), "Image new Width and Height 📏");
+      console.log((el.width * widthRatio / 1.5) * 2  , (el.height * widthRatio / 1.5) * 2 , "Image new Width and Height 📏");
       console.log(((el.x * widthRatio * 2 * 2) / 1.5)   , ((el.y * heightRatio * 2 * 2) / 1.5)  , "Image new x and y position 📏");
       console.log(el.scaleX, el.scaleY, "Image scaleX and scaleY 📏");
     
       // In portrait, only multiply by scaleX/scaleY if scale < 1, otherwise don't multiply
-      const scaleX = el?.scaleX ?? 1;
-      const scaleY = el?.scaleY ?? 1;
       const portraitX =
         ((el.x * widthRatio * 2) / 1.5);
       const portraitY =
@@ -766,21 +764,21 @@ const EditScreen = () => {
           y={
         canvasOrientation === 'portrait'
           ? portraitY
-          : ((el.y * heightRatio * 2) / 1.5) 
+          : ((el.y * heightRatio * 2) / 1.5)
           }
           width={
         canvasOrientation === 'square'
-          ? (el.width * widthRatio * 2) / 1.5
+          ? (el.width * widthRatio * 2)
           : canvasOrientation === 'portrait'
             ? portraitWidth
-            : (el.width * widthRatio * 2) / 1.5 * scaleX
+            : (el.width * widthRatio * 2) / 1.5
           }
           height={
         canvasOrientation === 'square'
-          ? (el.height * widthRatio / 1.5) * 2
+          ? (el.width * widthRatio * 2)
           : canvasOrientation === 'portrait'
             ? portraitHeight
-            : (el.height * widthRatio / 1.5) * 2 * scaleY
+            : (el.height * widthRatio / 1.5) * 2 
           }
           fit="fill"
         />
