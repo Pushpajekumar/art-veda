@@ -151,6 +151,8 @@ const EditScreen = () => {
   const { imageHooks, updateUrls } = useImageLoader(20);
   const { fontSizes, regularFonts, boldFonts, robotoRegularFonts, robotoBoldFonts } = useFonts();
 
+  // console.log(frames, "Frames Data 📸");
+
   // Memoized calculations
   const imageMap = useMemo(() => {
     const map: Record<string, ReturnType<typeof useImage> | null> = {};
@@ -174,40 +176,39 @@ const EditScreen = () => {
   }, [canvasWidth, canvasHeight]);
 
 
-  console.log(canvasOrientation, "Canvas Orientation 🔴");
-  console.log( deviceWidth, deviceHeight, "Device Dimensions 📱");
+  // console.log(canvasOrientation, "Canvas Orientation 🔴");
+  // console.log( deviceWidth, deviceHeight, "Device Dimensions 📱");
   
    //Canvas width and height based post height and width and device width and height
 
    const widthRatio =  (deviceWidth - 40) / canvasWidth;
    const heightRatio = (deviceHeight - 40) / canvasHeight;
 
-  console.log(widthRatio, heightRatio, "Width and Height Ratio 📏");
+  // console.log(widthRatio, heightRatio, "Width and Height Ratio 📏");
 
   const postWidthTesting = canvasWidth * widthRatio
   const postHeightTesting = canvasHeight * widthRatio;
 
-  console.log(postWidthTesting, postHeightTesting, "Post Width and Height Testing 📏");
+  // console.log(postWidthTesting, postHeightTesting, "Post Width and Height Testing 📏");
 
   const postImage = useImage(post?.previewImage);
 
 
   // Function to get font with size and weight
   const getFontWithSize = useCallback((weight: string, fontSize: number) => {
-    console.info("Font Size and Weight 🔵:", fontSize, weight);
+    // console.info("Font Size and Weight 🔵:", fontSize, weight);
     let scaledFontSize = fontSize * widthRatio * 1.2;
     if (canvasOrientation === 'portrait') {
       scaledFontSize = scaledFontSize / 1.5;
     }
-    // For 'square' or other, keep as is
-    console.info(scaledFontSize, "Scaled Font Size 🟢");
+    // console.info(scaledFontSize, "Scaled Font Size 🟢");
 
     // Find the closest available font size
     const closestSize = fontSizes.reduce((prev, curr) =>
       Math.abs(curr - scaledFontSize) < Math.abs(prev - scaledFontSize) ? curr : prev
     );
 
-    console.info(closestSize, "Closest Font Size 🟡");
+    // console.info(closestSize, "Closest Font Size 🟡");
 
     const index = fontSizes.indexOf(closestSize);
 
@@ -235,7 +236,7 @@ const EditScreen = () => {
       newX = (x * widthRatio * 2) / 1.5;
       newY = (y * widthRatio * 2) / 1.5;
     }
-    console.info("Calculated Position (New):", newX, newY, "Original Position:", x, y);
+    // console.info("Calculated Position (New):", newX, newY, "Original Position:", x, y);
     return { x: newX, y: newY };
   }, [frameWidth, frameHeight, widthRatio]);
 
@@ -292,19 +293,89 @@ const EditScreen = () => {
     }).filter(Boolean) as SkiaRenderable[];
   }, []);
 
-  // Filter frames based on canvas orientation
+  // Filter frames based on canvas orientation and user access
   const compatibleFrames = useMemo(() => {
-    if (!frames.length || !canvasOrientation) return frames;
+    console.log("Calculating compatible frames...🟡🟢🟢🟢🟢🟢 🟢");
+
+
+    if (!frames || !Array.isArray(frames) || !frames.length || !canvasOrientation) return [];
+
+    console.log("Filtering frames based on canvas orientation:", canvasOrientation);
+    console.log(frames.length, "Total Frames Count 📸");
     
     return frames.filter(frame => {
       // Determine frame orientation
       const frameOrientation = frame.width === frame.height ? 'square' : 
                               frame.width > frame.height ? 'landscape' : 'portrait';
       
-      // Only show frames that match the post orientation
-      return frameOrientation === canvasOrientation;
+      // Check if frame matches the post orientation
+      const orientationMatch = frameOrientation === canvasOrientation;
+      
+      // Check if user has access to this frame
+      let userAccess = false;
+
+      console.log("Current User ID:", currentUser?.[0]?.$id);
+      console.log("Frame Users:", frame.users);
+      
+      if (!frame.users || frame.users.length === 0) {
+        // If users array is empty, frame is available to all users
+        // console.log("Frame available to all users");
+        userAccess = true;
+      } else if (currentUser && currentUser.length > 0) {
+        // Check if current user's ID is in the frame's users array
+        const currentUserId = currentUser[0].$id;
+        console.log("Checking user access for:", currentUserId);
+        
+        userAccess = frame.users.some((frameUser: any) => {
+          // console.log("Checking frame user:", frameUser);
+          // Handle different possible structures of frameUser
+          if (typeof frameUser === 'string') {
+            const match = frameUser === currentUserId;
+            console.log("String comparison:", frameUser, "===", currentUserId, "=>", match);
+            return match;
+          } else if (frameUser && frameUser.$id) {
+            const match = frameUser.$id === currentUserId;
+            console.log("Object comparison:", frameUser.$id, "===", currentUserId, "=>", match);
+            return match;
+          } else if (frameUser && frameUser.userId) {
+            const match = frameUser.userId === currentUserId;
+            console.log("UserId comparison:", frameUser.userId, "===", currentUserId, "=>", match);
+            return match;
+          }
+
+          return false;
+        });
+        
+        // console.log("Final user access result:", userAccess);
+      } else {
+        // console.log("No current user found");
+      }
+      
+      // Only show frames that match orientation AND user has access to
+      return orientationMatch && userAccess;
     });
-  }, [frames, canvasOrientation]);
+  }, [frames, canvasOrientation, currentUser]);
+
+  // console.log(`Compatible frames count: ${compatibleFrames.length}/${frames.length}`, compatibleFrames.map(f => f.name));
+
+  // Auto-select first compatible frame after frames are filtered
+  useEffect(() => {
+    if (compatibleFrames.length > 0 && !loading) {
+      const firstFrame = compatibleFrames[0];
+      setSelectedFrameIndex(0);
+      
+      if (firstFrame?.template) {
+        try {
+          const parsedElements = parseFabricToSkia(firstFrame.template);
+          setElements(parsedElements);
+          setFrameWidth(firstFrame.width);
+          setFrameHeight(firstFrame.height);
+        } catch (error) {
+          console.error("Error parsing frame template:", error);
+        }
+      }
+    }
+  }, [compatibleFrames, loading, parseFabricToSkia]);
 
   const selectFrame = useCallback((index: number) => {
     if (index < 0 || index >= compatibleFrames.length) return;
@@ -329,12 +400,7 @@ const EditScreen = () => {
         setFrameWidth(newWidth);
         setFrameHeight(newHeight);
 
-        console.info(
-          "Parsed Elements:", parsedElements,
-          "Frame Width:", newWidth,
-          "Frame Height:", newHeight,
-          "🟢🔴🟡🔵"
-        );
+        // console.info("Parsed Elements:", parsedElements, "Frame Width:", newWidth, "Frame Height:", newHeight, "🟢🔴🟡🔵");
       } catch (error) {
         console.error("Error parsing frame template:", error);
       } finally {
@@ -498,9 +564,6 @@ const EditScreen = () => {
         setCanvasWidth(postDetails.width);
         setCanvasHeight(postDetails.height);
         setFrames(framesResponse.documents);
-
-        // Auto-select first compatible frame after frames are filtered
-        // This will be handled by a separate effect that watches compatibleFrames
       } catch (err) {
         console.error("Error fetching data:", err);
         setError(err);
@@ -570,10 +633,7 @@ const EditScreen = () => {
 
   // Render functions
   const renderTextElement = useCallback((el: SkiaRenderable & { type: 'text' }) => {
-
-
-    console.warn(el, "Rendering Text Element 📝");
-
+    // console.warn(el, "Rendering Text Element 📝");
 
     const position = calculatePositionFromRatio(el.x, el.y);
     const font = getFontWithSize(el.fontWeight, el.fontSize);
@@ -614,8 +674,7 @@ const EditScreen = () => {
   }, [calculatePositionFromRatio, getFontWithSize, currentUser]);
 
   const renderImageElement = useCallback((el: SkiaRenderable & { type: 'image' }) => {
-
-    console.log(el, "Rendering Image Element 🟢🔴🟡🔵");
+    // console.log(el, "Rendering Image Element 🟢🔴🟡🔵");
 
     let imgSrc = el.src;
 
@@ -692,7 +751,7 @@ const EditScreen = () => {
         </Group>
       );
       } else if (selectedImageShape === 'square') {
-        console.log(el.id, position, el.width, el.height, "Rendering square image 🟡");
+        // console.log(el.id, position, el.width, el.height, "Rendering square image 🟡");
       return (
         <Group key={el.id}>
         <Rect
@@ -726,12 +785,12 @@ const EditScreen = () => {
       );
       }
     } else {
-      console.log(el, "Rendering image element 🟢🔴🟡🔵");
-      console.log((el.width * widthRatio / 1.5) * 2, (el.height * heightRatio / 1.5) * 2, "Image Width and Height 📏");
-      console.log(el.x, el.y, "Image new x and y position 📏");
-      console.log((el.width * widthRatio / 1.5) * 2  , (el.height * widthRatio / 1.5) * 2 , "Image new Width and Height 📏");
-      console.log(((el.x * widthRatio * 2 * 2) / 1.5)   , ((el.y * heightRatio * 2 * 2) / 1.5)  , "Image new x and y position 📏");
-      console.log(el.scaleX, el.scaleY, "Image scaleX and scaleY 📏");
+      // console.log(el, "Rendering image element 🟢🔴🟡🔵");
+      // console.log((el.width * widthRatio / 1.5) * 2, (el.height * heightRatio / 1.5) * 2, "Image Width and Height 📏");
+      // console.log(el.x, el.y, "Image new x and y position 📏");
+      // console.log((el.width * widthRatio / 1.5) * 2  , (el.height * widthRatio / 1.5) * 2 , "Image new Width and Height 📏");
+      // console.log(((el.x * widthRatio * 2 * 2) / 1.5)   , ((el.y * heightRatio * 2 * 2) / 1.5)  , "Image new x and y position 📏");
+      // console.log(el.scaleX, el.scaleY, "Image scaleX and scaleY 📏");
     
       // In portrait, only multiply by scaleX/scaleY if scale < 1, otherwise don't multiply
       const portraitX =
@@ -946,7 +1005,7 @@ const EditScreen = () => {
                     />
                     {elements.map((el) => {
                       if (el.type === 'text') {
-                        console.warn(el, "Rendering Text Element 📝🔵");
+                        // console.warn(el, "Rendering Text Element 📝🔵");
                         return renderTextElement(el);
                       }
                       if (el.type === 'image') {
@@ -999,39 +1058,85 @@ const EditScreen = () => {
           {renderFontSelectionBottomSheet()}
           {renderImageShapeSelectionBottomSheet()}
 
-          {compatibleFrames.length > 0 && (
+            {compatibleFrames.length > 0 ? (
             <View style={styles.framesSection}>
               <Text style={styles.sectionTitle}>
-                Available Frames ({canvasOrientation})
+              Available Frames ({canvasOrientation}) - {compatibleFrames.length}
               </Text>
               <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                style={styles.framesScrollView}
-                contentContainerStyle={styles.framesContentContainer}
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              style={styles.framesScrollView}
+              contentContainerStyle={styles.framesContentContainer}
               >
-                {compatibleFrames.map((frame, index) => (
-                  <TouchableOpacity
-                    key={frame.$id}
-                    style={[
-                      styles.frameItem,
-                      selectedFrameIndex === index ? styles.selectedFrame : styles.normalFrame
-                    ]}
-                    onPress={() => selectFrame(index)}
-                  >
-                    <Image
-                      source={{ uri: frame.previewImage }}
-                      style={styles.frameImage}
-                      resizeMode="cover"
-                    />
-                    <View style={styles.frameDetails}>
-                      <Text style={styles.frameName}>{frame.name || `Frame ${index + 1}`}</Text>
+              {compatibleFrames.map((frame, index) => {
+                // Check if this frame is "premium" for the current user
+                let isPremium = false;
+                if (
+                frame.users &&
+                frame.users.length > 0 &&
+                currentUser &&
+                currentUser[0] &&
+                currentUser[0].$id
+                ) {
+                const myUserId = currentUser[0].$id;
+                isPremium = frame.users.some((u: any) =>
+                  (typeof u === "string" && u === myUserId) ||
+                  (u && u.$id === myUserId) ||
+                  (u && u.userId === myUserId)
+                );
+                }
+
+                return (
+                <TouchableOpacity
+                  key={frame.$id}
+                  style={[
+                  styles.frameItem,
+                  selectedFrameIndex === index ? styles.selectedFrame : styles.normalFrame
+                  ]}
+                  onPress={() => selectFrame(index)}
+                >
+                  <View>
+                  <Image
+                    source={{ uri: frame.previewImage }}
+                    style={styles.frameImage}
+                    resizeMode="cover"
+                  />
+                  {isPremium && (
+                    <View
+                    style={{
+                      position: "absolute",
+                      top: 6,
+                      left: 6,
+                      backgroundColor: "#FFD700",
+                      paddingHorizontal: 8,
+                      paddingVertical: 2,
+                      borderRadius: 6,
+                      zIndex: 2,
+                    }}
+                    >
+                    <Text style={{ color: "#333", fontWeight: "bold", fontSize: 12 }}>
+                      PREMIUM
+                    </Text>
                     </View>
-                  </TouchableOpacity>
-                ))}
+                  )}
+                  </View>
+                  <View style={styles.frameDetails}>
+                  <Text style={styles.frameName}>{frame.name || `Frame ${index + 1}`}</Text>
+                  </View>
+                </TouchableOpacity>
+                );
+              })}
               </ScrollView>
             </View>
-          )}
+            ) : (
+            <View style={styles.framesSection}>
+              <Text style={styles.sectionTitle}>No Available Frames</Text>
+              <Text style={styles.noFramesText}>
+              No {canvasOrientation} frames are available for your account.
+              </Text>
+            </View>
+            )}
         </View>
       </ScrollView>
     </View>
@@ -1257,5 +1362,12 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     marginTop: 8,
     textAlign: 'center',
+  },
+  noFramesText: {
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
+    fontStyle: 'italic',
+    paddingVertical: 20,
   },
 });
