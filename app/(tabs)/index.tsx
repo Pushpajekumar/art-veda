@@ -196,6 +196,7 @@ export const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#fff",
+    marginBottom: 40,
   },
   loadingContainer: {
     justifyContent: "center",
