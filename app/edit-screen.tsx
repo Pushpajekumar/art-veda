@@ -1188,7 +1188,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   canvas: {
-    backgroundColor: "red",
+    backgroundColor: "lightgrey",
   },
   buttonsContainer: {
     flexDirection: 'row',
