@@ -292,71 +292,58 @@ const EditScreen = () => {
     }).filter(Boolean) as SkiaRenderable[];
   }, []);
 
-   const selectFrame = (index: number) => {
-
-    if (index >= 0 && index < frames.length) {
-      setIsFrameLoading(true);
-      setSelectedFrameIndex(index);
-      const frame = frames[index];
-   
+  // Filter frames based on canvas orientation
+  const compatibleFrames = useMemo(() => {
+    if (!frames.length || !canvasOrientation) return frames;
+    
+    return frames.filter(frame => {
+      // Determine frame orientation
+      const frameOrientation = frame.width === frame.height ? 'square' : 
+                              frame.width > frame.height ? 'landscape' : 'portrait';
       
-      if (frame?.template) {
-        try {
-          const parsedElements = parseFabricToSkia(frame.template);
-          setElements(parsedElements);
-            if (canvasOrientation === 'portrait') {
-            setFrameWidth((frame.width * widthRatio) / 1.5);
-            setFrameHeight((frame.height * widthRatio) / 1.5);
-            } else if (canvasOrientation === 'square') {
-            setFrameWidth(frame.width * widthRatio);
-            setFrameHeight(frame.height * widthRatio);
-            } else {
-            setFrameWidth((frame.width * widthRatio) / 1.5);
-            setFrameHeight((frame.height * widthRatio) / 1.5);
-            }
+      // Only show frames that match the post orientation
+      return frameOrientation === canvasOrientation;
+    });
+  }, [frames, canvasOrientation]);
 
-          console.info("Parsed Elements:", parsedElements, "Frame Width:", (frame.width * widthRatio)/1.5, "Frame Height:", (frame.height * widthRatio)/1.5, "🟢🔴🟡🔵");
+  const selectFrame = useCallback((index: number) => {
+    if (index < 0 || index >= compatibleFrames.length) return;
 
-        } catch (error) {
-          console.error("Error parsing frame template:", error);
-        } finally {
-          setTimeout(() => setIsFrameLoading(false), 500);
+    setIsFrameLoading(true);
+    setSelectedFrameIndex(index);
+    const frame = compatibleFrames[index];
+
+    if (frame?.template) {
+      try {
+        const parsedElements = parseFabricToSkia(frame.template);
+        setElements(parsedElements);
+
+        let newWidth = frame.width * widthRatio;
+        let newHeight = frame.height * widthRatio;
+
+        if (canvasOrientation === 'portrait' || canvasOrientation !== 'square') {
+          newWidth /= 1.5;
+          newHeight /= 1.5;
         }
-      } else {
-        setIsFrameLoading(false);
+
+        setFrameWidth(newWidth);
+        setFrameHeight(newHeight);
+
+        console.info(
+          "Parsed Elements:", parsedElements,
+          "Frame Width:", newWidth,
+          "Frame Height:", newHeight,
+          "🟢🔴🟡🔵"
+        );
+      } catch (error) {
+        console.error("Error parsing frame template:", error);
+      } finally {
+        setTimeout(() => setIsFrameLoading(false), 500);
       }
+    } else {
+      setIsFrameLoading(false);
     }
-  };
-
-  // const selectFrame = useCallback((index: number) => {
-
-  //   console.info(index, "🟢🔴🟡🔵")
-
-  //   if (index >= 0 && index < frames.length) {
-  //     setIsFrameLoading(true);
-  //     setSelectedFrameIndex(index);
-  //     const frame = frames[index];
-   
-
-  //     if (frame?.template) {
-  //       try {
-  //         const parsedElements = parseFabricToSkia(frame.template);
-  //         setElements(parsedElements);
-  //         setFrameWidth(frame.width/1.5);
-  //         setFrameHeight(frame.height/1.5);
-
-  //         console.info("Parsed Elements:", parsedElements, "Frame Width:", frame.width/1.5, "Frame Height:", frame.height/1.5, "🟢🔴🟡🔵");
-
-  //       } catch (error) {
-  //         console.error("Error parsing frame template:", error);
-  //       } finally {
-  //         setTimeout(() => setIsFrameLoading(false), 500);
-  //       }
-  //     } else {
-  //       setIsFrameLoading(false);
-  //     }
-  //   }
-  // }, [frames, parseFabricToSkia]);
+  }, [compatibleFrames, parseFabricToSkia, widthRatio, canvasOrientation]);
 
   const handleDownload = useCallback(async () => {
     if (!isCanvasReady || !canvasRef.current || isDownloading) {
@@ -512,23 +499,8 @@ const EditScreen = () => {
         setCanvasHeight(postDetails.height);
         setFrames(framesResponse.documents);
 
-        // Select first frame without dependency on selectFrame
-        if (framesResponse.documents && framesResponse.documents.length > 0) {
-          const firstFrame = framesResponse.documents[0];
-          setSelectedFrameIndex(0);
-   
-          
-          if (firstFrame?.template) {
-            try {
-              const parsedElements = parseFabricToSkia(firstFrame.template);
-              setElements(parsedElements);
-              setFrameWidth(1080);
-              setFrameHeight(1920);
-            } catch (error) {
-              console.error("Error parsing frame template:", error);
-            }
-          }
-        }
+        // Auto-select first compatible frame after frames are filtered
+        // This will be handled by a separate effect that watches compatibleFrames
       } catch (err) {
         console.error("Error fetching data:", err);
         setError(err);
@@ -541,6 +513,25 @@ const EditScreen = () => {
       fetchInitialData();
     }
   }, [currentPostId, parseFabricToSkia]);
+
+  // Auto-select first compatible frame when frames are loaded and filtered
+  useEffect(() => {
+    if (compatibleFrames.length > 0 && !loading) {
+      const firstFrame = compatibleFrames[0];
+      setSelectedFrameIndex(0);
+      
+      if (firstFrame?.template) {
+        try {
+          const parsedElements = parseFabricToSkia(firstFrame.template);
+          setElements(parsedElements);
+          setFrameWidth(firstFrame.width);
+          setFrameHeight(firstFrame.height);
+        } catch (error) {
+          console.error("Error parsing frame template:", error);
+        }
+      }
+    }
+  }, [compatibleFrames, loading, parseFabricToSkia]);
 
   // Check canvas readiness based on multiple conditions
   useEffect(() => {
@@ -1008,16 +999,18 @@ const EditScreen = () => {
           {renderFontSelectionBottomSheet()}
           {renderImageShapeSelectionBottomSheet()}
 
-          {frames.length > 0 && (
+          {compatibleFrames.length > 0 && (
             <View style={styles.framesSection}>
-              <Text style={styles.sectionTitle}>Available Frames</Text>
+              <Text style={styles.sectionTitle}>
+                Available Frames ({canvasOrientation})
+              </Text>
               <ScrollView
                 horizontal
                 showsHorizontalScrollIndicator={false}
                 style={styles.framesScrollView}
                 contentContainerStyle={styles.framesContentContainer}
               >
-                {frames.map((frame, index) => (
+                {compatibleFrames.map((frame, index) => (
                   <TouchableOpacity
                     key={frame.$id}
                     style={[
