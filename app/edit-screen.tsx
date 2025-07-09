@@ -110,6 +110,13 @@ const useFonts = () => {
   const robotoBoldFonts = fontSizes.map(size =>
     useFont(require("../assets/fonts/Roboto-Bold.ttf"), size)
   );
+  // Add Hindi fonts
+  const hindiRegularFonts = fontSizes.map(size =>
+    useFont(require("../assets/fonts/Hind-Regular.ttf"), size)
+  );
+  const hindiBoldFonts = fontSizes.map(size =>
+    useFont(require("../assets/fonts/Hind-Bold.ttf"), size)
+  );
 
   return {
     fontSizes,
@@ -117,6 +124,8 @@ const useFonts = () => {
     boldFonts,
     robotoRegularFonts,
     robotoBoldFonts,
+    hindiRegularFonts,
+    hindiBoldFonts,
   };
 };
 
@@ -149,7 +158,7 @@ const EditScreen = () => {
 
   const canvasRef = useRef<any>(null);
   const { imageHooks, updateUrls } = useImageLoader(20);
-  const { fontSizes, regularFonts, boldFonts, robotoRegularFonts, robotoBoldFonts } = useFonts();
+  const { fontSizes, regularFonts, boldFonts, robotoRegularFonts, robotoBoldFonts, hindiRegularFonts, hindiBoldFonts } = useFonts();
 
   // console.log(frames, "Frames Data 📸");
 
@@ -194,23 +203,26 @@ const EditScreen = () => {
   const postImage = useImage(post?.previewImage);
 
 
-  // Function to get font with size and weight
-  const getFontWithSize = useCallback((weight: string, fontSize: number) => {
-    // console.info("Font Size and Weight 🔵:", fontSize, weight);
+  // Function to detect Hindi (Devanagari) characters
+  const isHindiText = (text: string) => /[\u0900-\u097F]/.test(text);
+
+  // Function to get font with size and weight, fallback to Hindi font if Hindi detected
+  const getFontWithSize = useCallback((weight: string, fontSize: number, text?: string) => {
     let scaledFontSize = fontSize * widthRatio * 1.2;
     if (canvasOrientation === 'portrait') {
       scaledFontSize = scaledFontSize / 1.5;
     }
-    // console.info(scaledFontSize, "Scaled Font Size 🟢");
 
-    // Find the closest available font size
     const closestSize = fontSizes.reduce((prev, curr) =>
       Math.abs(curr - scaledFontSize) < Math.abs(prev - scaledFontSize) ? curr : prev
     );
-
-    // console.info(closestSize, "Closest Font Size 🟡");
-
     const index = fontSizes.indexOf(closestSize);
+
+    // If Hindi detected, use Hindi font
+    if (text && isHindiText(text)) {
+      if (index === -1) return null;
+      return weight === 'bold' ? hindiBoldFonts[index] : hindiRegularFonts[index];
+    }
 
     if (index === -1) return null;
 
@@ -219,8 +231,18 @@ const EditScreen = () => {
     } else {
       return weight === 'bold' ? robotoBoldFonts[index] : robotoRegularFonts[index];
     }
-  }, [widthRatio, selectedFontFamily, fontSizes, boldFonts, regularFonts, robotoBoldFonts, robotoRegularFonts]);
-
+  }, [
+    widthRatio,
+    selectedFontFamily,
+    fontSizes,
+    boldFonts,
+    regularFonts,
+    robotoBoldFonts,
+    robotoRegularFonts,
+    canvasOrientation,
+    hindiRegularFonts,
+    hindiBoldFonts,
+  ]);
 
   // New calculatePositionFromRatio function (based on testingAnotherCalculatePositionFromRatio)
   const calculatePositionFromRatio = useCallback((x: number, y: number) => {
@@ -636,10 +658,6 @@ const EditScreen = () => {
     // console.warn(el, "Rendering Text Element 📝");
 
     const position = calculatePositionFromRatio(el.x, el.y);
-    const font = getFontWithSize(el.fontWeight, el.fontSize);
-
-    if (!font) return null;
-
     let displayText = el.text;
     if (el.label && currentUser && currentUser[0]) {
       const userData = currentUser[0];
@@ -659,7 +677,23 @@ const EditScreen = () => {
       }
     }
 
-    // Create another font just for testing
+    const font = getFontWithSize(el.fontWeight, el.fontSize, displayText);
+
+    // If Hindi, fallback to system font by not passing font prop
+    if (font === undefined) {
+      return (
+        <SkiaText
+          key={el.id}
+          x={position.x}
+          y={position.y}
+          text={displayText}
+          color={el.fill}
+          font={null}
+        />
+      );
+    }
+
+    if (!font) return null;
 
     return (
       <SkiaText
