@@ -717,13 +717,26 @@ const EditScreen = () => {
       );
     } else if (el.label === 'userImage') {
 
-      const centerX = position.x + el.width/2;
-      const centerY = position.y + el.height/2;
+      // const centerX = position.x + el.width/2;
+      // const centerY = position.y + el.height/2;
+
+      // Make user images bigger by increasing width and height by 40%
+      const scale = 1.2;
+      const scaledWidth = el.width * scale;
+      const scaledHeight = el.height * scale;
+      const offsetX = (scaledWidth - el.width) / 2;
+      const offsetY = (scaledHeight - el.height) / 2;
+      const scaledPosition = {
+        x: position.x - offsetX,
+        y: position.y - offsetY,
+      };
+      const centerX = scaledPosition.x + scaledWidth / 2;
+      const centerY = scaledPosition.y + scaledHeight / 2;
 
       if (selectedImageShape === 'circle') {
-      const radius = Math.min(el.width, el.height) / 2;
-      return (
-        <Group key={el.id}>
+        const radius = Math.min(scaledWidth, scaledHeight) / 2;
+        return (
+          <Group key={el.id}>
         <Circle
           cx={centerX}
           cy={centerY}
@@ -732,45 +745,44 @@ const EditScreen = () => {
         />
         <SkiaImage
           image={img}
-          x={position.x}
-          y={position.y}
-          width={el.width}
-          height={el.height}
+          x={scaledPosition.x}
+          y={scaledPosition.y}
+          width={scaledWidth}
+          height={scaledHeight}
           fit="cover"
           clip={{
-          rect: {
-            x: position.x,
-            y: position.y,
-            width: el.width,
-            height: el.height
-          },
-          rx: radius,
-          ry: radius
+            rect: {
+          x: scaledPosition.x,
+          y: scaledPosition.y,
+          width: scaledWidth,
+          height: scaledHeight
+            },
+            rx: radius,
+            ry: radius
           }}
         />
-        </Group>
-      );
+          </Group>
+        );
       } else if (selectedImageShape === 'square') {
-        // console.log(el.id, position, el.width, el.height, "Rendering square image 🟡");
-      return (
-        <Group key={el.id}>
+        return (
+          <Group key={el.id}>
         <Rect
-          x={position.x - 2}
-          y={position.y - 2}
-          width={el.width + 4}
-          height={el.height + 4}
+          x={scaledPosition.x - 2}
+          y={scaledPosition.y - 2}
+          width={scaledWidth + 4}
+          height={scaledHeight + 4}
           color="white"
         />
         <SkiaImage
           image={img}
-          x={position.x}
-          y={position.y}
-          width={el.width}
-          height={el.height}
+          x={scaledPosition.x}
+          y={scaledPosition.y}
+          width={scaledWidth}
+          height={scaledHeight}
           fit="cover"
         />
-        </Group>
-      );
+          </Group>
+        );
       } else { // rectangle
       return (
         <SkiaImage
