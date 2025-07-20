@@ -32,6 +32,7 @@ import { primaryColor, width } from "@/constant/contant";
 import * as MediaLibrary from 'expo-media-library';
 import * as FileSystem from 'expo-file-system';
 import { Feather } from '@expo/vector-icons';
+import { isHindiText, useFonts } from "@/utils/edit-utilities";
 
 type FabricObject = {
   type: string;
@@ -44,31 +45,7 @@ type FabricObject = {
   [key: string]: any;
 };
 
-type SkiaRenderable =
-  | {
-    type: 'text';
-    id: string;
-    x: number;
-    y: number;
-    text: string;
-    fontSize: number;
-    fontWeight: 'normal' | 'bold';
-    fontStyle: 'normal' | 'italic';
-    fill: string;
-    label: string;
-  }
-  | { 
-    type: 'image'; 
-    id: string; 
-    x: number; 
-    y: number; 
-    width: number; 
-    height: number; 
-    src: string; 
-    label: string; 
-    scaleX?: number;
-    scaleY?: number;
-  };
+
 
 // Optimized ImageLoader with dynamic loading
 const useImageLoader = (maxImages = 20) => {
@@ -91,43 +68,7 @@ const useImageLoader = (maxImages = 20) => {
   return { imageHooks, updateUrls };
 };
 
-// Optimized font loading
-const useFonts = () => {
-  const fontSizes = useMemo(() => 
-    Array.from({ length: 43 }, (_, i) => i + 8), 
-    []
-  );
 
-  const regularFonts = fontSizes.map(size =>
-    useFont(require("../assets/fonts/Montserrat-Medium.ttf"), size)
-  );
-  const boldFonts = fontSizes.map(size =>
-    useFont(require("../assets/fonts/Montserrat-Bold.ttf"), size)
-  );
-  const robotoRegularFonts = fontSizes.map(size =>
-    useFont(require("../assets/fonts/Roboto-Medium.ttf"), size)
-  );
-  const robotoBoldFonts = fontSizes.map(size =>
-    useFont(require("../assets/fonts/Roboto-Bold.ttf"), size)
-  );
-  // Add Hindi fonts
-  const hindiRegularFonts = fontSizes.map(size =>
-    useFont(require("../assets/fonts/Hind-Regular.ttf"), size)
-  );
-  const hindiBoldFonts = fontSizes.map(size =>
-    useFont(require("../assets/fonts/Hind-Bold.ttf"), size)
-  );
-
-  return {
-    fontSizes,
-    regularFonts,
-    boldFonts,
-    robotoRegularFonts,
-    robotoBoldFonts,
-    hindiRegularFonts,
-    hindiBoldFonts,
-  };
-};
 
 const EditScreen = () => {
 
@@ -159,8 +100,6 @@ const EditScreen = () => {
   const canvasRef = useRef<any>(null);
   const { imageHooks, updateUrls } = useImageLoader(20);
   const { fontSizes, regularFonts, boldFonts, robotoRegularFonts, robotoBoldFonts, hindiRegularFonts, hindiBoldFonts } = useFonts();
-
-  // console.log(frames, "Frames Data 📸");
 
   // Memoized calculations
   const imageMap = useMemo(() => {
@@ -203,8 +142,7 @@ const EditScreen = () => {
   const postImage = useImage(post?.previewImage);
 
 
-  // Function to detect Hindi (Devanagari) characters
-  const isHindiText = (text: string) => /[\u0900-\u097F]/.test(text);
+
 
   // Function to get font with size and weight, fallback to Hindi font if Hindi detected
   const getFontWithSize = useCallback((weight: string, fontSize: number, text?: string) => {
