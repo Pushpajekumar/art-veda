@@ -130,7 +130,7 @@ const OfficialHome = () => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView showsVerticalScrollIndicator={false}>
+      <ScrollView showsVerticalScrollIndicator={false} >
         <LinearGradient
           colors={["#ffffff", "#DAF0FF"]}
           start={{ x: 0, y: 0 }}
@@ -196,7 +196,7 @@ export const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#fff",
-    marginBottom: 40,
+    marginBottom: 60,
   },
   loadingContainer: {
     justifyContent: "center",
