@@ -22,56 +22,25 @@ import {
   Image as SkiaImage,
   useImage,
   Text as SkiaText,
-  useFont,
   Group,
   Circle,
   Rect,
-  scale,
 } from "@shopify/react-native-skia";
 import { primaryColor, width } from "@/constant/contant";
 import * as MediaLibrary from 'expo-media-library';
 import * as FileSystem from 'expo-file-system';
 import { Feather } from '@expo/vector-icons';
-import { isHindiText, useFonts } from "@/utils/edit-utilities";
-
-type FabricObject = {
-  type: string;
-  left: number;
-  top: number;
-  fontSize?: number;
-  text?: string;
-  src?: string;
-  id: string;
-  [key: string]: any;
-};
-
-
-
-// Optimized ImageLoader with dynamic loading
-const useImageLoader = (maxImages = 20) => {
-  const [urls, setUrls] = useState<Array<string | null>>(Array(maxImages).fill(null));
-  
-  const imageHooks = Array.from({ length: maxImages }, (_, i) => 
-    useImage(urls[i])
-  );
-
-  const updateUrls = useCallback((newUrls: string[]) => {
-    const updatedUrls = Array(maxImages).fill(null);
-    newUrls.forEach((url, i) => {
-      if (i < maxImages) {
-        updatedUrls[i] = url;
-      }
-    });
-    setUrls(updatedUrls);
-  }, [maxImages]);
-
-  return { imageHooks, updateUrls };
-};
-
-
+import { 
+  isHindiText, 
+  useFonts, 
+  useImageLoader, 
+  SkiaRenderable, 
+  parseFabricToSkia,
+  getCanvasOrientation,
+  calculatePositionFromRatio
+} from "@/utils/edit-utilities";
 
 const EditScreen = () => {
-
   const { postId: initialPostId } = useLocalSearchParams();
   const [currentPostId] = useState<string>(initialPostId as string);
   const { width : deviceWidth, height: deviceHeight } = Dimensions.get('window');
@@ -114,35 +83,20 @@ const EditScreen = () => {
     return map;
   }, [imageSources, imageHooks]);
 
-
   // Determine if the canvas is portrait, landscape, or square
-  const canvasOrientation = useMemo(() => {
-    if (!canvasWidth || !canvasHeight) return null;
-    if (canvasWidth === canvasHeight) return 'square';
-    if (canvasWidth > canvasHeight) return 'landscape';
-    return 'portrait';
-  }, [canvasWidth, canvasHeight]);
+  const canvasOrientation = useMemo(() => 
+    getCanvasOrientation(canvasWidth, canvasHeight), 
+    [canvasWidth, canvasHeight]
+  );
 
+  // Canvas width and height based post height and width and device width and height
+  const widthRatio = (deviceWidth - 40) / canvasWidth;
+  const heightRatio = (deviceHeight - 40) / canvasHeight;
 
-  // console.log(canvasOrientation, "Canvas Orientation 🔴");
-  // console.log( deviceWidth, deviceHeight, "Device Dimensions 📱");
-  
-   //Canvas width and height based post height and width and device width and height
-
-   const widthRatio =  (deviceWidth - 40) / canvasWidth;
-   const heightRatio = (deviceHeight - 40) / canvasHeight;
-
-  // console.log(widthRatio, heightRatio, "Width and Height Ratio 📏");
-
-  const postWidthTesting = canvasWidth * widthRatio
+  const postWidthTesting = canvasWidth * widthRatio;
   const postHeightTesting = canvasHeight * widthRatio;
 
-  // console.log(postWidthTesting, postHeightTesting, "Post Width and Height Testing 📏");
-
   const postImage = useImage(post?.previewImage);
-
-
-
 
   // Function to get font with size and weight, fallback to Hindi font if Hindi detected
   const getFontWithSize = useCallback((weight: string, fontSize: number, text?: string) => {
@@ -182,86 +136,14 @@ const EditScreen = () => {
     hindiBoldFonts,
   ]);
 
-  // New calculatePositionFromRatio function (based on testingAnotherCalculatePositionFromRatio)
-  const calculatePositionFromRatio = useCallback((x: number, y: number) => {
-    if (!frameWidth || !frameHeight) return { x, y };
-    let newX: number, newY: number;
-    if (canvasOrientation === 'square') {
-      newX = x * widthRatio * 2;
-      newY = y * widthRatio * 2 ;
-    } else if (canvasOrientation === 'portrait') {
-      newX = (x * widthRatio * 2 ) / 1.5  ;
-      newY = (y * widthRatio * 2 ) / 1.5 ;
-    } else {
-      newX = (x * widthRatio * 2) / 1.5;
-      newY = (y * widthRatio * 2) / 1.5;
-    }
-    // console.info("Calculated Position (New):", newX, newY, "Original Position:", x, y);
-    return { x: newX, y: newY };
-  }, [frameWidth, frameHeight, widthRatio]);
-
-  const parseFabricToSkia = useCallback((fabricJson: any): SkiaRenderable[] => {
-    let fabricObjects;
-    if (typeof fabricJson === 'string') {
-      try {
-        fabricObjects = JSON.parse(fabricJson);
-      } catch (error) {
-        console.error("Error parsing JSON:", error);
-        return [];
-      }
-    } else {
-      fabricObjects = fabricJson;
-    }
-
-    const objects = fabricObjects?.objects || [];
-
-    return objects.map((obj: FabricObject) => {
-      if (obj.type === 'IText') {
-        return {
-          type: 'text',
-          id: obj.id,
-          x: obj.left ?? 0,
-          y: (obj.top ?? 0) + (obj.fontSize ?? 12),
-          text: obj.text ?? '',
-          fontSize: obj.fontSize ?? 12,
-          fontWeight: (obj.fontWeight ?? 'normal') as 'normal' | 'bold',
-          fontStyle: (obj.fontStyle ?? 'normal') as 'normal' | 'italic',
-          fill: obj.fill ?? '#000000',
-          label: obj.label ?? '',
-        };
-      }
-      if (obj.type === 'Image') {
-        const isConstrainedSize = obj.label === 'logo' || obj.label === 'userImage';
-        return {
-          type: 'image',
-          id: obj.id,
-          x: obj.left ?? 0,
-          y: obj.top ?? 0,
-          width: isConstrainedSize
-            ? Math.min(80, (obj.width ?? 50) * (obj.scaleX ?? 1))
-            : (obj.width ?? 50) * (obj.scaleX ?? 1),
-          height: isConstrainedSize
-            ? Math.min(80, (obj.height ?? 50) * (obj.scaleY ?? 1))
-            : (obj.height ?? 50) * (obj.scaleY ?? 1),
-          src: obj.src ?? '',
-          label: obj.label ?? '',
-          scaleX: obj.scaleX ?? 1,
-          scaleY: obj.scaleY ?? 1,
-        };
-      }
-      return null;
-    }).filter(Boolean) as SkiaRenderable[];
-  }, []);
+  // Use the extracted calculatePositionFromRatio, but wrapped to provide the component-specific params
+  const getAdjustedPosition = useCallback((x: number, y: number) => {
+    return calculatePositionFromRatio(x, y, frameWidth, frameHeight, widthRatio, canvasOrientation);
+  }, [frameWidth, frameHeight, widthRatio, canvasOrientation]);
 
   // Filter frames based on canvas orientation and user access
   const compatibleFrames = useMemo(() => {
-    console.log("Calculating compatible frames...🟡🟢🟢🟢🟢🟢 🟢");
-
-
     if (!frames || !Array.isArray(frames) || !frames.length || !canvasOrientation) return [];
-
-    console.log("Filtering frames based on canvas orientation:", canvasOrientation);
-    console.log(frames.length, "Total Frames Count 📸");
     
     return frames.filter(frame => {
       // Determine frame orientation
@@ -273,50 +155,28 @@ const EditScreen = () => {
       
       // Check if user has access to this frame
       let userAccess = false;
-
-      console.log("Current User ID:", currentUser?.[0]?.$id);
-      console.log("Frame Users:", frame.users);
       
       if (!frame.users || frame.users.length === 0) {
-        // If users array is empty, frame is available to all users
-        // console.log("Frame available to all users");
         userAccess = true;
       } else if (currentUser && currentUser.length > 0) {
-        // Check if current user's ID is in the frame's users array
         const currentUserId = currentUser[0].$id;
-        console.log("Checking user access for:", currentUserId);
         
         userAccess = frame.users.some((frameUser: any) => {
-          // console.log("Checking frame user:", frameUser);
-          // Handle different possible structures of frameUser
           if (typeof frameUser === 'string') {
-            const match = frameUser === currentUserId;
-            console.log("String comparison:", frameUser, "===", currentUserId, "=>", match);
-            return match;
+            return frameUser === currentUserId;
           } else if (frameUser && frameUser.$id) {
-            const match = frameUser.$id === currentUserId;
-            console.log("Object comparison:", frameUser.$id, "===", currentUserId, "=>", match);
-            return match;
+            return frameUser.$id === currentUserId;
           } else if (frameUser && frameUser.userId) {
-            const match = frameUser.userId === currentUserId;
-            console.log("UserId comparison:", frameUser.userId, "===", currentUserId, "=>", match);
-            return match;
+            return frameUser.userId === currentUserId;
           }
-
           return false;
         });
-        
-        // console.log("Final user access result:", userAccess);
-      } else {
-        // console.log("No current user found");
       }
       
       // Only show frames that match orientation AND user has access to
       return orientationMatch && userAccess;
     });
   }, [frames, canvasOrientation, currentUser]);
-
-  // console.log(`Compatible frames count: ${compatibleFrames.length}/${frames.length}`, compatibleFrames.map(f => f.name));
 
   // Auto-select first compatible frame after frames are filtered
   useEffect(() => {
@@ -535,7 +395,7 @@ const EditScreen = () => {
     if (currentPostId) {
       fetchInitialData();
     }
-  }, [currentPostId, parseFabricToSkia]);
+  }, [currentPostId]);
 
   // Auto-select first compatible frame when frames are loaded and filtered
   useEffect(() => {
@@ -593,9 +453,7 @@ const EditScreen = () => {
 
   // Render functions
   const renderTextElement = useCallback((el: SkiaRenderable & { type: 'text' }) => {
-    // console.warn(el, "Rendering Text Element 📝");
-
-    const position = calculatePositionFromRatio(el.x, el.y);
+    const position = getAdjustedPosition(el.x, el.y);
     let displayText = el.text;
     if (el.label && currentUser && currentUser[0]) {
       const userData = currentUser[0];
@@ -643,7 +501,7 @@ const EditScreen = () => {
         color={el.fill}
       />
     );
-  }, [calculatePositionFromRatio, getFontWithSize, currentUser]);
+  }, [getAdjustedPosition, getFontWithSize, currentUser]);
 
   const renderImageElement = useCallback((el: SkiaRenderable & { type: 'image' }) => {
     // console.log(el, "Rendering Image Element 🟢🔴🟡🔵");
@@ -673,7 +531,7 @@ const EditScreen = () => {
     const img = imgSrc ? imageMap[imgSrc] : null;
     if (!img) return null;
 
-    const position = calculatePositionFromRatio(el.x, el.y);
+    const position = getAdjustedPosition(el.x, el.y);
 
     if (el.label === 'logo') {
       return (
