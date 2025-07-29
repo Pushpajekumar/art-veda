@@ -6,6 +6,7 @@ import { ThemeProvider } from "../context/ThemeContext";
 import { NotificationProvider } from "@/context/notificationContext";
 import * as Notifications from "expo-notifications";
 import * as TaskManager from "expo-task-manager";
+import { Platform } from "react-native";
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -17,132 +18,107 @@ Notifications.setNotificationHandler({
 
 const BACKGROUND_NOTIFICATION_TASK = "BACKGROUND-NOTIFICATION-TASK";
 
-TaskManager.defineTask(
-  BACKGROUND_NOTIFICATION_TASK,
-  async ({ data, error, executionInfo }) => {
-    console.log("✅ Received a notification in the background!", {
-      data,
-      error,
-      executionInfo,
-    });
-    // Do something with the notification data
-    return null;
-  }
-);
+// Register background task safely
+useEffect(() => {
+  const setupBackgroundNotificationTask = async () => {
+    const taskName = "BACKGROUND-NOTIFICATION-TASK";
+
+    if (!TaskManager.isTaskDefined(taskName)) {
+      TaskManager.defineTask(
+        taskName,
+        async ({ data, error, executionInfo }) => {
+          console.log("✅ Background Notification Received!", {
+            data,
+            error,
+            executionInfo,
+          });
+          return null;
+        }
+      );
+    }
+
+    try {
+      await Notifications.registerTaskAsync(taskName);
+    } catch (err) {
+      console.warn("⚠️ Notification background task not registered:", err);
+    }
+  };
+
+  setupBackgroundNotificationTask();
+}, []);
 
 Notifications.registerTaskAsync(BACKGROUND_NOTIFICATION_TASK);
-
 SplashScreen.preventAutoHideAsync();
+
+useEffect(() => {
+  if (Platform.OS === "android") {
+    Notifications.setNotificationChannelAsync("default", {
+      name: "Default",
+      importance: Notifications.AndroidImportance.MAX,
+      sound: "default",
+      vibrationPattern: [0, 250, 250, 250],
+      lightColor: "#FF231F7C",
+    });
+  }
+}, []);
 
 export default function RootLayout() {
   const [loaded, error] = useFonts({
-    // Regular weight
     Montserrat: require("../assets/fonts/Montserrat-Regular.ttf"),
-    // Additional weights
     "Montserrat-Light": require("../assets/fonts/Montserrat-Light.ttf"),
     "Montserrat-Medium": require("../assets/fonts/Montserrat-Medium.ttf"),
     "Montserrat-SemiBold": require("../assets/fonts/Montserrat-SemiBold.ttf"),
     "Montserrat-Bold": require("../assets/fonts/Montserrat-Bold.ttf"),
-    // Add any other weights you have in your assets/fonts directory
   });
 
   useEffect(() => {
-    if (error) {
-      console.error("Failed to load font:", error);
-    }
+    if (error) console.error("Failed to load font:", error);
   }, [error]);
 
   useEffect(() => {
     if (loaded || error) {
-      // Add a small delay to ensure everything is ready
-      setTimeout(() => {
-        SplashScreen.hideAsync();
-      }, 100);
+      setTimeout(() => SplashScreen.hideAsync(), 100);
     }
   }, [loaded, error]);
 
-  if (!loaded && !error) {
-    return null;
-  }
+  if (!loaded && !error) return null;
 
   return (
     <NotificationProvider>
       <ThemeProvider>
         <Stack
           screenOptions={{
-            headerStyle: {
-              backgroundColor: "#ffffff",
-            },
+            headerStyle: { backgroundColor: "#ffffff" },
             headerTintColor: "#000000",
-            headerTitleStyle: {
-              fontFamily: "Montserrat",
-            },
-            contentStyle: {
-              backgroundColor: "#ffffff",
-            },
-            // Enhanced options to prevent white screens
+            headerTitleStyle: { fontFamily: "Montserrat" },
+            contentStyle: { backgroundColor: "#ffffff" },
             freezeOnBlur: false,
             animationDuration: 150,
             gestureDirection: "horizontal",
           }}
         >
           <Stack.Screen name="index" options={{ headerShown: false }} />
-          <Stack.Screen
-            name="home"
-            options={{
-              headerShown: false,
-            }}
-          />
-          <Stack.Screen
-            name="auth"
-            options={{
-              headerShown: false,
-            }}
-          />
+          <Stack.Screen name="home" options={{ headerShown: false }} />
+          <Stack.Screen name="auth" options={{ headerShown: false }} />
           <Stack.Screen
             name="select-political-party"
-            options={{
-              headerShown: false,
-            }}
+            options={{ headerShown: false }}
           />
-          <Stack.Screen
-            name="(tabs)"
-            options={{
-              headerShown: false,
-            }}
-          />
+          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
           <Stack.Screen
             name="edit-profile"
-            options={{
-              // headerShown: false,
-              headerBackTitle: "Profile",
-            }}
+            options={{ headerBackTitle: "Profile" }}
           />
-          <Stack.Screen
-            name="view-all"
-            options={{
-              headerShown: false,
-              headerBackTitle: "Back",
-            }}
-          />
+          <Stack.Screen name="view-all" options={{ headerShown: false }} />
           <Stack.Screen
             name="search-screen"
-            options={{
-              headerBackTitle: "Back",
-            }}
+            options={{ headerBackTitle: "Back" }}
           />
           <Stack.Screen
             name="edit-screen"
-            options={{
-              headerBackTitle: "Back",
-            }}
+            options={{ headerBackTitle: "Back" }}
           />
-          <Stack.Screen
-            name="no-network"
-            options={{
-              headerShown: false,
-            }}
-          />
+          <Stack.Screen name="no-network" options={{ headerShown: false }} />
         </Stack>
       </ThemeProvider>
     </NotificationProvider>
