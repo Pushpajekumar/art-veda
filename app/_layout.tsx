@@ -18,49 +18,23 @@ Notifications.setNotificationHandler({
 
 const BACKGROUND_NOTIFICATION_TASK = "BACKGROUND-NOTIFICATION-TASK";
 
-// Register background task safely
-useEffect(() => {
-  const setupBackgroundNotificationTask = async () => {
-    const taskName = "BACKGROUND-NOTIFICATION-TASK";
-
-    if (!TaskManager.isTaskDefined(taskName)) {
-      TaskManager.defineTask(
-        taskName,
-        async ({ data, error, executionInfo }) => {
-          console.log("✅ Background Notification Received!", {
-            data,
-            error,
-            executionInfo,
-          });
-          return null;
-        }
-      );
+// 👇 Define the task at the top level
+if (!TaskManager.isTaskDefined(BACKGROUND_NOTIFICATION_TASK)) {
+  TaskManager.defineTask(
+    BACKGROUND_NOTIFICATION_TASK,
+    async ({ data, error, executionInfo }) => {
+      console.log("✅ Background Notification Received!", {
+        data,
+        error,
+        executionInfo,
+      });
+      return null;
     }
-
-    try {
-      await Notifications.registerTaskAsync(taskName);
-    } catch (err) {
-      console.warn("⚠️ Notification background task not registered:", err);
-    }
-  };
-
-  setupBackgroundNotificationTask();
-}, []);
+  );
+}
 
 Notifications.registerTaskAsync(BACKGROUND_NOTIFICATION_TASK);
 SplashScreen.preventAutoHideAsync();
-
-useEffect(() => {
-  if (Platform.OS === "android") {
-    Notifications.setNotificationChannelAsync("default", {
-      name: "Default",
-      importance: Notifications.AndroidImportance.MAX,
-      sound: "default",
-      vibrationPattern: [0, 250, 250, 250],
-      lightColor: "#FF231F7C",
-    });
-  }
-}, []);
 
 export default function RootLayout() {
   const [loaded, error] = useFonts({
@@ -70,6 +44,30 @@ export default function RootLayout() {
     "Montserrat-SemiBold": require("../assets/fonts/Montserrat-SemiBold.ttf"),
     "Montserrat-Bold": require("../assets/fonts/Montserrat-Bold.ttf"),
   });
+
+  useEffect(() => {
+    if (Platform.OS === "android") {
+      Notifications.setNotificationChannelAsync("default", {
+        name: "Default",
+        importance: Notifications.AndroidImportance.MAX,
+        sound: "default",
+        vibrationPattern: [0, 250, 250, 250],
+        lightColor: "#FF231F7C",
+      });
+    }
+  }, []);
+
+  useEffect(() => {
+    const registerTask = async () => {
+      try {
+        await Notifications.registerTaskAsync(BACKGROUND_NOTIFICATION_TASK);
+      } catch (err) {
+        console.warn("⚠️ Failed to register background task:", err);
+      }
+    };
+
+    registerTask();
+  }, []);
 
   useEffect(() => {
     if (error) console.error("Failed to load font:", error);
