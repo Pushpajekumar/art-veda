@@ -11,7 +11,7 @@ import * as Notifications from "expo-notifications";
 import { registerForPushNotificationsAsync } from "@/utils/registerForPushNotificationsAsync";
 import { Subscription } from "expo-notifications";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { Alert, AppState } from "react-native";
+import { Alert, AppState, Platform } from "react-native";
 import { updateUserToken } from "@/utils/updateUserToken";
 import { account } from "@/context/app-write";
 
@@ -24,6 +24,7 @@ interface NotificationContextType {
   error: Error | null;
   registerForPushNotifications: () => Promise<string | null>;
   updateTokenInDatabase: () => Promise<boolean>;
+  scheduleLocalNotificationWithImage: (title: string, body: string, imageUri?: string, data?: any) => Promise<void>;
 }
 
 const NotificationContext = createContext<NotificationContextType | undefined>(
@@ -176,13 +177,25 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({
 
     notificationListener.current = Notifications.addNotificationReceivedListener(
       (notification) => {
+        console.log("📱 Notification Received:", {
+          title: notification.request.content.title,
+          body: notification.request.content.body,
+          data: notification.request.content.data,
+        });
         setNotification(notification);
       }
     );
 
     responseListener.current = Notifications.addNotificationResponseReceivedListener(
       (response) => {
-        console.log("🔔 Notification Response Received: ", response.notification.request.content.data);
+        console.log("🔔 Notification Response Received:", {
+          title: response.notification.request.content.title,
+          body: response.notification.request.content.body,
+          data: response.notification.request.content.data,
+        });
+        
+        // Handle notification tap action here if needed
+        // You can navigate to specific screens based on the data
       }
     );
 
@@ -209,6 +222,40 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({
     return false;
   }, [expoPushToken]);
 
+  const scheduleLocalNotificationWithImage = useCallback(async (
+    title: string,
+    body: string,
+    imageUri?: string,
+    data?: any
+  ) => {
+    try {
+      const notificationContent: Notifications.NotificationContentInput = {
+        title,
+        body,
+        data: {
+          ...data,
+          imageUri,
+          bigimage: imageUri, // For Android compatibility
+        },
+      };
+
+      // For Android, add style for big picture
+      if (Platform.OS === "android" && imageUri) {
+        (notificationContent as any).style = {
+          type: "bigPicture",
+          bigPicture: imageUri,
+        };
+      }
+
+      await Notifications.scheduleNotificationAsync({
+        content: notificationContent,
+        trigger: null, // Show immediately
+      });
+    } catch (error) {
+      console.error("Error scheduling local notification with image:", error);
+    }
+  }, []);
+
 
 
   return (
@@ -219,6 +266,7 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({
         error,
         registerForPushNotifications,
         updateTokenInDatabase,
+        scheduleLocalNotificationWithImage,
       }}
     >
       {children}

@@ -19,16 +19,9 @@ export async function registerForPushNotificationsAsync(): Promise<string> {
       importance: Notifications.AndroidImportance.MAX,
       vibrationPattern: [0, 250, 250, 250],
       lightColor: "#FF231F7C",
-    });
-    
-    // Create a second channel for marketing notifications with different settings
-    await Notifications.setNotificationChannelAsync("marketing", {
-      name: "Marketing",
-      description: "Promotional notifications and updates",
-      importance: Notifications.AndroidImportance.DEFAULT,
-      vibrationPattern: [0, 100, 100, 100],
       enableLights: true,
-      lightColor: "#00FF00",
+      enableVibrate: true,
+      showBadge: true,
     });
   }
 

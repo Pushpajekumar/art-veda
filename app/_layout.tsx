@@ -9,11 +9,26 @@ import * as TaskManager from "expo-task-manager";
 import { Platform } from "react-native";
 
 Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: true,
-    shouldSetBadge: true,
-  }),
+  handleNotification: async (notification) => {
+    const { data } = notification.request.content;
+    
+    // Handle image notifications
+    const notificationConfig: any = {
+      shouldShowAlert: true,
+      shouldPlaySound: true,
+      shouldSetBadge: true,
+    };
+
+    // Add image support for Android
+    if (Platform.OS === "android" && (data?.imageUri || data?.bigimage)) {
+      notificationConfig.style = {
+        type: "bigPicture",
+        bigPicture: data?.bigimage || data?.imageUri,
+      };
+    }
+
+    return notificationConfig;
+  },
 });
 
 const BACKGROUND_NOTIFICATION_TASK = "BACKGROUND-NOTIFICATION-TASK";
@@ -53,6 +68,9 @@ export default function RootLayout() {
         sound: "default",
         vibrationPattern: [0, 250, 250, 250],
         lightColor: "#FF231F7C",
+        enableLights: true,
+        enableVibrate: true,
+        showBadge: true,
       });
     }
   }, []);
