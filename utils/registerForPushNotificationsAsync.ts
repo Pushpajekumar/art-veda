@@ -12,6 +12,11 @@ export async function registerForPushNotificationsAsync(): Promise<string> {
     return cachedToken;
   }
 
+  // Skip push registration on web
+  if (Platform.OS === "web") {
+    throw new Error("Push notifications are not supported on web");
+  }
+
   // Setup notification channel for Android
   if (Platform.OS === "android") {
     await Notifications.setNotificationChannelAsync("default", {
@@ -55,7 +60,8 @@ export async function registerForPushNotificationsAsync(): Promise<string> {
       console.warn("Project ID not available - using fallback method");
       // Fallback for development environment
       const devToken = (await Notifications.getExpoPushTokenAsync()).data;
-      console.log("DEV TOKEN:", devToken);
+      // Avoid logging tokens in production
+      if (__DEV__) console.log("DEV TOKEN:", devToken);
       cachedToken = devToken;
       return devToken;
     }
@@ -65,13 +71,13 @@ export async function registerForPushNotificationsAsync(): Promise<string> {
       projectId,
     })).data;
     
-    console.log("PUSH TOKEN:", pushToken);
+  if (__DEV__) console.log("PUSH TOKEN:", pushToken);
     
     // Cache the token
     cachedToken = pushToken;
     return pushToken;
   } catch (e: any) {
-    console.error("Error getting push token:", e);
+  console.error("Error getting push token:", e);
     
     // Add descriptive error message
     if (e.message?.includes("project ID")) {
@@ -82,8 +88,8 @@ export async function registerForPushNotificationsAsync(): Promise<string> {
     
     // Try fallback method if main method fails
     try {
-      const fallbackToken = (await Notifications.getExpoPushTokenAsync()).data;
-      console.log("FALLBACK TOKEN:", fallbackToken);
+  const fallbackToken = (await Notifications.getExpoPushTokenAsync()).data;
+  if (__DEV__) console.log("FALLBACK TOKEN:", fallbackToken);
       cachedToken = fallbackToken;
       return fallbackToken;
     } catch (fallbackError) {

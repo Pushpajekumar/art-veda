@@ -52,6 +52,7 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({
   const [notification, setNotification] = useState<Notifications.Notification | null>(null);
   const [error, setError] = useState<Error | null>(null);
   const [isUserAuthenticated, setIsUserAuthenticated] = useState<boolean>(false);
+  const uploadInFlightRef = useRef<string | null>(null);
 
   const appState = useRef(AppState.currentState);
   const notificationListener = useRef<Subscription>();
@@ -59,7 +60,10 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({
 
   const checkAuthStatusAndUpdateToken = useCallback(async () => {
     try {
-      const storedUserId = await AsyncStorage.getItem(USER_ID_STORAGE_KEY);
+      const [storedUserId, storedToken] = await Promise.all([
+        AsyncStorage.getItem(USER_ID_STORAGE_KEY),
+        AsyncStorage.getItem(PUSH_TOKEN_STORAGE_KEY),
+      ]);
       let currentUserId: string | null = null;
       let isAuthenticated = false;
 
@@ -82,14 +86,18 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({
           await AsyncStorage.setItem(USER_ID_STORAGE_KEY, currentUserId);
         }
 
-        if (expoPushToken) {
-          await updateUserToken(expoPushToken);
-        } else {
-          const token = await registerForPushNotificationsAsync();
-          if (token) {
-            setExpoPushToken(token);
+        const token = expoPushToken || storedToken || (await registerForPushNotificationsAsync());
+        if (token) {
+          setExpoPushToken(token);
+          if (token !== storedToken) {
             await AsyncStorage.setItem(PUSH_TOKEN_STORAGE_KEY, token);
-            await updateUserToken(token);
+          }
+          // Deduplicate concurrent uploads
+          if (uploadInFlightRef.current !== token) {
+            uploadInFlightRef.current = token;
+            await updateUserToken(token).finally(() => {
+              uploadInFlightRef.current = null;
+            });
           }
         }
       }
@@ -140,7 +148,12 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({
       if (storedToken) {
         setExpoPushToken(storedToken);
         if (isUserAuthenticated) {
-          await updateUserToken(storedToken);
+          if (uploadInFlightRef.current !== storedToken) {
+            uploadInFlightRef.current = storedToken;
+            await updateUserToken(storedToken).finally(() => {
+              uploadInFlightRef.current = null;
+            });
+          }
         }
         return storedToken;
       }
@@ -150,7 +163,12 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({
         await AsyncStorage.setItem(PUSH_TOKEN_STORAGE_KEY, token);
         setExpoPushToken(token);
         if (isUserAuthenticated) {
-          await updateUserToken(token);
+          if (uploadInFlightRef.current !== token) {
+            uploadInFlightRef.current = token;
+            await updateUserToken(token).finally(() => {
+              uploadInFlightRef.current = null;
+            });
+          }
         }
       }
 
@@ -245,6 +263,16 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({
           type: "bigPicture",
           bigPicture: imageUri,
         };
+      }
+
+      // iOS attachments
+      if (Platform.OS === "ios" && imageUri) {
+        (notificationContent as any).attachments = [
+          {
+            identifier: "image",
+            url: imageUri,
+          },
+        ];
       }
 
       await Notifications.scheduleNotificationAsync({

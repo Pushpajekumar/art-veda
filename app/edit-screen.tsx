@@ -11,9 +11,12 @@ import {
   ActivityIndicator,
   ToastAndroid,
   Platform,
-  Dimensions
+  Dimensions,
+  FlatList,
+  Pressable,
+  Animated,
 } from "react-native";
-import React, { useEffect, useState, useCallback, useRef, useMemo } from "react";
+import React, { useEffect, useState, useCallback, useRef, useMemo, FC } from "react";
 import { useLocalSearchParams } from "expo-router";
 import { account, database } from "@/context/app-write";
 import { ID, Query } from "react-native-appwrite";
@@ -26,7 +29,7 @@ import {
   Circle,
   Rect,
 } from "@shopify/react-native-skia";
-import { primaryColor, width } from "@/constant/contant";
+import { primaryColor, secondaryColor, primary_textColor, secondary_textColor, width } from "@/constant/contant";
 import * as MediaLibrary from 'expo-media-library';
 import * as FileSystem from 'expo-file-system';
 import { Feather } from '@expo/vector-icons';
@@ -39,6 +42,64 @@ import {
   getCanvasOrientation,
   calculatePositionFromRatio
 } from "@/utils/edit-utilities";
+
+// Helper to derive canvas container style based on orientation and computed sizes
+const getCanvasContainerStyle = (
+  orientation: 'square' | 'portrait' | 'landscape' | null,
+  postWidthTesting: number,
+  postHeightTesting: number,
+  deviceWidth: number
+) => {
+  if (orientation === 'square') {
+    return { width: postWidthTesting, height: postHeightTesting };
+  }
+  if (orientation === 'portrait') {
+    return { width: postWidthTesting / 1.5, height: postHeightTesting / 1.5 };
+  }
+  // landscape default
+  return { width: deviceWidth - 40, height: (deviceWidth - 40) * 0.7 };
+};
+
+// Small bouncy button component for delightful presses
+const BouncyButton = ({ children, onPress, disabled, style }: any) => {
+  const scale = useRef(new Animated.Value(1)).current;
+
+  const handlePressIn = () => {
+    Animated.spring(scale, {
+      toValue: 0.97,
+      useNativeDriver: true,
+      friction: 7,
+      tension: 80,
+    }).start();
+  };
+
+  const handlePressOut = () => {
+    Animated.spring(scale, {
+      toValue: 1,
+      useNativeDriver: true,
+      friction: 7,
+      tension: 80,
+    }).start();
+  };
+
+  return (
+    <Pressable
+      onPressIn={handlePressIn}
+      onPressOut={handlePressOut}
+      onPress={onPress}
+      disabled={disabled}
+      style={({ pressed }) => [
+        { opacity: disabled ? 0.6 : 1 },
+        style,
+      ]}
+      accessibilityRole="button"
+    >
+      <Animated.View style={{ transform: [{ scale }] }}>
+        {children}
+      </Animated.View>
+    </Pressable>
+  );
+};
 
 const EditScreen = () => {
   const { postId: initialPostId } = useLocalSearchParams();
@@ -89,12 +150,17 @@ const EditScreen = () => {
     [canvasWidth, canvasHeight]
   );
 
-  // Canvas width and height based post height and width and device width and height
-  const widthRatio = (deviceWidth - 40) / canvasWidth;
-  const heightRatio = (deviceHeight - 40) / canvasHeight;
-
-  const postWidthTesting = canvasWidth * widthRatio;
-  const postHeightTesting = canvasHeight * widthRatio;
+  // Canvas ratios and derived sizes (memoized)
+  const { widthRatio, heightRatio, postWidthTesting, postHeightTesting } = useMemo(() => {
+    const safeWidthRatio = canvasWidth ? (deviceWidth - 40) / canvasWidth : 1;
+    const safeHeightRatio = canvasHeight ? (deviceHeight - 40) / canvasHeight : 1;
+    return {
+      widthRatio: safeWidthRatio,
+      heightRatio: safeHeightRatio,
+      postWidthTesting: canvasWidth ? canvasWidth * safeWidthRatio : deviceWidth - 40,
+      postHeightTesting: canvasHeight ? canvasHeight * safeWidthRatio : deviceWidth - 40,
+    };
+  }, [canvasWidth, canvasHeight, deviceWidth, deviceHeight]);
 
   const postImage = useImage(post?.previewImage);
 
@@ -178,24 +244,7 @@ const EditScreen = () => {
     });
   }, [frames, canvasOrientation, currentUser]);
 
-  // Auto-select first compatible frame after frames are filtered
-  useEffect(() => {
-    if (compatibleFrames.length > 0 && !loading) {
-      const firstFrame = compatibleFrames[0];
-      setSelectedFrameIndex(0);
-      
-      if (firstFrame?.template) {
-        try {
-          const parsedElements = parseFabricToSkia(firstFrame.template);
-          setElements(parsedElements);
-          setFrameWidth(firstFrame.width);
-          setFrameHeight(firstFrame.height);
-        } catch (error) {
-          console.error("Error parsing frame template:", error);
-        }
-      }
-    }
-  }, [compatibleFrames, loading, parseFabricToSkia]);
+  // (Removed duplicate auto-select effect; kept a single one below)
 
   const selectFrame = useCallback((index: number) => {
     if (index < 0 || index >= compatibleFrames.length) return;
@@ -359,8 +408,13 @@ const EditScreen = () => {
         sources.push(el.src);
       }
     });
-    setImageSources(sources);
-  }, [elements]);
+    const logo = currentUser?.[0]?.logo;
+    if (logo) sources.push(logo);
+    const profileImage = currentUser?.[0]?.profileImage;
+    if (profileImage) sources.push(profileImage);
+    const unique = Array.from(new Set(sources));
+    setImageSources(unique);
+  }, [elements, currentUser]);
 
   // Fetch post and frames data
   useEffect(() => {
@@ -509,23 +563,13 @@ const EditScreen = () => {
     let imgSrc = el.src;
 
     if (el.label === 'logo') {
-      if (!currentUser?.[0]?.logo) {
-        return null; // Skip rendering if user doesn't have a logo
-      }
-      if (!imageSources.includes(currentUser[0].logo)) {
-        setImageSources(prev => [...prev, currentUser[0].logo]);
-      }
-      imgSrc = currentUser[0].logo;
+      imgSrc = currentUser?.[0]?.logo;
+      if (!imgSrc) return null;
     }
 
     if (el.label === 'userImage') {
-      if (!currentUser?.[0]?.profileImage) {
-        return null; // Skip rendering if user doesn't have a profile image
-      }
-      if (!imageSources.includes(currentUser[0].profileImage)) {
-        setImageSources(prev => [...prev, currentUser[0].profileImage]);
-      }
-      imgSrc = currentUser[0].profileImage;
+      imgSrc = currentUser?.[0]?.profileImage;
+      if (!imgSrc) return null;
     }
 
     const img = imgSrc ? imageMap[imgSrc] : null;
@@ -676,7 +720,7 @@ const EditScreen = () => {
         />
       );
     }
-  }, [calculatePositionFromRatio, currentUser, imageSources, imageMap, selectedImageShape]);
+  }, [calculatePositionFromRatio, currentUser, imageMap, selectedImageShape, widthRatio, heightRatio, canvasOrientation]);
 
   const renderFontSelectionBottomSheet = () => (
     <Modal
@@ -803,29 +847,32 @@ const EditScreen = () => {
 
   return (
     <View style={styles.safeArea}>
-      <ScrollView style={styles.scrollView}>
+      <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
         <View style={styles.container}>
+          {/* Header */}
+          <View style={styles.screenHeader}>
+            <Text style={styles.screenTitle}>Customize Your Post</Text>
+            <View style={styles.headerRow}>
+              <Text style={styles.screenSubtitle}>Pick a frame, tweak text and shape</Text>
+              <View style={styles.chip}>
+                <Feather name="smartphone" size={14} color={primaryColor} />
+                <Text style={styles.chipText}>{canvasOrientation || 'auto'}</Text>
+              </View>
+            </View>
+          </View>
+
           <View style={styles.previewContainer}>
-            <View
-              style={[
-                styles.canvas,
-                canvasOrientation === 'square'
-                  ? { width: postWidthTesting, height: postHeightTesting }
-                  : canvasOrientation === 'portrait'
-                    ? { width: postWidthTesting/1.5, height: postHeightTesting / 1.5 }
-                    : { width: deviceWidth - 40, height: (deviceWidth - 40) * 0.7 }
-              ]}
-            >
+            <View style={styles.previewCard}>
+              <View style={styles.previewHeader}>
+                <Text style={styles.previewTitle}>Preview</Text>
+                <View style={styles.badgeSoft}>
+                  <Text style={styles.badgeSoftText}>Live</Text>
+                </View>
+              </View>
+              <View style={[styles.canvas, getCanvasContainerStyle(canvasOrientation, postWidthTesting, postHeightTesting, deviceWidth)]}>
               <Canvas
                 ref={canvasRef}
                 style={StyleSheet.absoluteFill}
-                onLayout={() => {
-                  setTimeout(() => {
-                    if (canvasRef.current && !isFrameLoading && post && postImage) {
-                      setIsCanvasReady(true);
-                    }
-                  }, 1000);
-                }}
               >
                 {!isFrameLoading && (
                   <>
@@ -865,135 +912,197 @@ const EditScreen = () => {
                   <Text style={styles.loadingFrameText}>Loading frame...</Text>
                 </View>
               )}
+              </View>
             </View>
           </View>
-          <View style={styles.buttonsContainer}>
-            <TouchableOpacity
-              style={styles.actionButton}
-              onPress={() => setFontSelectorVisible(true)}
-              activeOpacity={0.8}
-            >
-              <Feather name="type" size={24} color="white" />
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.actionButton}
-              onPress={() => setImageShapeVisible(true)}
-              activeOpacity={0.8}
-            >
-              <Feather name="square" size={24} color="white" />
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[
-                styles.actionButton,
-                (!isCanvasReady || isFrameLoading || loading || isDownloading) && styles.disabledButton
-              ]}
-              onPress={handleDownload}
-              activeOpacity={0.8}
-              disabled={!isCanvasReady || isFrameLoading || loading || isDownloading}
-            >
-              <Feather name="download" size={24} color="white" />
-            </TouchableOpacity>
-          </View>
+          {/* Spacer for floating bar */}
+          <View style={{ height: 96 }} />
 
           {renderFontSelectionBottomSheet()}
           {renderImageShapeSelectionBottomSheet()}
 
             {compatibleFrames.length > 0 ? (
             <View style={styles.framesSection}>
-              <Text style={styles.sectionTitle}>
-              Available Frames ({canvasOrientation}) - {compatibleFrames.length}
-              </Text>
-              <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              style={styles.framesScrollView}
-              contentContainerStyle={styles.framesContentContainer}
-              >
-              {compatibleFrames.map((frame, index) => {
-                // Check if this frame is "premium" for the current user
-                let isPremium = false;
-                if (
-                frame.users &&
-                frame.users.length > 0 &&
-                currentUser &&
-                currentUser[0] &&
-                currentUser[0].$id
-                ) {
-                const myUserId = currentUser[0].$id;
-                isPremium = frame.users.some((u: any) =>
-                  (typeof u === "string" && u === myUserId) ||
-                  (u && u.$id === myUserId) ||
-                  (u && u.userId === myUserId)
-                );
-                }
-
-                return (
-                <TouchableOpacity
-                  key={frame.$id}
-                  style={[
-                  styles.frameItem,
-                  selectedFrameIndex === index ? styles.selectedFrame : styles.normalFrame
-                  ]}
-                  onPress={() => selectFrame(index)}
-                >
-                  <View>
-                  <Image
-                    source={{ uri: frame.previewImage }}
-                    style={styles.frameImage}
-                    resizeMode="cover"
-                  />
-                  {isPremium && (
-                    <View
-                    style={{
-                      position: "absolute",
-                      top: 6,
-                      left: 6,
-                      backgroundColor: "#FFD700",
-                      paddingHorizontal: 8,
-                      paddingVertical: 2,
-                      borderRadius: 6,
-                      zIndex: 2,
-                    }}
-                    >
-                    <Text style={{ color: "#333", fontWeight: "bold", fontSize: 12 }}>
-                      PREMIUM
-                    </Text>
-                    </View>
-                  )}
-                  </View>
-                  <View style={styles.frameDetails}>
-                  <Text style={styles.frameName}>{frame.name || `Frame ${index + 1}`}</Text>
-                  </View>
-                </TouchableOpacity>
-                );
-              })}
-              </ScrollView>
+              <View style={styles.sectionHeaderRow}>
+                <Text style={styles.sectionTitle}>Available Frames</Text>
+                <View style={styles.countChip}><Text style={styles.countChipText}>{compatibleFrames.length}</Text></View>
+              </View>
+              <FlatList
+                horizontal
+                data={compatibleFrames}
+                keyExtractor={(item: any) => item.$id}
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.framesContentContainer}
+                renderItem={({ item, index }) => {
+                  let isPremium = false;
+                  const myUserId = currentUser?.[0]?.$id;
+                  if (item.users && item.users.length > 0 && myUserId) {
+                    isPremium = item.users.some((u: any) =>
+                      (typeof u === "string" && u === myUserId) ||
+                      (u && u.$id === myUserId) ||
+                      (u && u.userId === myUserId)
+                    );
+                  }
+                  const isSelected = selectedFrameIndex === index;
+                  return (
+                    <FrameCard
+                      item={item}
+                      index={index}
+                      isSelected={isSelected}
+                      isPremium={isPremium}
+                      orientationText={item.orientation || canvasOrientation}
+                      onPress={() => selectFrame(index)}
+                    />
+                  );
+                }}
+              />
             </View>
             ) : (
             <View style={styles.framesSection}>
               <Text style={styles.sectionTitle}>No Available Frames</Text>
-              <Text style={styles.noFramesText}>
-              No {canvasOrientation} frames are available for your account.
-              </Text>
+              <View style={styles.emptyStateCard}>
+                <Feather name="image" size={28} color={primaryColor} />
+                <Text style={styles.noFramesText}>
+                  No {canvasOrientation} frames are available for your account.
+                </Text>
+              </View>
             </View>
             )}
         </View>
-      </ScrollView>
+  </ScrollView>
+      <FloatingActionBar
+        disabledPrimary={!isCanvasReady || isFrameLoading || loading || isDownloading}
+        onFont={() => setFontSelectorVisible(true)}
+        onShape={() => setImageShapeVisible(true)}
+        onDownload={handleDownload}
+      />
     </View>
   );
 };
 
 export default EditScreen;
 
+// Floating action bar component
+const FloatingActionBar: FC<{
+  disabledPrimary?: boolean;
+  onFont: () => void;
+  onShape: () => void;
+  onDownload: () => void;
+}> = ({ disabledPrimary, onFont, onShape, onDownload }) => {
+  return (
+    <View style={styles.floatingBarWrapper} pointerEvents="box-none">
+      <View style={styles.floatingBar}>
+        <BouncyButton onPress={onFont} style={styles.fabNeutral}>
+          <Feather name="type" size={18} color={primaryColor} />
+          <Text style={styles.fabLabel}>Font</Text>
+        </BouncyButton>
+        <BouncyButton onPress={onShape} style={styles.fabNeutral}>
+          <Feather name="square" size={18} color={primaryColor} />
+          <Text style={styles.fabLabel}>Shape</Text>
+        </BouncyButton>
+        <BouncyButton
+          onPress={onDownload}
+          disabled={!!disabledPrimary}
+          style={[styles.fabPrimary, disabledPrimary && styles.disabledPrimary]}
+        >
+          <Feather name="download" size={18} color={secondary_textColor} />
+          <Text style={styles.fabLabelPrimary}>Download</Text>
+        </BouncyButton>
+      </View>
+    </View>
+  );
+};
+
+// Reusable frame card
+const FrameCard: FC<{
+  item: any;
+  index: number;
+  isSelected: boolean;
+  isPremium: boolean;
+  orientationText?: string | null;
+  onPress: () => void;
+}> = ({ item, isSelected, isPremium, orientationText, onPress }) => {
+  const scale = useRef(new Animated.Value(1)).current;
+  const onPressIn = () => Animated.spring(scale, { toValue: 0.98, useNativeDriver: true }).start();
+  const onPressOut = () => Animated.spring(scale, { toValue: 1, useNativeDriver: true }).start();
+
+  return (
+    <Pressable onPressIn={onPressIn} onPressOut={onPressOut} onPress={onPress} style={{ marginRight: 12 }}>
+      <Animated.View style={{ transform: [{ scale }] }}>
+        <View style={[styles.frameItem, isSelected ? styles.selectedFrame : styles.normalFrame]}>
+          <View>
+            <Image source={{ uri: item.previewImage }} style={styles.frameImage} resizeMode="cover" />
+            <View style={styles.frameImageOverlay} />
+            <View style={styles.frameBottomBar}>
+              <Text style={styles.frameBottomText} numberOfLines={1}>
+                {item.name || 'Untitled'}
+              </Text>
+            </View>
+            {isPremium && (
+              <View style={styles.premiumBadge}>
+                <Text style={styles.premiumText}>PREMIUM</Text>
+              </View>
+            )}
+            {isSelected && <View style={styles.selectionGlow} />}
+          </View>
+          <View style={styles.frameDetails}>
+            {orientationText ? (
+              <View style={styles.smallChip}><Text style={styles.smallChipText}>{orientationText}</Text></View>
+            ) : null}
+          </View>
+        </View>
+      </Animated.View>
+    </Pressable>
+  );
+};
+
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
     paddingTop: 10,
+    backgroundColor: '#F7FAFF',
   },
   scrollView: {
     flex: 1,
+  },
+  scrollContent: {
+    paddingBottom: 16,
+  },
+  screenHeader: {
+    paddingHorizontal: 16,
+    paddingTop: 8,
+    paddingBottom: 12,
+  },
+  screenTitle: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: primary_textColor,
+  },
+  screenSubtitle: {
+    marginTop: 4,
+    fontSize: 14,
+    color: '#666',
+  },
+  headerRow: {
+    marginTop: 6,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  chip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: `${secondaryColor}40`,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: 999,
+  },
+  chipText: {
+    color: primaryColor,
+    fontWeight: '600',
+    fontSize: 12,
+    textTransform: 'capitalize',
   },
   loadingContainer: {
     flex: 1,
@@ -1025,6 +1134,42 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
+  previewCard: {
+    width: '100%',
+    backgroundColor: '#fff',
+    borderRadius: 16,
+  padding: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 3,
+  borderWidth: StyleSheet.hairlineWidth,
+  borderColor: '#E9EEF5',
+  },
+  previewHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 4,
+    paddingBottom: 8,
+  },
+  previewTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: primary_textColor,
+  },
+  badgeSoft: {
+    backgroundColor: `${primaryColor}15`,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 999,
+  },
+  badgeSoftText: {
+    color: primaryColor,
+    fontWeight: '700',
+    fontSize: 12,
+  },
   canvasScrollContent: {
     alignItems: "center",
     justifyContent: "center",
@@ -1032,13 +1177,7 @@ const styles = StyleSheet.create({
   canvas: {
     backgroundColor: "lightgrey",
   },
-  buttonsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 24,
-    paddingHorizontal: 4,
-    flexWrap: 'wrap',
-  },
+  // Old toolbar styles kept for reference; floating bar replaces it
   actionButton: {
     flex: 1,
     backgroundColor: primaryColor,
@@ -1055,8 +1194,40 @@ const styles = StyleSheet.create({
     elevation: 4,
     minHeight: 56,
   },
+  actionButtonNeutral: {
+    flex: 1,
+    backgroundColor: `${secondaryColor}40`,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    minHeight: 52,
+    flexDirection: 'row',
+    gap: 8,
+  },
+  actionButtonPrimary: {
+    flex: 1,
+    backgroundColor: primaryColor,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    minHeight: 52,
+    flexDirection: 'row',
+    gap: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
+    elevation: 4,
+  },
   disabledButton: {
     backgroundColor: '#cccccc',
+  },
+  disabledPrimary: {
+    backgroundColor: '#8ecbff',
   },
   buttonText: {
     color: 'white',
@@ -1064,13 +1235,40 @@ const styles = StyleSheet.create({
     marginLeft: 8,
     fontSize: 15,
   },
+  actionLabel: {
+    color: primaryColor,
+    fontWeight: '600',
+    fontSize: 14,
+  },
+  actionLabelPrimary: {
+    color: secondary_textColor,
+    fontWeight: '700',
+    fontSize: 14,
+  },
   framesSection: {
     marginTop: 20,
+  },
+  sectionHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingRight: 6,
   },
   sectionTitle: {
     fontSize: 18,
     fontWeight: "bold",
     marginBottom: 12,
+  },
+  countChip: {
+    backgroundColor: `${secondaryColor}60`,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 999,
+  },
+  countChipText: {
+    color: '#333',
+    fontWeight: '700',
+    fontSize: 12,
   },
   framesScrollView: {
     flexGrow: 0,
@@ -1079,28 +1277,92 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
   },
   frameItem: {
-    width: 150,
+  width: 180,
     marginRight: 12,
     borderRadius: 8,
     overflow: "hidden",
+  backgroundColor: "#fff",
+  shadowColor: '#000',
+  shadowOffset: { width: 0, height: 2 },
+  shadowOpacity: 0.08,
+  shadowRadius: 6,
+  elevation: 2,
+  borderWidth: StyleSheet.hairlineWidth,
+  borderColor: '#E9EEF5',
   },
   selectedFrame: {
-    borderWidth: 2,
-    borderColor: "#007bff",
+  borderWidth: 2,
+  borderColor: primaryColor,
   },
   normalFrame: {
-    borderWidth: 1,
-    borderColor: "#eeeeee",
+  borderWidth: 1,
+  borderColor: "#eeeeee",
   },
   frameImage: {
     width: "100%",
-    height: 100,
+  height: 120,
+  },
+  frameImageOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.05)',
+  },
+  frameBottomBar: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.35)',
+    paddingVertical: 6,
+    paddingHorizontal: 8,
+  },
+  frameBottomText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '600',
   },
   frameDetails: {
     padding: 8,
   },
   frameName: {
     fontWeight: "500",
+  },
+  smallChip: {
+    alignSelf: 'flex-start',
+    backgroundColor: `${secondaryColor}40`,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 999,
+  },
+  smallChipText: {
+    color: '#333',
+    fontWeight: '600',
+    fontSize: 12,
+    textTransform: 'capitalize',
+  },
+  premiumBadge: {
+    position: 'absolute',
+    top: 6,
+    left: 6,
+    backgroundColor: '#FFD700',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 6,
+    zIndex: 2,
+  },
+  premiumText: {
+    color: '#333',
+    fontWeight: 'bold',
+    fontSize: 12,
+  },
+  selectionGlow: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    top: 0,
+    borderWidth: 2,
+    borderColor: `${primaryColor}60`,
+    borderRadius: 8,
   },
   modalOverlay: {
     flex: 1,
@@ -1211,5 +1473,75 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontStyle: 'italic',
     paddingVertical: 20,
+  },
+  emptyStateCard: {
+    marginTop: 8,
+    alignSelf: 'center',
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 16,
+    width: '90%',
+    alignItems: 'center',
+    gap: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
+    elevation: 2,
+  },
+  // Floating action bar styles
+  floatingBarWrapper: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    padding: 12,
+    paddingBottom: 20,
+  },
+  floatingBar: {
+    backgroundColor: '#FFFFFFEE',
+    borderRadius: 16,
+    padding: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 8,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: '#E9EEF5',
+  },
+  fabNeutral: {
+    flex: 1,
+    backgroundColor: `${secondaryColor}30`,
+    paddingVertical: 12,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 8,
+  },
+  fabPrimary: {
+    flex: 1,
+    backgroundColor: primaryColor,
+    paddingVertical: 12,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 8,
+  },
+  fabLabel: {
+    color: primaryColor,
+    fontWeight: '700',
+    fontSize: 13,
+  },
+  fabLabelPrimary: {
+    color: secondary_textColor,
+    fontWeight: '700',
+    fontSize: 13,
   },
 });

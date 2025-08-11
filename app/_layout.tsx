@@ -34,10 +34,11 @@ Notifications.setNotificationHandler({
 const BACKGROUND_NOTIFICATION_TASK = "BACKGROUND-NOTIFICATION-TASK";
 
 // 👇 Define the task at the top level
-if (!TaskManager.isTaskDefined(BACKGROUND_NOTIFICATION_TASK)) {
+if (Platform.OS !== "web" && !TaskManager.isTaskDefined(BACKGROUND_NOTIFICATION_TASK)) {
   TaskManager.defineTask(
     BACKGROUND_NOTIFICATION_TASK,
     async ({ data, error, executionInfo }) => {
+      // Keep logging minimal in production; this is useful for debugging
       console.log("✅ Background Notification Received!", {
         data,
         error,
@@ -47,8 +48,6 @@ if (!TaskManager.isTaskDefined(BACKGROUND_NOTIFICATION_TASK)) {
     }
   );
 }
-
-Notifications.registerTaskAsync(BACKGROUND_NOTIFICATION_TASK);
 SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
@@ -78,7 +77,9 @@ export default function RootLayout() {
   useEffect(() => {
     const registerTask = async () => {
       try {
-        await Notifications.registerTaskAsync(BACKGROUND_NOTIFICATION_TASK);
+        if (Platform.OS !== "web") {
+          await Notifications.registerTaskAsync(BACKGROUND_NOTIFICATION_TASK);
+        }
       } catch (err) {
         console.warn("⚠️ Failed to register background task:", err);
       }
